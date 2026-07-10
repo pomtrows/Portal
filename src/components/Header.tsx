@@ -92,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
             <Palette size={20} />
           </button>
           <div className="absolute right-0 top-full mt-2 w-36 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-            {(['tokyo-night', 'light', 'nord', 'dracula', 'midnight'] as Theme[]).map((t) => (
+            {(['light', 'tokyo-night', 'nord', 'dracula', 'midnight'] as Theme[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTheme(t)}
