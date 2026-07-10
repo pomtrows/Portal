@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { SectionModal, ItemModal } from './components/EditModals';
-import { loadConfig, saveConfig } from './utils/storage';
 import type { DashboardConfig, Section, LinkItem } from './types';
+import { supabase } from './utils/supabase';
 
 function App() {
-  const [config, setConfig] = useState<DashboardConfig>(loadConfig());
+  const [config, setConfig] = useState<DashboardConfig>({ title: 'Mon Portail', sections: [] });
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
 
@@ -18,11 +19,38 @@ function App() {
   const [editingItem, setEditingItem] = useState<{ sectionId: string, item: LinkItem | null } | null>(null);
 
   useEffect(() => {
-    saveConfig(config);
-  }, [config]);
+    fetchData();
+  }, []);
 
-  const handleTitleChange = (newTitle: string) => {
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // Fetch title
+      const { data: configData } = await supabase.from('config').select('*').eq('id', 'main').single();
+      const title = configData?.title || 'Mon Portail';
+
+      // Fetch sections
+      const { data: sectionsData } = await supabase.from('sections').select('*').order('created_at', { ascending: true });
+      
+      // Fetch links
+      const { data: linksData } = await supabase.from('links').select('*').order('created_at', { ascending: true });
+
+      const sections: Section[] = (sectionsData || []).map(sec => ({
+        ...sec,
+        items: (linksData || []).filter(link => link.section_id === sec.id)
+      }));
+
+      setConfig({ title, sections });
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTitleChange = async (newTitle: string) => {
     setConfig(prev => ({ ...prev, title: newTitle }));
+    await supabase.from('config').upsert({ id: 'main', title: newTitle });
   };
 
   // Section handlers
@@ -36,24 +64,31 @@ function App() {
     setIsSectionModalOpen(true);
   };
 
-  const handleDeleteSection = (id: string) => {
+  const handleDeleteSection = async (id: string) => {
     if (confirm("Êtes-vous sûr de vouloir supprimer cette section et tous ses liens ?")) {
+      // Optimistic UI update
       setConfig(prev => ({
         ...prev,
         sections: prev.sections.filter(s => s.id !== id)
       }));
+      await supabase.from('sections').delete().eq('id', id);
     }
   };
 
-  const handleSaveSection = (sectionData: Partial<Section>) => {
+  const handleSaveSection = async (sectionData: Partial<Section>) => {
     if (editingSection) {
+      // Update
+      const updatedSection = { ...editingSection, ...sectionData };
       setConfig(prev => ({
         ...prev,
-        sections: prev.sections.map(s => s.id === editingSection.id ? { ...s, ...sectionData } : s)
+        sections: prev.sections.map(s => s.id === editingSection.id ? updatedSection : s)
       }));
+      await supabase.from('sections').update({ title: sectionData.title }).eq('id', editingSection.id);
     } else {
+      // Create
+      const newId = `sec-${Date.now()}`;
       const newSection: Section = {
-        id: `sec-${Date.now()}`,
+        id: newId,
         title: sectionData.title || 'Nouvelle section',
         items: []
       };
@@ -61,6 +96,7 @@ function App() {
         ...prev,
         sections: [...prev.sections, newSection]
       }));
+      await supabase.from('sections').insert({ id: newId, title: newSection.title });
     }
   };
 
@@ -75,7 +111,7 @@ function App() {
     setIsItemModalOpen(true);
   };
 
-  const handleDeleteItem = (sectionId: string, itemId: string) => {
+  const handleDeleteItem = async (sectionId: string, itemId: string) => {
     if (confirm("Êtes-vous sûr de vouloir supprimer ce lien ?")) {
       setConfig(prev => ({
         ...prev,
@@ -85,31 +121,40 @@ function App() {
             : s
         )
       }));
+      await supabase.from('links').delete().eq('id', itemId);
     }
   };
 
-  const handleSaveItem = (itemData: Partial<LinkItem>) => {
+  const handleSaveItem = async (itemData: Partial<LinkItem>) => {
     if (!editingItem) return;
-
     const { sectionId, item } = editingItem;
 
     if (item) {
-      // Edit existing
+      // Update
+      const updatedItem = { ...item, ...itemData };
       setConfig(prev => ({
         ...prev,
         sections: prev.sections.map(s => 
           s.id === sectionId
             ? {
                 ...s,
-                items: s.items.map(i => i.id === item.id ? { ...i, ...itemData } : i)
+                items: s.items.map(i => i.id === item.id ? updatedItem : i)
               }
             : s
         )
       }));
+      await supabase.from('links').update({
+        title: itemData.title,
+        url: itemData.url,
+        description: itemData.description,
+        icon: itemData.icon
+      }).eq('id', item.id);
     } else {
-      // Add new
+      // Create
+      const newId = `link-${Date.now()}`;
       const newItem: LinkItem = {
-        id: `link-${Date.now()}`,
+        id: newId,
+        section_id: sectionId,
         title: itemData.title || 'Nouveau lien',
         url: itemData.url || '#',
         description: itemData.description,
@@ -124,8 +169,24 @@ function App() {
             : s
         )
       }));
+      await supabase.from('links').insert({
+        id: newId,
+        section_id: sectionId,
+        title: newItem.title,
+        url: newItem.url,
+        description: newItem.description,
+        icon: newItem.icon
+      });
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[var(--color-background)] flex items-center justify-center">
+        <div className="text-[var(--color-primary)] text-xl animate-pulse">Chargement...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--color-background)]">
