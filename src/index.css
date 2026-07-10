@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #0f111a;
+  --color-surface: #1a1d2d;
+  --color-surface-hover: #24283b;
+  --color-primary: #7aa2f7;
+  --color-text: #a9b1d6;
+  --color-text-strong: #c0caf5;
+  --color-text-muted: #565f89;
+  --color-border: #292e42;
+}
+
+@layer base {
+  body {
+    @apply bg-[var(--color-background)] text-[var(--color-text)] antialiased min-h-screen;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-[var(--color-surface)]/80 backdrop-blur-md border border-[var(--color-border)] rounded-xl shadow-lg;
+  }
+  
+  .interactive-element {
+    @apply transition-all duration-200 ease-in-out hover:scale-[1.02];
+  }
+}
