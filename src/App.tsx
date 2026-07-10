@@ -35,9 +35,9 @@ function App() {
       // Fetch links
       const { data: linksData } = await supabase.from('links').select('*').order('created_at', { ascending: true });
 
-      const sections: Section[] = (sectionsData || []).map(sec => ({
+      const sections: Section[] = (sectionsData || []).map((sec: any) => ({
         ...sec,
-        items: (linksData || []).filter(link => link.section_id === sec.id)
+        items: (linksData || []).filter((link: any) => link.section_id === sec.id)
       }));
 
       setConfig({ title, sections });
