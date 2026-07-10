@@ -1,4 +1,4 @@
-import React from 'react';
+
 import * as LucideIcons from 'lucide-react';
 
 interface DynamicIconProps {

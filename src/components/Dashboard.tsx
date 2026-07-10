@@ -1,4 +1,4 @@
-import React from 'react';
+
 import type { Section, LinkItem } from '../types';
 import { SectionCard } from './SectionCard';
 import { Plus } from 'lucide-react';

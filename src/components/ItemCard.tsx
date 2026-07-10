@@ -1,4 +1,4 @@
-import React from 'react';
+
 import type { LinkItem } from '../types';
 import { DynamicIcon } from './DynamicIcon';
 import { Edit2, Trash2 } from 'lucide-react';

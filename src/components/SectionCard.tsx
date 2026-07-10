@@ -1,4 +1,4 @@
-import React from 'react';
+
 import type { Section, LinkItem } from '../types';
 import { ItemCard } from './ItemCard';
 import { Plus, Edit2, Trash2 } from 'lucide-react';

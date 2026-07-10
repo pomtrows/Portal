@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Search, Settings, Edit3, X, Check } from 'lucide-react';
 
 interface HeaderProps {
