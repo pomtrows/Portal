@@ -1,19 +1,79 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0f111a;
-  --color-surface: #1a1d2d;
-  --color-surface-hover: #24283b;
-  --color-primary: #7aa2f7;
-  --color-text: #a9b1d6;
-  --color-text-strong: #c0caf5;
-  --color-text-muted: #565f89;
-  --color-border: #292e42;
+  --color-background: var(--theme-background);
+  --color-surface: var(--theme-surface);
+  --color-surface-hover: var(--theme-surface-hover);
+  --color-primary: var(--theme-primary);
+  --color-text: var(--theme-text);
+  --color-text-strong: var(--theme-text-strong);
+  --color-text-muted: var(--theme-text-muted);
+  --color-border: var(--theme-border);
 }
 
 @layer base {
+  /* Default / Tokyo Night */
+  :root, [data-theme="tokyo-night"] {
+    --theme-background: #0f111a;
+    --theme-surface: #1a1d2d;
+    --theme-surface-hover: #24283b;
+    --theme-primary: #7aa2f7;
+    --theme-text: #a9b1d6;
+    --theme-text-strong: #c0caf5;
+    --theme-text-muted: #565f89;
+    --theme-border: #292e42;
+  }
+
+  /* Dashy Light */
+  [data-theme="light"] {
+    --theme-background: #f1f5f9;
+    --theme-surface: #ffffff;
+    --theme-surface-hover: #f8fafc;
+    --theme-primary: #3b82f6;
+    --theme-text: #334155;
+    --theme-text-strong: #0f172a;
+    --theme-text-muted: #64748b;
+    --theme-border: #e2e8f0;
+  }
+
+  /* Nord */
+  [data-theme="nord"] {
+    --theme-background: #2e3440;
+    --theme-surface: #3b4252;
+    --theme-surface-hover: #434c5e;
+    --theme-primary: #88c0d0;
+    --theme-text: #d8dee9;
+    --theme-text-strong: #eceff4;
+    --theme-text-muted: #4c566a;
+    --theme-border: #4c566a;
+  }
+
+  /* Dracula */
+  [data-theme="dracula"] {
+    --theme-background: #282a36;
+    --theme-surface: #44475a;
+    --theme-surface-hover: #6272a4;
+    --theme-primary: #ff79c6;
+    --theme-text: #f8f8f2;
+    --theme-text-strong: #ffffff;
+    --theme-text-muted: #6272a4;
+    --theme-border: #6272a4;
+  }
+
+  /* Midnight (OLED) */
+  [data-theme="midnight"] {
+    --theme-background: #000000;
+    --theme-surface: #111111;
+    --theme-surface-hover: #222222;
+    --theme-primary: #ffffff;
+    --theme-text: #cccccc;
+    --theme-text-strong: #ffffff;
+    --theme-text-muted: #666666;
+    --theme-border: #333333;
+  }
+
   body {
-    @apply bg-[var(--color-background)] text-[var(--color-text)] antialiased min-h-screen;
+    @apply bg-[var(--color-background)] text-[var(--color-text)] antialiased min-h-screen transition-colors duration-300;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }

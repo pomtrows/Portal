@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Search, Settings, Edit3, X, Check } from 'lucide-react';
+import { Search, Settings, Edit3, X, Check, Palette } from 'lucide-react';
+import { useTheme, type Theme } from '../hooks/useTheme';
 
 interface HeaderProps {
   title: string;
@@ -20,6 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(title);
+  const { theme, setTheme } = useTheme();
 
   const handleTitleSubmit = () => {
     if (tempTitle.trim()) {
@@ -85,6 +87,25 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-3 flex-1 justify-end">
+        <div className="relative group">
+          <button className="flex items-center justify-center p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-black/10 transition-colors">
+            <Palette size={20} />
+          </button>
+          <div className="absolute right-0 top-full mt-2 w-36 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+            {(['tokyo-night', 'light', 'nord', 'dracula', 'midnight'] as Theme[]).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTheme(t)}
+                className={`w-full text-left px-4 py-2 text-sm capitalize transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                  theme === t ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]'
+                }`}
+              >
+                {t.replace('-', ' ')}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <button
           onClick={onToggleEditMode}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
