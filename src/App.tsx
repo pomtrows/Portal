@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { SectionModal, ItemModal } from './components/EditModals';
+import { Auth } from './components/Auth';
 import type { DashboardConfig, Section, LinkItem } from './types';
 import { supabase } from './utils/supabase';
+import type { Session } from '@supabase/supabase-js';
 
 function App() {
+  const [session, setSession] = useState<Session | null>(null);
   const [config, setConfig] = useState<DashboardConfig>({ title: 'Mon Portail', sections: [] });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -19,20 +22,43 @@ function App() {
   const [editingItem, setEditingItem] = useState<{ sectionId: string, item: LinkItem | null } | null>(null);
 
   useEffect(() => {
-    fetchData();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (session) {
+      fetchData();
+    }
+  }, [session]);
+
   const fetchData = async () => {
+    if (!session?.user) return;
+    
     setLoading(true);
     try {
       // Fetch title
-      const { data: configData } = await supabase.from('config').select('*').eq('id', 'main').single();
+      const { data: configData } = await supabase
+        .from('config')
+        .select('*')
+        .eq('id', `main_${session.user.id}`)
+        .single();
+        
       const title = configData?.title || 'Mon Portail';
 
-      // Fetch sections
+      // Fetch sections (RLS handles user_id filtering)
       const { data: sectionsData } = await supabase.from('sections').select('*').order('created_at', { ascending: true });
       
-      // Fetch links
+      // Fetch links (RLS handles user_id filtering)
       const { data: linksData } = await supabase.from('links').select('*').order('created_at', { ascending: true });
 
       const sections: Section[] = (sectionsData || []).map((sec: any) => ({
@@ -49,8 +75,13 @@ function App() {
   };
 
   const handleTitleChange = async (newTitle: string) => {
+    if (!session?.user) return;
     setConfig(prev => ({ ...prev, title: newTitle }));
-    await supabase.from('config').upsert({ id: 'main', title: newTitle });
+    await supabase.from('config').upsert({ 
+      id: `main_${session.user.id}`, 
+      title: newTitle,
+      user_id: session.user.id
+    });
   };
 
   // Section handlers
@@ -66,7 +97,6 @@ function App() {
 
   const handleDeleteSection = async (id: string) => {
     if (confirm("Êtes-vous sûr de vouloir supprimer cette section et tous ses liens ?")) {
-      // Optimistic UI update
       setConfig(prev => ({
         ...prev,
         sections: prev.sections.filter(s => s.id !== id)
@@ -76,6 +106,8 @@ function App() {
   };
 
   const handleSaveSection = async (sectionData: Partial<Section>) => {
+    if (!session?.user) return;
+    
     if (editingSection) {
       // Update
       const updatedSection = { ...editingSection, ...sectionData };
@@ -96,7 +128,11 @@ function App() {
         ...prev,
         sections: [...prev.sections, newSection]
       }));
-      await supabase.from('sections').insert({ id: newId, title: newSection.title });
+      await supabase.from('sections').insert({ 
+        id: newId, 
+        title: newSection.title,
+        user_id: session.user.id
+      });
     }
   };
 
@@ -126,7 +162,7 @@ function App() {
   };
 
   const handleSaveItem = async (itemData: Partial<LinkItem>) => {
-    if (!editingItem) return;
+    if (!session?.user || !editingItem) return;
     const { sectionId, item } = editingItem;
 
     if (item) {
@@ -175,10 +211,15 @@ function App() {
         title: newItem.title,
         url: newItem.url,
         description: newItem.description,
-        icon: newItem.icon
+        icon: newItem.icon,
+        user_id: session.user.id
       });
     }
   };
+
+  if (!session) {
+    return <Auth />;
+  }
 
   if (loading) {
     return (

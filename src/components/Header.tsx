@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Search, Settings, Edit3, X, Check, Palette } from 'lucide-react';
+import { Search, Settings, Edit3, X, Check, Palette, LogOut } from 'lucide-react';
 import { useTheme, type Theme } from '../hooks/useTheme';
+import { supabase } from '../utils/supabase';
 
 interface HeaderProps {
   title: string;
@@ -116,6 +117,14 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Settings size={18} className={isEditMode ? 'animate-spin-slow' : ''} />
           <span>{isEditMode ? 'Terminer' : 'Éditer'}</span>
+        </button>
+
+        <button
+          onClick={() => supabase.auth.signOut()}
+          className="flex items-center justify-center p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors ml-2"
+          title="Se déconnecter"
+        >
+          <LogOut size={20} />
         </button>
       </div>
     </header>
