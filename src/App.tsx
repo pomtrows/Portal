@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { SectionModal, ItemModal } from './components/EditModals';
+import { AccountModal } from './components/AccountModal';
 import { Auth } from './components/Auth';
 import type { DashboardConfig, Section, LinkItem } from './types';
 import { supabase } from './utils/supabase';
@@ -15,6 +16,7 @@ function App() {
   const [isEditMode, setIsEditMode] = useState(false);
 
   // Modals state
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isSectionModalOpen, setIsSectionModalOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<Section | null>(null);
   
@@ -238,6 +240,7 @@ function App() {
         onSearchChange={setSearchQuery}
         isEditMode={isEditMode}
         onToggleEditMode={() => setIsEditMode(!isEditMode)}
+        onOpenAccountModal={() => setIsAccountModalOpen(true)}
       />
 
       <main>
@@ -255,6 +258,11 @@ function App() {
       </main>
 
       {/* Modals */}
+      <AccountModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+      />
+
       <SectionModal
         isOpen={isSectionModalOpen}
         onClose={() => setIsSectionModalOpen(false)}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Settings, Edit3, X, Check, Palette, LogOut } from 'lucide-react';
+import { Search, Settings, Edit3, X, Check, Palette, LogOut, User } from 'lucide-react';
 import { useTheme, type Theme } from '../hooks/useTheme';
 import { supabase } from '../utils/supabase';
 
@@ -10,6 +10,7 @@ interface HeaderProps {
   onSearchChange: (query: string) => void;
   isEditMode: boolean;
   onToggleEditMode: () => void;
+  onOpenAccountModal: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,7 +19,8 @@ export const Header: React.FC<HeaderProps> = ({
   searchQuery,
   onSearchChange,
   isEditMode,
-  onToggleEditMode
+  onToggleEditMode,
+  onOpenAccountModal
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(title);
@@ -117,6 +119,14 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Settings size={18} className={isEditMode ? 'animate-spin-slow' : ''} />
           <span>{isEditMode ? 'Terminer' : 'Éditer'}</span>
+        </button>
+
+        <button
+          onClick={onOpenAccountModal}
+          className="flex items-center justify-center p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-black/10 transition-colors ml-2"
+          title="Mon Compte"
+        >
+          <User size={20} />
         </button>
 
         <button
