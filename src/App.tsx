@@ -348,7 +348,7 @@ function App() {
             {isEditMode && editingPageId !== page.id && (
               <button
                 onClick={() => handleDeletePage(page.id)}
-                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full transition-opacity z-10"
                 title="Supprimer la page"
               >
                 <Trash2 size={12} />

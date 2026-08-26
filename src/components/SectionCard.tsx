@@ -29,7 +29,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
           {section.title}
         </h2>
         {isEditMode && (
-          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-2 transition-opacity">
             <button
               onClick={() => onAddItem(section.id)}
               className="p-1.5 text-green-400 hover:bg-green-400/10 rounded-md transition-colors"

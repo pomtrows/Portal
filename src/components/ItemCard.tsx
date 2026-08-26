@@ -42,7 +42,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, on
       </a>
 
       {isEditMode && (
-        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-[var(--color-surface)] p-1 rounded-lg border border-[var(--color-border)] shadow-md">
+        <div className="absolute top-2 right-2 flex items-center gap-1 transition-opacity bg-[var(--color-surface)] p-1 rounded-lg border border-[var(--color-border)] shadow-md">
           <button
             onClick={() => onEdit(item)}
             className="p-1.5 text-blue-400 hover:bg-blue-400/10 rounded-md transition-colors"
