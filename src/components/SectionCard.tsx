@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import type { Section, LinkItem } from '../types';
 import { ItemCard } from './ItemCard';
 import { Plus, Edit2, Trash2, GripVertical } from 'lucide-react';
@@ -8,8 +8,8 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
 } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
 import {
   SortableContext,
   rectSortingStrategy,
