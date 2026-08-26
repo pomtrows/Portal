@@ -49,7 +49,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
       />
       
       {/* Drawer */}
-      <div className="absolute inset-y-0 right-0 w-[280px] bg-[var(--color-surface)] border-l border-[var(--color-border)] shadow-2xl flex flex-col h-full overflow-y-auto">
+      <div className="absolute inset-y-0 left-0 w-[280px] bg-[var(--color-surface)] border-r border-[var(--color-border)] shadow-2xl flex flex-col h-full overflow-y-auto">
         <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between sticky top-0 bg-[var(--color-surface)] z-10">
           <h2 className="font-bold text-lg text-[var(--color-text-strong)] truncate pr-2">{title}</h2>
           <button onClick={onClose} className="p-2 bg-[var(--color-background)] rounded-full text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] border border-[var(--color-border)]">

@@ -42,15 +42,27 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 glass-panel border-x-0 border-t-0 rounded-none mb-8 px-6 py-4 flex items-center justify-between">
-      <div className="flex items-center gap-4 flex-1">
+    <header className="sticky top-0 z-50 glass-panel border-x-0 border-t-0 rounded-none mb-8 px-6 py-4 flex items-center justify-between relative">
+      
+      {/* MOBILE BURGER (Left) */}
+      <div className="md:hidden flex items-center justify-start flex-1">
+        <button
+          onClick={onOpenMobileMenu}
+          className="p-2 -ml-2 text-[var(--color-text-strong)] hover:bg-black/10 rounded-lg transition-colors"
+        >
+          <Menu size={24} />
+        </button>
+      </div>
+
+      {/* TITLE (Left on PC, Center on Mobile) */}
+      <div className="flex items-center gap-4 flex-1 justify-center md:justify-start">
         {isEditingTitle ? (
           <div className="flex items-center gap-2">
             <input
               type="text"
               value={tempTitle}
               onChange={(e) => setTempTitle(e.target.value)}
-              className="bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-3 py-1.5 text-xl font-bold focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)]"
+              className="bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-3 py-1.5 text-xl font-bold focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)] w-full max-w-[200px]"
               autoFocus
               onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
             />
@@ -82,6 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
+      {/* PC CENTER (Search & Toggle) */}
       <div className="hidden md:flex flex-row items-center gap-4 flex-1 justify-center">
         <div className="relative w-full max-w-sm">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -112,6 +125,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
+      {/* PC RIGHT (Tools) */}
       <div className="hidden md:flex items-center gap-3 flex-1 justify-end">
         <div className="relative group">
           <button className="flex items-center justify-center p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-black/10 transition-colors" title="Mise en page">
@@ -183,14 +197,9 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
       </div>
 
-      <div className="md:hidden flex items-center justify-end flex-1">
-        <button
-          onClick={onOpenMobileMenu}
-          className="p-2 text-[var(--color-text-strong)] hover:bg-black/10 rounded-lg transition-colors"
-        >
-          <Menu size={24} />
-        </button>
-      </div>
+      {/* MOBILE EMPTY RIGHT (Balances layout) */}
+      <div className="md:hidden flex-1"></div>
+
     </header>
   );
 };
