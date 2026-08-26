@@ -31,12 +31,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const getColumnsClass = () => {
     switch (columnCount) {
-      case 1: return 'columns-1 gap-6';
-      case 2: return 'columns-1 md:columns-2 gap-6';
-      case 3: return 'columns-1 md:columns-2 lg:columns-3 gap-6';
-      case 4: return 'columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-6';
-      case 5: return 'columns-1 md:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 gap-6';
-      default: return 'columns-1 md:columns-2 lg:columns-3 gap-6';
+      case 1: return 'grid grid-cols-1 gap-6 items-start';
+      case 2: return 'grid grid-cols-1 md:grid-cols-2 gap-6 items-start';
+      case 3: return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start';
+      case 4: return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start';
+      case 5: return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 items-start';
+      default: return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start';
     }
   };
 
