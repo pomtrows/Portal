@@ -18,6 +18,67 @@ interface RssWidgetCardProps {
   onDeleteSection: (id: string) => void;
 }
 
+function parseXmlFeed(xmlText: string): RssItem[] {
+  try {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+    const xmlItems = xmlDoc.querySelectorAll('item, entry');
+
+    if (!xmlItems || xmlItems.length === 0) return [];
+
+    const parsed: RssItem[] = [];
+    xmlItems.forEach((el, index) => {
+      if (index >= 6) return;
+      const title = el.querySelector('title')?.textContent?.trim() || 'Sans titre';
+      const link = el.querySelector('link')?.textContent?.trim() || el.querySelector('link')?.getAttribute('href')?.trim() || '#';
+      const pubDate = el.querySelector('pubDate, published, updated')?.textContent?.trim() || undefined;
+      const description = el.querySelector('description, summary')?.textContent?.replace(/<[^>]*>?/gm, '')?.trim() || '';
+      parsed.push({ title, link, pubDate, description });
+    });
+
+    return parsed;
+  } catch {
+    return [];
+  }
+}
+
+function parseJinaMarkdown(text: string): RssItem[] {
+  const items: RssItem[] = [];
+  const blocks = text.split(/(?=###\s+)/g);
+  
+  for (const block of blocks) {
+    if (!block.trim().startsWith('###')) continue;
+    const lines = block.trim().split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length === 0) continue;
+
+    const linkMatch = block.match(/https:\/\/[^\s\)\>]+/);
+    const link = linkMatch ? linkMatch[0] : '#';
+
+    let title = '';
+    const titleMatch = block.match(/###\s+\[([^\]]+)\]/);
+    if (titleMatch && titleMatch[1]) {
+      title = titleMatch[1];
+    } else {
+      const slug = link.split('/').pop()?.replace(/-\d+$/, '')?.replace(/-/g, ' ');
+      if (slug && slug.length > 5) {
+        title = slug.charAt(0).toUpperCase() + slug.slice(1);
+      }
+    }
+
+    const dateMatch = block.match(/(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s+\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\s+[\d:]+\s+GMT/i) || block.match(/\d{4}-\d{2}-\d{2}T[\d:]+/);
+    const pubDate = dateMatch ? dateMatch[0] : undefined;
+
+    const descLines = lines.filter(l => !l.startsWith('#') && !l.startsWith('http') && !l.startsWith('[http') && l !== pubDate);
+    const description = descLines.join(' ');
+
+    if (title || link !== '#') {
+      items.push({ title: title || 'Article', link, pubDate, description });
+    }
+  }
+
+  return items.slice(0, 6);
+}
+
 export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
   section,
   isEditMode,
@@ -52,12 +113,16 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
     setLoading(true);
     setError(null);
 
+    const targetUrl = section.widget_url.trim();
+
+    // 1. Essai direct via rss2json
     try {
-      // 1ère tentative : rss2json
-      const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(section.widget_url)}`);
+      const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(targetUrl)}`, {
+        signal: AbortSignal.timeout(6000)
+      });
       if (res.ok) {
         const data = await res.json();
-        if (data.status === 'ok' && Array.isArray(data.items)) {
+        if (data.status === 'ok' && Array.isArray(data.items) && data.items.length > 0) {
           const parsed = data.items.slice(0, 6).map((item: any) => ({
             title: item.title?.replace(/<[^>]*>?/gm, '') || 'Sans titre',
             link: item.link || '#',
@@ -69,36 +134,52 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
           return;
         }
       }
-
-      // Fallback : AllOrigins CORS proxy + DOMParser
-      const fallbackRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(section.widget_url)}`);
-      if (!fallbackRes.ok) throw new Error('Impossible de charger le flux RSS.');
-      const fallbackData = await fallbackRes.json();
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(fallbackData.contents, 'text/xml');
-      const xmlItems = xmlDoc.querySelectorAll('item, entry');
-
-      if (!xmlItems || xmlItems.length === 0) {
-        throw new Error('Aucun article trouvé dans ce flux.');
-      }
-
-      const parsedItems: RssItem[] = [];
-      xmlItems.forEach((el, index) => {
-        if (index >= 6) return;
-        const title = el.querySelector('title')?.textContent || 'Sans titre';
-        const link = el.querySelector('link')?.textContent || el.querySelector('link')?.getAttribute('href') || '#';
-        const pubDate = el.querySelector('pubDate, published, updated')?.textContent || undefined;
-        const description = el.querySelector('description, summary')?.textContent?.replace(/<[^>]*>?/gm, '') || '';
-        parsedItems.push({ title, link, pubDate, description });
-      });
-
-      setItems(parsedItems);
-    } catch (err: any) {
-      console.error('RSS Fetch error:', err);
-      setError(err?.message || 'Erreur lors du chargement du flux.');
-    } finally {
-      setLoading(false);
+    } catch {
+      // Continuer vers les fallbacks
     }
+
+    // 2. Essai via AllOrigins proxy
+    try {
+      const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`, {
+        signal: AbortSignal.timeout(6000)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.contents) {
+          const parsed = parseXmlFeed(data.contents);
+          if (parsed.length > 0) {
+            setItems(parsed);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+    } catch {
+      // Continuer vers fallback 3
+    }
+
+    // 3. Essai via Jina Reader (contourne les protections Cloudflare / Akamai)
+    try {
+      const res = await fetch(`https://r.jina.ai/${targetUrl}`, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(8000)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const content = data.data?.content || '';
+        const parsed = parseJinaMarkdown(content);
+        if (parsed.length > 0) {
+          setItems(parsed);
+          setLoading(false);
+          return;
+        }
+      }
+    } catch {
+      // Échec complet
+    }
+
+    setError('Impossible de récupérer le flux RSS (CORS ou flux indisponible).');
+    setLoading(false);
   }, [section.widget_url]);
 
   useEffect(() => {
