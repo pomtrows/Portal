@@ -11,6 +11,9 @@ import { Plus, Trash2 } from 'lucide-react';
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
+  const [currentProfile, setCurrentProfile] = useState<'perso' | 'pro'>(() => {
+    return (localStorage.getItem('portal-profile') as 'perso' | 'pro') || 'perso';
+  });
   const [config, setConfig] = useState<DashboardConfig>({ title: 'Mon Portail', pages: [], sections: [] });
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,7 +51,13 @@ function App() {
     if (session) {
       fetchData();
     }
-  }, [session]);
+  }, [session, currentProfile]);
+
+  const handleChangeProfile = (p: 'perso' | 'pro') => {
+    setCurrentProfile(p);
+    localStorage.setItem('portal-profile', p);
+    setActivePageId(null);
+  };
 
   const fetchData = async () => {
     if (!session?.user) return;
@@ -59,13 +68,13 @@ function App() {
       const { data: configData } = await supabase
         .from('config')
         .select('*')
-        .eq('id', `main_${session.user.id}`)
+        .eq('id', `${currentProfile}_${session.user.id}`)
         .single();
         
-      const title = configData?.title || 'Mon Portail';
+      const title = configData?.title || (currentProfile === 'pro' ? 'Mon Portail Pro' : 'Mon Portail');
 
       // Fetch pages
-      const { data: pagesData } = await supabase.from('pages').select('*').order('created_at', { ascending: true });
+      const { data: pagesData } = await supabase.from('pages').select('*').eq('profile', currentProfile).order('created_at', { ascending: true });
       const pages: Page[] = pagesData || [];
 
       // Fetch sections (RLS handles user_id filtering)
@@ -81,7 +90,7 @@ function App() {
 
       setConfig({ title, pages, sections });
       
-      if (pages.length > 0 && !activePageId) {
+      if (pages.length > 0 && (!activePageId || !pages.find(p => p.id === activePageId))) {
         setActivePageId(pages[0].id);
       }
     } catch (error) {
@@ -96,7 +105,7 @@ function App() {
     if (!session?.user) return;
     setConfig(prev => ({ ...prev, title: newTitle }));
     await supabase.from('config').upsert({ 
-      id: `main_${session.user.id}`, 
+      id: `${currentProfile}_${session.user.id}`, 
       title: newTitle,
       user_id: session.user.id
     });
@@ -106,7 +115,7 @@ function App() {
   const handleAddPage = async () => {
     if (!session?.user) return;
     const newId = crypto.randomUUID();
-    const newPage: Page = { id: newId, title: 'Nouvelle page' };
+    const newPage: Page = { id: newId, title: 'Nouvelle page', profile: currentProfile };
     
     setConfig(prev => ({ ...prev, pages: [...prev.pages, newPage] }));
     setActivePageId(newId);
@@ -116,6 +125,7 @@ function App() {
     const { error } = await supabase.from('pages').insert({
       id: newId,
       title: newPage.title,
+      profile: currentProfile,
       user_id: session.user.id
     });
     if (error) console.error("Error inserting page:", error);
@@ -313,6 +323,8 @@ function App() {
         isEditMode={isEditMode}
         onToggleEditMode={() => setIsEditMode(!isEditMode)}
         onOpenAccountModal={() => setIsAccountModalOpen(true)}
+        profile={currentProfile}
+        onChangeProfile={handleChangeProfile}
       />
 
       {/* Tabs */}

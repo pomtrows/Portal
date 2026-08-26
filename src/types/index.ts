@@ -11,6 +11,7 @@ export interface LinkItem {
 export interface Page {
   id: string;
   title: string;
+  profile?: 'perso' | 'pro';
   created_at?: string;
 }
 

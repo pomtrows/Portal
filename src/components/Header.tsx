@@ -12,6 +12,8 @@ interface HeaderProps {
   isEditMode: boolean;
   onToggleEditMode: () => void;
   onOpenAccountModal: () => void;
+  profile: 'perso' | 'pro';
+  onChangeProfile: (p: 'perso' | 'pro') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -21,7 +23,9 @@ export const Header: React.FC<HeaderProps> = ({
   onSearchChange,
   isEditMode,
   onToggleEditMode,
-  onOpenAccountModal
+  onOpenAccountModal,
+  profile,
+  onChangeProfile
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(title);
@@ -76,7 +80,22 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      <div className="flex items-center gap-4 flex-1 justify-center">
+      <div className="flex flex-col items-center gap-3 flex-1 justify-center">
+        <div className="flex bg-black/10 border border-[var(--color-border)] rounded-full p-1 w-48">
+          <button 
+             className={`flex-1 py-1 rounded-full text-sm font-semibold transition-all ${profile === 'perso' ? 'bg-[var(--color-surface)] text-[var(--color-text-strong)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'}`}
+             onClick={() => onChangeProfile('perso')}
+          >
+            Perso
+          </button>
+          <button 
+             className={`flex-1 py-1 rounded-full text-sm font-semibold transition-all ${profile === 'pro' ? 'bg-[var(--color-surface)] text-[var(--color-text-strong)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'}`}
+             onClick={() => onChangeProfile('pro')}
+          >
+            Pro
+          </button>
+        </div>
+
         <div className="relative w-full max-w-md">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search size={18} className="text-[var(--color-text-muted)]" />
