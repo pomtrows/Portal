@@ -84,7 +84,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setTempTitle(title);
                   setIsEditingTitle(true);
                 }}
-                className="opacity-0 group-hover:opacity-100 p-1 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all"
+                className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all"
                 title="Renommer le portail"
               >
                 <Edit3 size={16} />
