@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
+import { SectionCard } from './components/SectionCard';
+import { ItemCard } from './components/ItemCard';
 import { SectionModal, ItemModal } from './components/EditModals';
-import { AccountModal } from './components/AccountModal';
+import { MobileMenu } from './components/MobileMenu';
 import { Auth } from './components/Auth';
+import { AccountModal } from './components/AccountModal';
+import { useLayout } from './hooks/useLayout';
 import type { DashboardConfig, Section, LinkItem, Page } from './types';
+import { Plus, Trash2 } from 'lucide-react';
 import { supabase } from './utils/supabase';
 import type { Session } from '@supabase/supabase-js';
-import { Plus, Trash2 } from 'lucide-react';
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -20,6 +24,7 @@ function App() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Modals state
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
@@ -325,10 +330,29 @@ function App() {
         onOpenAccountModal={() => setIsAccountModalOpen(true)}
         profile={currentProfile}
         onChangeProfile={handleChangeProfile}
+        onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
+      />
+
+      <MobileMenu
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        title={config.title}
+        pages={config.pages}
+        activePageId={activePageId}
+        onSelectPage={setActivePageId}
+        onAddPage={handleAddPage}
+        onDeletePage={handleDeletePage}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        profile={currentProfile}
+        onChangeProfile={handleChangeProfile}
+        isEditMode={isEditMode}
+        onToggleEditMode={() => setIsEditMode(!isEditMode)}
+        onOpenAccountModal={() => setIsAccountModalOpen(true)}
       />
 
       {/* Tabs */}
-      <div className="max-w-[1400px] mx-auto px-6 py-4 flex flex-wrap gap-2 items-center mb-2">
+      <div className="hidden md:flex max-w-[1400px] mx-auto px-6 py-4 flex-wrap gap-2 items-center mb-2">
         {config.pages.map(page => (
           <div key={page.id} className="relative group flex items-center">
             {editingPageId === page.id ? (

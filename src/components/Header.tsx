@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Settings, Edit3, X, Check, Palette, LogOut, User, LayoutGrid } from 'lucide-react';
+import { Search, Settings, Edit3, X, Check, Palette, LogOut, User, LayoutGrid, Menu } from 'lucide-react';
 import { useTheme, type Theme } from '../hooks/useTheme';
 import { useLayout, type ColumnCount } from '../hooks/useLayout';
 import { supabase } from '../utils/supabase';
@@ -14,6 +14,7 @@ interface HeaderProps {
   onOpenAccountModal: () => void;
   profile: 'perso' | 'pro';
   onChangeProfile: (p: 'perso' | 'pro') => void;
+  onOpenMobileMenu: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -25,7 +26,8 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleEditMode,
   onOpenAccountModal,
   profile,
-  onChangeProfile
+  onChangeProfile,
+  onOpenMobileMenu
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(title);
@@ -80,7 +82,7 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      <div className="flex flex-col items-center gap-3 flex-1 justify-center">
+      <div className="hidden md:flex flex-col items-center gap-3 flex-1 justify-center">
         <div className="flex bg-black/10 border border-[var(--color-border)] rounded-full p-1 w-48">
           <button 
              className={`flex-1 py-1 rounded-full text-sm font-semibold transition-all ${profile === 'perso' ? 'bg-[var(--color-surface)] text-[var(--color-text-strong)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'}`}
@@ -110,7 +112,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      <div className="flex items-center gap-3 flex-1 justify-end">
+      <div className="hidden md:flex items-center gap-3 flex-1 justify-end">
         <div className="relative group">
           <button className="flex items-center justify-center p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-black/10 transition-colors" title="Mise en page">
             <LayoutGrid size={20} />
@@ -178,6 +180,15 @@ export const Header: React.FC<HeaderProps> = ({
           title="Se déconnecter"
         >
           <LogOut size={20} />
+        </button>
+      </div>
+
+      <div className="md:hidden flex items-center justify-end flex-1">
+        <button
+          onClick={onOpenMobileMenu}
+          className="p-2 text-[var(--color-text-strong)] hover:bg-black/10 rounded-lg transition-colors"
+        >
+          <Menu size={24} />
         </button>
       </div>
     </header>
