@@ -8,8 +8,15 @@ export interface LinkItem {
   created_at?: string;
 }
 
+export interface Page {
+  id: string;
+  title: string;
+  created_at?: string;
+}
+
 export interface Section {
   id: string;
+  page_id: string;
   title: string;
   created_at?: string;
   items: LinkItem[];
@@ -17,5 +24,6 @@ export interface Section {
 
 export interface DashboardConfig {
   title: string;
+  pages: Page[];
   sections: Section[];
 }

@@ -4,13 +4,15 @@ import { Dashboard } from './components/Dashboard';
 import { SectionModal, ItemModal } from './components/EditModals';
 import { AccountModal } from './components/AccountModal';
 import { Auth } from './components/Auth';
-import type { DashboardConfig, Section, LinkItem } from './types';
+import type { DashboardConfig, Section, LinkItem, Page } from './types';
 import { supabase } from './utils/supabase';
 import type { Session } from '@supabase/supabase-js';
+import { Plus, Trash2 } from 'lucide-react';
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
-  const [config, setConfig] = useState<DashboardConfig>({ title: 'Mon Portail', sections: [] });
+  const [config, setConfig] = useState<DashboardConfig>({ title: 'Mon Portail', pages: [], sections: [] });
+  const [activePageId, setActivePageId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
@@ -22,6 +24,10 @@ function App() {
   
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<{ sectionId: string, item: LinkItem | null } | null>(null);
+
+  // Page Editing
+  const [editingPageId, setEditingPageId] = useState<string | null>(null);
+  const [tempPageTitle, setTempPageTitle] = useState('');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -57,6 +63,10 @@ function App() {
         
       const title = configData?.title || 'Mon Portail';
 
+      // Fetch pages
+      const { data: pagesData } = await supabase.from('pages').select('*').order('created_at', { ascending: true });
+      const pages: Page[] = pagesData || [];
+
       // Fetch sections (RLS handles user_id filtering)
       const { data: sectionsData } = await supabase.from('sections').select('*').order('created_at', { ascending: true });
       
@@ -68,7 +78,11 @@ function App() {
         items: (linksData || []).filter((link: any) => link.section_id === sec.id)
       }));
 
-      setConfig({ title, sections });
+      setConfig({ title, pages, sections });
+      
+      if (pages.length > 0 && !activePageId) {
+        setActivePageId(pages[0].id);
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -84,6 +98,57 @@ function App() {
       title: newTitle,
       user_id: session.user.id
     });
+  };
+
+  // Page Handlers
+  const handleAddPage = async () => {
+    if (!session?.user) return;
+    const newId = `page-${Date.now()}`;
+    const newPage: Page = { id: newId, title: 'Nouvelle page' };
+    
+    setConfig(prev => ({ ...prev, pages: [...prev.pages, newPage] }));
+    setActivePageId(newId);
+    setEditingPageId(newId);
+    setTempPageTitle('Nouvelle page');
+
+    await supabase.from('pages').insert({
+      id: newId,
+      title: newPage.title,
+      user_id: session.user.id
+    });
+  };
+
+  const handleSavePageTitle = async (pageId: string) => {
+    if (!session?.user || !tempPageTitle.trim()) {
+      setEditingPageId(null);
+      return;
+    }
+
+    setConfig(prev => ({
+      ...prev,
+      pages: prev.pages.map(p => p.id === pageId ? { ...p, title: tempPageTitle } : p)
+    }));
+    setEditingPageId(null);
+
+    await supabase.from('pages').update({ title: tempPageTitle }).eq('id', pageId);
+  };
+
+  const handleDeletePage = async (pageId: string) => {
+    if (confirm("Êtes-vous sûr de vouloir supprimer cette page et tout son contenu ?")) {
+      setConfig(prev => {
+        const newPages = prev.pages.filter(p => p.id !== pageId);
+        return {
+          ...prev,
+          pages: newPages,
+          sections: prev.sections.filter(s => s.page_id !== pageId)
+        };
+      });
+      if (activePageId === pageId) {
+        const remaining = config.pages.filter(p => p.id !== pageId);
+        setActivePageId(remaining.length > 0 ? remaining[0].id : null);
+      }
+      await supabase.from('pages').delete().eq('id', pageId);
+    }
   };
 
   // Section handlers
@@ -108,7 +173,7 @@ function App() {
   };
 
   const handleSaveSection = async (sectionData: Partial<Section>) => {
-    if (!session?.user) return;
+    if (!session?.user || !activePageId) return;
     
     if (editingSection) {
       // Update
@@ -123,6 +188,7 @@ function App() {
       const newId = `sec-${Date.now()}`;
       const newSection: Section = {
         id: newId,
+        page_id: activePageId,
         title: sectionData.title || 'Nouvelle section',
         items: []
       };
@@ -132,6 +198,7 @@ function App() {
       }));
       await supabase.from('sections').insert({ 
         id: newId, 
+        page_id: activePageId,
         title: newSection.title,
         user_id: session.user.id
       });
@@ -231,6 +298,8 @@ function App() {
     );
   }
 
+  const currentSections = config.sections.filter(s => s.page_id === activePageId);
+
   return (
     <div className="min-h-screen bg-[var(--color-background)]">
       <Header
@@ -243,18 +312,79 @@ function App() {
         onOpenAccountModal={() => setIsAccountModalOpen(true)}
       />
 
+      {/* Tabs */}
+      <div className="max-w-[1400px] mx-auto px-6 py-4 flex flex-wrap gap-2 items-center mb-2">
+        {config.pages.map(page => (
+          <div key={page.id} className="relative group flex items-center">
+            {editingPageId === page.id ? (
+              <input
+                autoFocus
+                value={tempPageTitle}
+                onChange={e => setTempPageTitle(e.target.value)}
+                onBlur={() => handleSavePageTitle(page.id)}
+                onKeyDown={e => e.key === 'Enter' && handleSavePageTitle(page.id)}
+                className="px-4 py-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-primary)] text-[var(--color-text-strong)] focus:outline-none"
+              />
+            ) : (
+              <button
+                onClick={() => setActivePageId(page.id)}
+                onDoubleClick={() => {
+                  if (isEditMode) {
+                    setEditingPageId(page.id);
+                    setTempPageTitle(page.title);
+                  }
+                }}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activePageId === page.id 
+                    ? 'bg-[var(--color-primary)] text-white shadow-sm' 
+                    : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]'
+                }`}
+              >
+                {page.title}
+              </button>
+            )}
+            
+            {isEditMode && editingPageId !== page.id && (
+              <button
+                onClick={() => handleDeletePage(page.id)}
+                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                title="Supprimer la page"
+              >
+                <Trash2 size={12} />
+              </button>
+            )}
+          </div>
+        ))}
+
+        {isEditMode && (
+          <button
+            onClick={handleAddPage}
+            className="p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface)] transition-colors ml-2"
+            title="Ajouter une page"
+          >
+            <Plus size={20} />
+          </button>
+        )}
+      </div>
+
       <main>
-        <Dashboard
-          sections={config.sections}
-          searchQuery={searchQuery}
-          isEditMode={isEditMode}
-          onAddSection={handleAddSection}
-          onEditSection={handleEditSection}
-          onDeleteSection={handleDeleteSection}
-          onAddItem={handleAddItem}
-          onEditItem={handleEditItem}
-          onDeleteItem={handleDeleteItem}
-        />
+        {activePageId ? (
+          <Dashboard
+            sections={currentSections}
+            searchQuery={searchQuery}
+            isEditMode={isEditMode}
+            onAddSection={handleAddSection}
+            onEditSection={handleEditSection}
+            onDeleteSection={handleDeleteSection}
+            onAddItem={handleAddItem}
+            onEditItem={handleEditItem}
+            onDeleteItem={handleDeleteItem}
+          />
+        ) : (
+          <div className="text-center py-20 text-[var(--color-text-muted)]">
+            {isEditMode ? "Créez une page pour commencer." : "Aucune page disponible."}
+          </div>
+        )}
       </main>
 
       {/* Modals */}
