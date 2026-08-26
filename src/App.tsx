@@ -80,10 +80,10 @@ function App() {
       const pages: Page[] = pagesData || [];
 
       // Fetch sections (RLS handles user_id filtering)
-      const { data: sectionsData } = await supabase.from('sections').select('*').order('created_at', { ascending: true });
+      const { data: sectionsData } = await supabase.from('sections').select('*').order('position', { ascending: true }).order('created_at', { ascending: true });
       
       // Fetch links (RLS handles user_id filtering)
-      const { data: linksData } = await supabase.from('links').select('*').order('created_at', { ascending: true });
+      const { data: linksData } = await supabase.from('links').select('*').order('position', { ascending: true }).order('created_at', { ascending: true });
 
       const sections: Section[] = (sectionsData || []).map((sec: any) => ({
         ...sec,
@@ -301,6 +301,50 @@ function App() {
     }
   };
 
+  const handleReorderSections = async (newSections: Section[]) => {
+    if (!session?.user) return;
+    
+    // Optimistic UI update
+    setConfig(prev => ({ ...prev, sections: newSections }));
+
+    // Send the array of updates to Supabase
+    const updates = newSections.map((s, index) => ({
+      id: s.id,
+      page_id: s.page_id,
+      title: s.title,
+      position: index,
+      user_id: session.user.id
+    }));
+    
+    await supabase.from('sections').upsert(updates, { onConflict: 'id' });
+  };
+
+  const handleReorderItems = async (sectionId: string, newItems: LinkItem[]) => {
+    if (!session?.user) return;
+
+    // Optimistic UI update
+    setConfig(prev => ({
+      ...prev,
+      sections: prev.sections.map(s => 
+        s.id === sectionId ? { ...s, items: newItems } : s
+      )
+    }));
+
+    // Send the array of updates to Supabase
+    const updates = newItems.map((item, index) => ({
+      id: item.id,
+      section_id: item.section_id,
+      title: item.title,
+      url: item.url,
+      description: item.description,
+      icon: item.icon,
+      position: index,
+      user_id: session.user.id
+    }));
+
+    await supabase.from('links').upsert(updates, { onConflict: 'id' });
+  };
+
   if (!session) {
     return <Auth />;
   }
@@ -415,6 +459,8 @@ function App() {
             onAddItem={handleAddItem}
             onEditItem={handleEditItem}
             onDeleteItem={handleDeleteItem}
+            onReorderSections={handleReorderSections}
+            onReorderItems={handleReorderItems}
           />
         ) : (
           <div className="text-center py-20 text-[var(--color-text-muted)]">

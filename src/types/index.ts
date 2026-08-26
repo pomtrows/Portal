@@ -5,6 +5,7 @@ export interface LinkItem {
   url: string;
   description?: string;
   icon?: string; // lucide icon name or URL
+  position?: number;
   created_at?: string;
 }
 
@@ -19,6 +20,7 @@ export interface Section {
   id: string;
   page_id: string;
   title: string;
+  position?: number;
   created_at?: string;
   items: LinkItem[];
 }

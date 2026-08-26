@@ -1,7 +1,9 @@
-
+﻿import React from 'react';
 import type { LinkItem } from '../types';
 import { DynamicIcon } from './DynamicIcon';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, GripVertical } from 'lucide-react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface ItemCardProps {
   item: LinkItem;
@@ -11,20 +13,43 @@ interface ItemCardProps {
 }
 
 export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, onDelete }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: item.id, disabled: !isEditMode });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
   return (
-    <div className="group relative">
+    <div ref={setNodeRef} style={style} className={"group relative " + (isDragging ? 'z-50' : '')}>
       <a
         href={isEditMode ? undefined : item.url}
         target={isEditMode ? undefined : "_blank"}
         rel="noopener noreferrer"
-        className={`block h-full p-4 glass-panel interactive-element bg-black/10 hover:bg-[var(--color-surface-hover)] border-[var(--color-border)]/50 ${
-          isEditMode ? 'cursor-default' : 'cursor-pointer'
-        }`}
+        className={"block h-full p-4 glass-panel interactive-element bg-black/10 hover:bg-[var(--color-surface-hover)] border-[var(--color-border)]/50 " + (isEditMode ? 'cursor-default ' : 'cursor-pointer ')}
         onClick={(e) => {
           if (isEditMode) e.preventDefault();
         }}
       >
         <div className="flex items-start gap-4">
+          {isEditMode && (
+            <div
+              {...attributes}
+              {...listeners}
+              className="cursor-grab hover:bg-black/10 p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors -ml-2 self-center"
+              title="Déplacer le lien"
+            >
+              <GripVertical size={16} />
+            </div>
+          )}
           <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-primary)] overflow-hidden">
             <DynamicIcon name={item.icon} className="w-10 h-10 rounded-lg" />
           </div>
