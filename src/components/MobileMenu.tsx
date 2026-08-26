@@ -61,13 +61,13 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
           {/* Profile Toggle */}
           <div className="flex bg-black/10 border border-[var(--color-border)] rounded-full p-1">
             <button 
-              className={lex-1 py-2 rounded-full text-sm font-semibold transition-all }
+              className={`flex-1 py-2 rounded-full text-sm font-semibold transition-all ${profile === 'perso' ? 'bg-[var(--color-surface)] text-[var(--color-text-strong)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'}`}
               onClick={() => { onChangeProfile('perso'); onClose(); }}
             >
               Perso
             </button>
             <button 
-              className={lex-1 py-2 rounded-full text-sm font-semibold transition-all }
+              className={`flex-1 py-2 rounded-full text-sm font-semibold transition-all ${profile === 'pro' ? 'bg-[var(--color-surface)] text-[var(--color-text-strong)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'}`}
               onClick={() => { onChangeProfile('pro'); onClose(); }}
             >
               Pro
@@ -102,7 +102,11 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
               <div key={page.id} className="relative group flex items-center">
                 <button
                   onClick={() => { onSelectPage(page.id); onClose(); }}
-                  className={w-full text-left px-4 py-3 rounded-xl font-medium transition-colors }
+                  className={`w-full text-left px-4 py-3 rounded-xl font-medium transition-colors ${
+                    activePageId === page.id 
+                      ? 'bg-[var(--color-primary)] text-white shadow-md' 
+                      : 'bg-[var(--color-background)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] border border-[var(--color-border)]/50'
+                  }`}
                 >
                   {page.title}
                 </button>
@@ -121,10 +125,14 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
           <div className="mt-auto border-t border-[var(--color-border)] pt-4 flex flex-col gap-2">
              <button
               onClick={() => { onToggleEditMode(); onClose(); }}
-              className={lex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all }
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${
+                isEditMode 
+                  ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20' 
+                  : 'bg-[var(--color-background)] text-[var(--color-text-strong)] border border-[var(--color-border)]'
+              }`}
             >
               <Settings size={18} className={isEditMode ? 'animate-spin-slow' : ''} />
-              <span>{isEditMode ? 'Terminer l''édition' : 'Mode Édition'}</span>
+              <span>{isEditMode ? 'Terminer l\'édition' : 'Mode Édition'}</span>
             </button>
             
             <button
