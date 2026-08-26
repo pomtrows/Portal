@@ -159,3 +159,79 @@ export const ItemModal: React.FC<ItemModalProps> = ({ isOpen, onClose, onSave, i
     </div>
   );
 };
+
+interface RssModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (section: Partial<Section>) => void;
+  initialData?: Section | null;
+}
+
+export const RssModal: React.FC<RssModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
+  const [title, setTitle] = useState('');
+  const [widgetUrl, setWidgetUrl] = useState('');
+
+  useEffect(() => {
+    if (initialData) {
+      setTitle(initialData.title);
+      setWidgetUrl(initialData.widget_url || '');
+    } else {
+      setTitle('');
+      setWidgetUrl('');
+    }
+  }, [initialData, isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl w-full max-w-md p-6 shadow-2xl">
+        <h2 className="text-xl font-bold text-[var(--color-text-strong)] mb-4">
+          {initialData ? 'Modifier le flux RSS' : 'Nouveau widget RSS'}
+        </h2>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1">Titre du widget</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="ex: Actualités Le Monde, Tech News..."
+              className="w-full bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-3 py-2 focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)]"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1">URL du flux RSS (XML)</label>
+            <input
+              type="url"
+              value={widgetUrl}
+              onChange={(e) => setWidgetUrl(e.target.value)}
+              placeholder="https://example.com/rss.xml"
+              className="w-full bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-3 py-2 focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)]"
+            />
+          </div>
+        </div>
+
+        <div className="mt-6 flex justify-end gap-3">
+          <button onClick={onClose} className="px-4 py-2 rounded-md bg-[var(--color-background)] text-[var(--color-text)] hover:bg-[var(--color-border)] transition-colors">
+            Annuler
+          </button>
+          <button 
+            onClick={() => {
+              if (title.trim() && widgetUrl.trim()) {
+                onSave({ title: title.trim(), widget_url: widgetUrl.trim(), type: 'rss' });
+                onClose();
+              }
+            }}
+            className="px-4 py-2 rounded-md bg-[var(--color-primary)] text-white hover:opacity-90 transition-opacity"
+          >
+            Sauvegarder
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+

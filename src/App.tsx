@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
-import { SectionModal, ItemModal } from './components/EditModals';
+import { SectionModal, ItemModal, RssModal } from './components/EditModals';
 import { MobileMenu } from './components/MobileMenu';
 import { Auth } from './components/Auth';
 import { AccountModal } from './components/AccountModal';
@@ -27,6 +27,9 @@ function App() {
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isSectionModalOpen, setIsSectionModalOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<Section | null>(null);
+
+  const [isRssModalOpen, setIsRssModalOpen] = useState(false);
+  const [editingRssSection, setEditingRssSection] = useState<Section | null>(null);
   
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<{ sectionId: string, item: LinkItem | null } | null>(null);
@@ -173,13 +176,23 @@ function App() {
     setIsSectionModalOpen(true);
   };
 
+  const handleAddRssWidget = () => {
+    setEditingRssSection(null);
+    setIsRssModalOpen(true);
+  };
+
   const handleEditSection = (section: Section) => {
-    setEditingSection(section);
-    setIsSectionModalOpen(true);
+    if (section.type === 'rss') {
+      setEditingRssSection(section);
+      setIsRssModalOpen(true);
+    } else {
+      setEditingSection(section);
+      setIsSectionModalOpen(true);
+    }
   };
 
   const handleDeleteSection = async (id: string) => {
-    if (confirm("Êtes-vous sûr de vouloir supprimer cette section et tous ses liens ?")) {
+    if (confirm("Êtes-vous sûr de vouloir supprimer cette section / ce widget ?")) {
       setConfig(prev => ({
         ...prev,
         sections: prev.sections.filter(s => s.id !== id)
@@ -206,6 +219,8 @@ function App() {
         id: newId,
         page_id: activePageId,
         title: sectionData.title || 'Nouvelle section',
+        type: 'links',
+        position: config.sections.length,
         items: []
       };
       setConfig(prev => ({
@@ -216,6 +231,56 @@ function App() {
         id: newId, 
         page_id: activePageId,
         title: newSection.title,
+        type: 'links',
+        position: newSection.position,
+        user_id: session.user.id
+      });
+    }
+  };
+
+  const handleSaveRssSection = async (sectionData: Partial<Section>) => {
+    if (!session?.user || !activePageId) return;
+
+    if (editingRssSection) {
+      // Update
+      const updatedSection: Section = { 
+        ...editingRssSection, 
+        title: sectionData.title || editingRssSection.title,
+        widget_url: sectionData.widget_url || editingRssSection.widget_url,
+        type: 'rss'
+      };
+      setConfig(prev => ({
+        ...prev,
+        sections: prev.sections.map(s => s.id === editingRssSection.id ? updatedSection : s)
+      }));
+      await supabase.from('sections').update({ 
+        title: updatedSection.title,
+        widget_url: updatedSection.widget_url,
+        type: 'rss'
+      }).eq('id', editingRssSection.id);
+    } else {
+      // Create
+      const newId = `rss-${Date.now()}`;
+      const newSection: Section = {
+        id: newId,
+        page_id: activePageId,
+        title: sectionData.title || 'Flux RSS',
+        type: 'rss',
+        widget_url: sectionData.widget_url,
+        position: config.sections.length,
+        items: []
+      };
+      setConfig(prev => ({
+        ...prev,
+        sections: [...prev.sections, newSection]
+      }));
+      await supabase.from('sections').insert({
+        id: newId,
+        page_id: activePageId,
+        title: newSection.title,
+        type: 'rss',
+        widget_url: newSection.widget_url,
+        position: newSection.position,
         user_id: session.user.id
       });
     }
@@ -313,6 +378,8 @@ function App() {
       id: s.id,
       page_id: s.page_id,
       title: s.title,
+      type: s.type || 'links',
+      widget_url: s.widget_url || null,
       position: index,
       user_id: session.user.id
     }));
@@ -455,6 +522,7 @@ function App() {
             searchQuery={searchQuery}
             isEditMode={isEditMode}
             onAddSection={handleAddSection}
+            onAddRssWidget={handleAddRssWidget}
             onEditSection={handleEditSection}
             onDeleteSection={handleDeleteSection}
             onAddItem={handleAddItem}
@@ -481,6 +549,13 @@ function App() {
         onClose={() => setIsSectionModalOpen(false)}
         onSave={handleSaveSection}
         initialData={editingSection}
+      />
+
+      <RssModal
+        isOpen={isRssModalOpen}
+        onClose={() => setIsRssModalOpen(false)}
+        onSave={handleSaveRssSection}
+        initialData={editingRssSection}
       />
 
       <ItemModal

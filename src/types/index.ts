@@ -20,6 +20,8 @@ export interface Section {
   id: string;
   page_id: string;
   title: string;
+  type?: 'links' | 'rss';
+  widget_url?: string;
   position?: number;
   created_at?: string;
   items: LinkItem[];

@@ -1,0 +1,239 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import type { Section } from '../types';
+import { Rss, Edit2, Trash2, GripVertical, RotateCw, ExternalLink, AlertCircle } from 'lucide-react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+interface RssItem {
+  title: string;
+  link: string;
+  pubDate?: string;
+  description?: string;
+}
+
+interface RssWidgetCardProps {
+  section: Section;
+  isEditMode: boolean;
+  onEditSection: (section: Section) => void;
+  onDeleteSection: (id: string) => void;
+}
+
+export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
+  section,
+  isEditMode,
+  onEditSection,
+  onDeleteSection,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: section.id, disabled: !isEditMode });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const [items, setItems] = useState<RssItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchRssFeed = useCallback(async () => {
+    if (!section.widget_url) {
+      setError('Aucune URL de flux configurée.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // 1ère tentative : rss2json
+      const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(section.widget_url)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === 'ok' && Array.isArray(data.items)) {
+          const parsed = data.items.slice(0, 6).map((item: any) => ({
+            title: item.title?.replace(/<[^>]*>?/gm, '') || 'Sans titre',
+            link: item.link || '#',
+            pubDate: item.pubDate,
+            description: item.description?.replace(/<[^>]*>?/gm, '') || ''
+          }));
+          setItems(parsed);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Fallback : AllOrigins CORS proxy + DOMParser
+      const fallbackRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(section.widget_url)}`);
+      if (!fallbackRes.ok) throw new Error('Impossible de charger le flux RSS.');
+      const fallbackData = await fallbackRes.json();
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(fallbackData.contents, 'text/xml');
+      const xmlItems = xmlDoc.querySelectorAll('item, entry');
+
+      if (!xmlItems || xmlItems.length === 0) {
+        throw new Error('Aucun article trouvé dans ce flux.');
+      }
+
+      const parsedItems: RssItem[] = [];
+      xmlItems.forEach((el, index) => {
+        if (index >= 6) return;
+        const title = el.querySelector('title')?.textContent || 'Sans titre';
+        const link = el.querySelector('link')?.textContent || el.querySelector('link')?.getAttribute('href') || '#';
+        const pubDate = el.querySelector('pubDate, published, updated')?.textContent || undefined;
+        const description = el.querySelector('description, summary')?.textContent?.replace(/<[^>]*>?/gm, '') || '';
+        parsedItems.push({ title, link, pubDate, description });
+      });
+
+      setItems(parsedItems);
+    } catch (err: any) {
+      console.error('RSS Fetch error:', err);
+      setError(err?.message || 'Erreur lors du chargement du flux.');
+    } finally {
+      setLoading(false);
+    }
+  }, [section.widget_url]);
+
+  useEffect(() => {
+    fetchRssFeed();
+  }, [fetchRssFeed]);
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      return new Intl.DateTimeFormat('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(d);
+    } catch {
+      return '';
+    }
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className={"glass-panel p-6 w-full flex flex-col " + (isDragging ? 'z-50 shadow-2xl ring-2 ring-[var(--color-primary)]' : '')}>
+      <div className="flex items-center justify-between mb-4 pb-2 border-b border-[var(--color-border)]">
+        <div className="flex items-center gap-2">
+          {isEditMode && (
+            <div
+              {...attributes}
+              {...listeners}
+              className="cursor-grab hover:bg-black/10 p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors -ml-2"
+              title="Déplacer le widget"
+            >
+              <GripVertical size={20} />
+            </div>
+          )}
+          <div className="p-1.5 rounded-lg bg-orange-500/10 text-orange-400">
+            <Rss size={18} />
+          </div>
+          <h2 className="text-xl font-bold text-[var(--color-text-strong)] truncate max-w-[200px]">
+            {section.title}
+          </h2>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <button
+            onClick={fetchRssFeed}
+            disabled={loading}
+            className={"p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-black/10 rounded-md transition-all " + (loading ? 'animate-spin' : '')}
+            title="Rafraîchir le flux"
+          >
+            <RotateCw size={16} />
+          </button>
+
+          {isEditMode && (
+            <>
+              <button
+                onClick={() => onEditSection(section)}
+                className="p-1.5 text-blue-400 hover:bg-blue-400/10 rounded-md transition-colors"
+                title="Modifier le widget"
+              >
+                <Edit2 size={16} />
+              </button>
+              <button
+                onClick={() => onDeleteSection(section.id)}
+                className="p-1.5 text-red-400 hover:bg-red-400/10 rounded-md transition-colors"
+                title="Supprimer le widget"
+              >
+                <Trash2 size={16} />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="flex-1 space-y-3">
+        {loading && items.length === 0 && (
+          <div className="space-y-3 py-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse space-y-2 p-3 rounded-lg bg-black/10">
+                <div className="h-4 bg-white/10 rounded w-3/4"></div>
+                <div className="h-3 bg-white/5 rounded w-1/2"></div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {error && items.length === 0 && (
+          <div className="py-6 px-4 text-center text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl flex flex-col items-center gap-2">
+            <AlertCircle size={20} />
+            <span>{error}</span>
+            <button
+              onClick={fetchRssFeed}
+              className="mt-2 text-xs font-semibold px-3 py-1 bg-red-500/20 hover:bg-red-500/30 rounded-md transition-colors"
+            >
+              Réessayer
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && items.length === 0 && (
+          <div className="py-8 text-center text-sm text-[var(--color-text-muted)] border-2 border-dashed border-[var(--color-border)] rounded-xl">
+            Aucun article disponible.
+          </div>
+        )}
+
+        {items.map((item, idx) => (
+          <a
+            key={idx}
+            href={item.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group/item block p-3 rounded-xl bg-black/10 hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)]/40 hover:border-[var(--color-primary)]/50 transition-all"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-semibold text-sm text-[var(--color-text-strong)] group-hover/item:text-[var(--color-primary)] transition-colors line-clamp-2">
+                {item.title}
+              </h3>
+              <ExternalLink size={14} className="text-[var(--color-text-muted)] opacity-0 group-hover/item:opacity-100 transition-opacity flex-shrink-0 mt-0.5" />
+            </div>
+
+            {item.description && (
+              <p className="text-xs text-[var(--color-text-muted)] mt-1 line-clamp-2">
+                {item.description}
+              </p>
+            )}
+
+            {item.pubDate && (
+              <div className="text-[11px] text-[var(--color-text-muted)]/70 mt-2 font-mono">
+                {formatDate(item.pubDate)}
+              </div>
+            )}
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+};

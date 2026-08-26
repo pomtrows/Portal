@@ -1,7 +1,8 @@
 import React from 'react';
 import type { Section, LinkItem } from '../types';
 import { SectionCard } from './SectionCard';
-import { Plus } from 'lucide-react';
+import { RssWidgetCard } from './RssWidgetCard';
+import { Plus, Rss } from 'lucide-react';
 import { useLayout } from '../hooks/useLayout';
 import {
   DndContext,
@@ -22,6 +23,7 @@ interface DashboardProps {
   searchQuery: string;
   isEditMode: boolean;
   onAddSection: () => void;
+  onAddRssWidget: () => void;
   onEditSection: (section: Section) => void;
   onDeleteSection: (id: string) => void;
   onAddItem: (sectionId: string) => void;
@@ -36,6 +38,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   searchQuery,
   isEditMode,
   onAddSection,
+  onAddRssWidget,
   onEditSection,
   onDeleteSection,
   onAddItem,
@@ -57,13 +60,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
-  const filteredSections = sections.map(section => ({
-    ...section,
-    items: section.items.filter(item => 
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
-    )
-  })).filter(section => section.items.length > 0 || isEditMode);
+  const filteredSections = sections.map(section => {
+    if (section.type === 'rss') {
+      const matches = section.title.toLowerCase().includes(searchQuery.toLowerCase());
+      return matches || isEditMode ? section : null;
+    }
+    return {
+      ...section,
+      items: section.items.filter(item => 
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    };
+  }).filter((section): section is Section => section !== null && (section.type === 'rss' || section.items.length > 0 || isEditMode));
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -96,17 +105,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <SortableContext items={filteredSections.map(s => s.id)} strategy={rectSortingStrategy}>
           <div className={getColumnsClass()}>
             {filteredSections.map(section => (
-              <SectionCard
-                key={section.id}
-                section={section}
-                isEditMode={isEditMode}
-                onEditSection={onEditSection}
-                onDeleteSection={onDeleteSection}
-                onAddItem={onAddItem}
-                onEditItem={onEditItem}
-                onDeleteItem={onDeleteItem}
-                onReorderItems={onReorderItems}
-              />
+              section.type === 'rss' ? (
+                <RssWidgetCard
+                  key={section.id}
+                  section={section}
+                  isEditMode={isEditMode}
+                  onEditSection={onEditSection}
+                  onDeleteSection={onDeleteSection}
+                />
+              ) : (
+                <SectionCard
+                  key={section.id}
+                  section={section}
+                  isEditMode={isEditMode}
+                  onEditSection={onEditSection}
+                  onDeleteSection={onDeleteSection}
+                  onAddItem={onAddItem}
+                  onEditItem={onEditItem}
+                  onDeleteItem={onDeleteItem}
+                  onReorderItems={onReorderItems}
+                />
+              )
             ))}
           </div>
         </SortableContext>
@@ -119,13 +138,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
       )}
 
       {isEditMode && (
-        <div className="flex justify-center mt-8">
+        <div className="flex flex-wrap items-center justify-center gap-4 mt-8">
           <button
             onClick={onAddSection}
             className="flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-dashed border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all font-medium"
           >
             <Plus size={20} />
             <span>Ajouter une section</span>
+          </button>
+          <button
+            onClick={onAddRssWidget}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-dashed border-orange-500/40 text-orange-400 hover:text-orange-300 hover:border-orange-500 hover:bg-orange-500/10 transition-all font-medium"
+          >
+            <Rss size={20} />
+            <span>Ajouter un flux RSS</span>
           </button>
         </div>
       )}
