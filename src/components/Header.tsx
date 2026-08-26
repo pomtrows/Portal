@@ -82,8 +82,21 @@ export const Header: React.FC<HeaderProps> = ({
         )}
       </div>
 
-      <div className="hidden md:flex flex-col items-center gap-3 flex-1 justify-center">
-        <div className="flex bg-black/10 border border-[var(--color-border)] rounded-full p-1 w-48">
+      <div className="hidden md:flex flex-row items-center gap-4 flex-1 justify-center">
+        <div className="relative w-full max-w-sm">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search size={18} className="text-[var(--color-text-muted)]" />
+          </div>
+          <input
+            type="text"
+            placeholder="Rechercher..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="w-full bg-black/20 border border-[var(--color-border)] rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-[var(--color-primary)] focus:bg-black/40 transition-all placeholder:text-[var(--color-text-muted)] text-[var(--color-text-strong)]"
+          />
+        </div>
+
+        <div className="flex bg-black/10 border border-[var(--color-border)] rounded-full p-1 w-40 flex-shrink-0">
           <button 
              className={`flex-1 py-1 rounded-full text-sm font-semibold transition-all ${profile === 'perso' ? 'bg-[var(--color-surface)] text-[var(--color-text-strong)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'}`}
              onClick={() => onChangeProfile('perso')}
@@ -96,19 +109,6 @@ export const Header: React.FC<HeaderProps> = ({
           >
             Pro
           </button>
-        </div>
-
-        <div className="relative w-full max-w-md">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search size={18} className="text-[var(--color-text-muted)]" />
-          </div>
-          <input
-            type="text"
-            placeholder="Rechercher..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full bg-black/20 border border-[var(--color-border)] rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-[var(--color-primary)] focus:bg-black/40 transition-all placeholder:text-[var(--color-text-muted)] text-[var(--color-text-strong)]"
-          />
         </div>
       </div>
 
