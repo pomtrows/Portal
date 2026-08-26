@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Search, Settings, Edit3, X, Check, Palette, LogOut, User } from 'lucide-react';
+import { Search, Settings, Edit3, X, Check, Palette, LogOut, User, LayoutGrid } from 'lucide-react';
 import { useTheme, type Theme } from '../hooks/useTheme';
+import { useLayout, type ColumnCount } from '../hooks/useLayout';
 import { supabase } from '../utils/supabase';
 
 interface HeaderProps {
@@ -25,6 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(title);
   const { theme, setTheme } = useTheme();
+  const { columnCount, setColumnCount } = useLayout();
 
   const handleTitleSubmit = () => {
     if (tempTitle.trim()) {
@@ -90,6 +92,28 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-3 flex-1 justify-end">
+        <div className="relative group">
+          <button className="flex items-center justify-center p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-black/10 transition-colors" title="Mise en page">
+            <LayoutGrid size={20} />
+          </button>
+          <div className="absolute right-0 top-full mt-2 w-48 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+            <div className="px-4 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider border-b border-[var(--color-border)]">
+              Colonnes (Max)
+            </div>
+            {([1, 2, 3, 4, 5] as ColumnCount[]).map((c) => (
+              <button
+                key={c}
+                onClick={() => setColumnCount(c)}
+                className={`w-full text-left px-4 py-2 text-sm transition-colors last:rounded-b-lg ${
+                  columnCount === c ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]'
+                }`}
+              >
+                {c} colonne{c > 1 ? 's' : ''}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="relative group">
           <button className="flex items-center justify-center p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-black/10 transition-colors">
             <Palette size={20} />

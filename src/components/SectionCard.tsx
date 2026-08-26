@@ -23,7 +23,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
   onDeleteItem,
 }) => {
   return (
-    <div className="glass-panel p-6">
+    <div className="glass-panel p-6 break-inside-avoid w-full inline-block mb-6">
       <div className="flex items-center justify-between mb-6 group">
         <h2 className="text-xl font-bold text-[var(--color-text-strong)] flex items-center gap-2">
           {section.title}
@@ -55,7 +55,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
         {section.items.map((item) => (
           <ItemCard
             key={item.id}

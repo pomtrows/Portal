@@ -2,6 +2,7 @@
 import type { Section, LinkItem } from '../types';
 import { SectionCard } from './SectionCard';
 import { Plus } from 'lucide-react';
+import { useLayout } from '../hooks/useLayout';
 
 interface DashboardProps {
   sections: Section[];
@@ -26,6 +27,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onEditItem,
   onDeleteItem,
 }) => {
+  const { columnCount } = useLayout();
+
+  const getColumnsClass = () => {
+    switch (columnCount) {
+      case 1: return 'columns-1 gap-6';
+      case 2: return 'columns-1 md:columns-2 gap-6';
+      case 3: return 'columns-1 md:columns-2 lg:columns-3 gap-6';
+      case 4: return 'columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-6';
+      case 5: return 'columns-1 md:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 gap-6';
+      default: return 'columns-1 md:columns-2 lg:columns-3 gap-6';
+    }
+  };
+
   // Filter sections and items based on search query
   const filteredSections = sections.map(section => ({
     ...section,
@@ -36,19 +50,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
   })).filter(section => section.items.length > 0 || isEditMode); // In edit mode, show empty sections
 
   return (
-    <div className="max-w-7xl mx-auto px-6 pb-12 space-y-8">
-      {filteredSections.map(section => (
-        <SectionCard
-          key={section.id}
-          section={section}
-          isEditMode={isEditMode}
-          onEditSection={onEditSection}
-          onDeleteSection={onDeleteSection}
-          onAddItem={onAddItem}
-          onEditItem={onEditItem}
-          onDeleteItem={onDeleteItem}
-        />
-      ))}
+    <div className="max-w-[1400px] mx-auto px-6 pb-12">
+      <div className={getColumnsClass()}>
+        {filteredSections.map(section => (
+          <SectionCard
+            key={section.id}
+            section={section}
+            isEditMode={isEditMode}
+            onEditSection={onEditSection}
+            onDeleteSection={onDeleteSection}
+            onAddItem={onAddItem}
+            onEditItem={onEditItem}
+            onDeleteItem={onDeleteItem}
+          />
+        ))}
+      </div>
 
       {filteredSections.length === 0 && !isEditMode && (
         <div className="text-center py-20 text-[var(--color-text-muted)] text-lg">
