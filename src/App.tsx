@@ -103,7 +103,7 @@ function App() {
   // Page Handlers
   const handleAddPage = async () => {
     if (!session?.user) return;
-    const newId = `page-${Date.now()}`;
+    const newId = crypto.randomUUID();
     const newPage: Page = { id: newId, title: 'Nouvelle page' };
     
     setConfig(prev => ({ ...prev, pages: [...prev.pages, newPage] }));
@@ -111,11 +111,12 @@ function App() {
     setEditingPageId(newId);
     setTempPageTitle('Nouvelle page');
 
-    await supabase.from('pages').insert({
+    const { error } = await supabase.from('pages').insert({
       id: newId,
       title: newPage.title,
       user_id: session.user.id
     });
+    if (error) console.error("Error inserting page:", error);
   };
 
   const handleSavePageTitle = async (pageId: string) => {
