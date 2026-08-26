@@ -18,30 +18,6 @@ interface RssWidgetCardProps {
   onDeleteSection: (id: string) => void;
 }
 
-function parseXmlFeed(xmlText: string): RssItem[] {
-  try {
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-    const xmlItems = xmlDoc.querySelectorAll('item, entry');
-
-    if (!xmlItems || xmlItems.length === 0) return [];
-
-    const parsed: RssItem[] = [];
-    xmlItems.forEach((el, index) => {
-      if (index >= 6) return;
-      const title = el.querySelector('title')?.textContent?.trim() || 'Sans titre';
-      const link = el.querySelector('link')?.textContent?.trim() || el.querySelector('link')?.getAttribute('href')?.trim() || '#';
-      const pubDate = el.querySelector('pubDate, published, updated')?.textContent?.trim() || undefined;
-      const description = el.querySelector('description, summary')?.textContent?.replace(/<[^>]*>?/gm, '')?.trim() || '';
-      parsed.push({ title, link, pubDate, description });
-    });
-
-    return parsed;
-  } catch {
-    return [];
-  }
-}
-
 function parseJinaMarkdown(text: string): RssItem[] {
   const items: RssItem[] = [];
   const blocks = text.split(/(?=###\s+)/g);
@@ -51,7 +27,7 @@ function parseJinaMarkdown(text: string): RssItem[] {
     const lines = block.trim().split('\n').map(l => l.trim()).filter(Boolean);
     if (lines.length === 0) continue;
 
-    const linkMatch = block.match(/https:\/\/[^\s\)\>]+/);
+    const linkMatch = block.match(/https?:\/\/[^\s\)\>]+/);
     const link = linkMatch ? linkMatch[0] : '#';
 
     let title = '';
@@ -59,16 +35,21 @@ function parseJinaMarkdown(text: string): RssItem[] {
     if (titleMatch && titleMatch[1]) {
       title = titleMatch[1];
     } else {
-      const slug = link.split('/').pop()?.replace(/-\d+$/, '')?.replace(/-/g, ' ');
-      if (slug && slug.length > 5) {
-        title = slug.charAt(0).toUpperCase() + slug.slice(1);
+      const textLine = lines.find(l => !l.startsWith('###') && !l.startsWith('http') && !l.startsWith('[http') && !l.match(/GMT$/i));
+      if (textLine && textLine.length > 5) {
+        title = textLine;
+      } else {
+        const slug = link.split('/').pop()?.replace(/-\d+$/, '')?.replace(/-/g, ' ');
+        if (slug && slug.length > 5) {
+          title = slug.charAt(0).toUpperCase() + slug.slice(1);
+        }
       }
     }
 
     const dateMatch = block.match(/(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s+\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\s+[\d:]+\s+GMT/i) || block.match(/\d{4}-\d{2}-\d{2}T[\d:]+/);
     const pubDate = dateMatch ? dateMatch[0] : undefined;
 
-    const descLines = lines.filter(l => !l.startsWith('#') && !l.startsWith('http') && !l.startsWith('[http') && l !== pubDate);
+    const descLines = lines.filter(l => !l.startsWith('###') && !l.startsWith('http') && !l.startsWith('[http') && l !== pubDate && l !== title);
     const description = descLines.join(' ');
 
     if (title || link !== '#') {
@@ -115,71 +96,50 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
 
     const targetUrl = section.widget_url.trim();
 
-    // 1. Essai direct via rss2json
-    try {
-      const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(targetUrl)}`, {
-        signal: AbortSignal.timeout(6000)
-      });
-      if (res.ok) {
+    // Requêtes parallèles : le premier qui répond avec des articles gagne !
+    const fetchers = [
+      // 1. rss2json (rapide pour les flux ouverts)
+      (async (): Promise<RssItem[]> => {
+        const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(targetUrl)}`, {
+          signal: AbortSignal.timeout(4000)
+        });
+        if (!res.ok) throw new Error('rss2json error');
         const data = await res.json();
-        if (data.status === 'ok' && Array.isArray(data.items) && data.items.length > 0) {
-          const parsed = data.items.slice(0, 6).map((item: any) => ({
-            title: item.title?.replace(/<[^>]*>?/gm, '') || 'Sans titre',
-            link: item.link || '#',
-            pubDate: item.pubDate,
-            description: item.description?.replace(/<[^>]*>?/gm, '') || ''
-          }));
-          setItems(parsed);
-          setLoading(false);
-          return;
+        if (data.status !== 'ok' || !Array.isArray(data.items) || data.items.length === 0) {
+          throw new Error('rss2json empty');
         }
-      }
-    } catch {
-      // Continuer vers les fallbacks
-    }
+        return data.items.slice(0, 6).map((item: any) => ({
+          title: item.title?.replace(/<[^>]*>?/gm, '') || 'Sans titre',
+          link: item.link || '#',
+          pubDate: item.pubDate,
+          description: item.description?.replace(/<[^>]*>?/gm, '') || ''
+        }));
+      })(),
 
-    // 2. Essai via AllOrigins proxy
-    try {
-      const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`, {
-        signal: AbortSignal.timeout(6000)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.contents) {
-          const parsed = parseXmlFeed(data.contents);
-          if (parsed.length > 0) {
-            setItems(parsed);
-            setLoading(false);
-            return;
-          }
-        }
-      }
-    } catch {
-      // Continuer vers fallback 3
-    }
-
-    // 3. Essai via Jina Reader (contourne les protections Cloudflare / Akamai)
-    try {
-      const res = await fetch(`https://r.jina.ai/${targetUrl}`, {
-        headers: { 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(8000)
-      });
-      if (res.ok) {
+      // 2. Jina Reader (contourne Akamai/Cloudflare pour Les Echos, Le Figaro, etc.)
+      (async (): Promise<RssItem[]> => {
+        const res = await fetch(`https://r.jina.ai/${targetUrl}`, {
+          headers: { 'Accept': 'application/json' },
+          signal: AbortSignal.timeout(7000)
+        });
+        if (!res.ok) throw new Error('jina error');
         const data = await res.json();
         const content = data.data?.content || '';
         const parsed = parseJinaMarkdown(content);
-        if (parsed.length > 0) {
-          setItems(parsed);
-          setLoading(false);
-          return;
-        }
-      }
-    } catch {
-      // Échec complet
-    }
+        if (parsed.length === 0) throw new Error('jina empty');
+        return parsed;
+      })()
+    ];
 
-    setError('Impossible de récupérer le flux RSS (CORS ou flux indisponible).');
-    setLoading(false);
+    try {
+      const parsedItems = await Promise.any(fetchers);
+      setItems(parsedItems);
+    } catch (err: any) {
+      console.error('All RSS fetchers failed:', err);
+      setError('Impossible de récupérer le flux RSS.');
+    } finally {
+      setLoading(false);
+    }
   }, [section.widget_url]);
 
   useEffect(() => {
