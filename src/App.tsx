@@ -1,13 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
-import { SectionCard } from './components/SectionCard';
-import { ItemCard } from './components/ItemCard';
 import { SectionModal, ItemModal } from './components/EditModals';
 import { MobileMenu } from './components/MobileMenu';
 import { Auth } from './components/Auth';
 import { AccountModal } from './components/AccountModal';
-import { useLayout } from './hooks/useLayout';
 import type { DashboardConfig, Section, LinkItem, Page } from './types';
 import { Plus, Trash2 } from 'lucide-react';
 import { supabase } from './utils/supabase';
