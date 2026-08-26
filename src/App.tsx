@@ -66,24 +66,25 @@ function App() {
     
     if (!isInitialized) setLoading(true);
     try {
-      // Fetch title
-      const { data: configData } = await supabase
-        .from('config')
-        .select('*')
-        .eq('id', `${currentProfile}_${session.user.id}`)
-        .single();
+      // Execute all fetches concurrently
+      const [
+        { data: configData },
+        { data: pagesData },
+        { data: sectionsData },
+        { data: linksData }
+      ] = await Promise.all([
+        supabase
+          .from('config')
+          .select('*')
+          .eq('id', `${currentProfile}_${session.user.id}`)
+          .single(),
+        supabase.from('pages').select('*').eq('profile', currentProfile).order('created_at', { ascending: true }),
+        supabase.from('sections').select('*').order('position', { ascending: true }).order('created_at', { ascending: true }),
+        supabase.from('links').select('*').order('position', { ascending: true }).order('created_at', { ascending: true })
+      ]);
         
       const title = configData?.title || (currentProfile === 'pro' ? 'Mon Portail Pro' : 'Mon Portail');
-
-      // Fetch pages
-      const { data: pagesData } = await supabase.from('pages').select('*').eq('profile', currentProfile).order('created_at', { ascending: true });
       const pages: Page[] = pagesData || [];
-
-      // Fetch sections (RLS handles user_id filtering)
-      const { data: sectionsData } = await supabase.from('sections').select('*').order('position', { ascending: true }).order('created_at', { ascending: true });
-      
-      // Fetch links (RLS handles user_id filtering)
-      const { data: linksData } = await supabase.from('links').select('*').order('position', { ascending: true }).order('created_at', { ascending: true });
 
       const sections: Section[] = (sectionsData || []).map((sec: any) => ({
         ...sec,
