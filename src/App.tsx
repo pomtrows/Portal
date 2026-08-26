@@ -14,6 +14,7 @@ function App() {
   const [config, setConfig] = useState<DashboardConfig>({ title: 'Mon Portail', pages: [], sections: [] });
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
 
@@ -52,7 +53,7 @@ function App() {
   const fetchData = async () => {
     if (!session?.user) return;
     
-    setLoading(true);
+    if (!isInitialized) setLoading(true);
     try {
       // Fetch title
       const { data: configData } = await supabase
@@ -87,6 +88,7 @@ function App() {
       console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
+      setIsInitialized(true);
     }
   };
 
