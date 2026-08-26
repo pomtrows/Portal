@@ -25,8 +25,8 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, on
         }}
       >
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-primary)]">
-            <DynamicIcon name={item.icon} className="w-6 h-6" />
+          <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-primary)] overflow-hidden">
+            <DynamicIcon name={item.icon} className="w-10 h-10 rounded-lg" />
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-[var(--color-text-strong)] font-semibold text-base truncate">
