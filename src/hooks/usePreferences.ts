@@ -13,6 +13,7 @@ export interface ProfileSchedule {
 export interface UserPreferences {
   theme?: string;
   fontSizeSection?: FontSize;
+  fontSizeLinks?: FontSize;
   fontSizeRss?: FontSize;
   schedule?: ProfileSchedule;
   pageColumns?: Record<string, number>;
@@ -29,6 +30,12 @@ const LISTENERS = new Set<() => void>();
 
 function getStoredFontSizeSection(): FontSize {
   const saved = localStorage.getItem('portal-font-size-section');
+  if (saved === 'compact' || saved === 'normal' || saved === 'large') return saved;
+  return 'normal';
+}
+
+function getStoredFontSizeLinks(): FontSize {
+  const saved = localStorage.getItem('portal-font-size-links');
   if (saved === 'compact' || saved === 'normal' || saved === 'large') return saved;
   return 'normal';
 }
@@ -73,6 +80,7 @@ export function getAllStoredPageColumns(): Record<string, number> {
 }
 
 let globalFontSizeSection: FontSize = getStoredFontSizeSection();
+let globalFontSizeLinks: FontSize = getStoredFontSizeLinks();
 let globalFontSizeRss: FontSize = getStoredFontSizeRss();
 let globalSchedule: ProfileSchedule = getStoredSchedule();
 
@@ -135,6 +143,12 @@ export function hydratePreferencesFromCloud(metadata: Record<string, unknown> | 
     hasChanged = true;
   }
 
+  if (prefs.fontSizeLinks && prefs.fontSizeLinks !== globalFontSizeLinks) {
+    globalFontSizeLinks = prefs.fontSizeLinks;
+    localStorage.setItem('portal-font-size-links', prefs.fontSizeLinks);
+    hasChanged = true;
+  }
+
   if (prefs.fontSizeRss && prefs.fontSizeRss !== globalFontSizeRss) {
     globalFontSizeRss = prefs.fontSizeRss;
     localStorage.setItem('portal-font-size-rss', prefs.fontSizeRss);
@@ -190,20 +204,28 @@ export function calculateScheduledProfile(schedule: ProfileSchedule): 'pro' | 'p
 
 export function usePreferences() {
   const [fontSizeSection, setFontSizeSectionState] = useState<FontSize>(globalFontSizeSection);
+  const [fontSizeLinks, setFontSizeLinksState] = useState<FontSize>(globalFontSizeLinks);
   const [fontSizeRss, setFontSizeRssState] = useState<FontSize>(globalFontSizeRss);
   const [schedule, setScheduleState] = useState<ProfileSchedule>(globalSchedule);
 
   useEffect(() => {
     const listener = () => {
       setFontSizeSectionState(globalFontSizeSection);
+      setFontSizeLinksState(globalFontSizeLinks);
       setFontSizeRssState(globalFontSizeRss);
       setScheduleState(globalSchedule);
     };
     LISTENERS.add(listener);
 
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'portal-font-size-section' || e.key === 'portal-font-size-rss' || e.key === 'portal-profile-schedule') {
+      if (
+        e.key === 'portal-font-size-section' ||
+        e.key === 'portal-font-size-links' ||
+        e.key === 'portal-font-size-rss' ||
+        e.key === 'portal-profile-schedule'
+      ) {
         globalFontSizeSection = getStoredFontSizeSection();
+        globalFontSizeLinks = getStoredFontSizeLinks();
         globalFontSizeRss = getStoredFontSizeRss();
         globalSchedule = getStoredSchedule();
         LISTENERS.forEach((l) => l());
@@ -225,6 +247,14 @@ export function usePreferences() {
     syncPreferenceToCloud({ fontSizeSection: size });
   };
 
+  const setFontSizeLinks = (size: FontSize) => {
+    globalFontSizeLinks = size;
+    localStorage.setItem('portal-font-size-links', size);
+    setFontSizeLinksState(size);
+    LISTENERS.forEach((l) => l());
+    syncPreferenceToCloud({ fontSizeLinks: size });
+  };
+
   const setFontSizeRss = (size: FontSize) => {
     globalFontSizeRss = size;
     localStorage.setItem('portal-font-size-rss', size);
@@ -244,6 +274,8 @@ export function usePreferences() {
   return {
     fontSizeSection,
     setFontSizeSection,
+    fontSizeLinks,
+    setFontSizeLinks,
     fontSizeRss,
     setFontSizeRss,
     schedule,

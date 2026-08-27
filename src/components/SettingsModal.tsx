@@ -40,6 +40,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const {
     fontSizeSection,
     setFontSizeSection,
+    fontSizeLinks,
+    setFontSizeLinks,
     fontSizeRss,
     setFontSizeRss,
     schedule,
@@ -163,14 +165,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           {/* TAB 3: TAILLES DE POLICE */}
           {activeTab === 'fonts' && (
             <div className="space-y-6">
-              {/* Section Font Size */}
+              {/* Section Titles Font Size */}
               <div className="space-y-2.5">
                 <div>
                   <h3 className="text-sm font-bold text-[var(--color-text-strong)]">
-                    Taille de police des Sections & Liens
+                    Taille de police des Sections
                   </h3>
                   <p className="text-xs text-[var(--color-text-muted)]">
-                    Ajuste la taille des titres de section et des liens favoris.
+                    Ajuste la taille des titres de vos blocs et catégories.
                   </p>
                 </div>
 
@@ -189,10 +191,47 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         }`}
                       >
                         <div className="text-sm font-bold">{labels[size]}</div>
+                        <div className={`text-slate-500 dark:text-slate-400 mt-1 truncate font-bold ${
+                          size === 'compact' ? 'text-xs' : size === 'normal' ? 'text-sm' : 'text-base'
+                        }`}>
+                          Titre Section
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Links Font Size */}
+              <div className="space-y-2.5 pt-4 border-t border-[var(--color-border)]">
+                <div>
+                  <h3 className="text-sm font-bold text-[var(--color-text-strong)]">
+                    Taille de police des Liens
+                  </h3>
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    Ajuste la taille des titres et des descriptions de vos raccourcis.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2.5">
+                  {(['compact', 'normal', 'large'] as FontSize[]).map((size) => {
+                    const isSelected = fontSizeLinks === size;
+                    const labels = { compact: 'Compact', normal: 'Normal', large: 'Grand' };
+                    return (
+                      <button
+                        key={size}
+                        onClick={() => setFontSizeLinks(size)}
+                        className={`p-3 rounded-xl border text-center transition-all ${
+                          isSelected
+                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-2 ring-[var(--color-primary)] font-extrabold shadow-sm'
+                            : 'border-[var(--color-border)] bg-black/5 hover:bg-black/10 text-[var(--color-text)] font-semibold'
+                        }`}
+                      >
+                        <div className="text-sm font-bold">{labels[size]}</div>
                         <div className={`text-slate-500 dark:text-slate-400 mt-1 truncate ${
                           size === 'compact' ? 'text-[11px]' : size === 'normal' ? 'text-xs' : 'text-sm'
                         }`}>
-                          Exemple de texte
+                          Nom du lien
                         </div>
                       </button>
                     );

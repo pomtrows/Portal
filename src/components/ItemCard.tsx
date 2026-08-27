@@ -15,7 +15,7 @@ interface ItemCardProps {
 }
 
 export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, onDelete }) => {
-  const { fontSizeSection } = usePreferences();
+  const { fontSizeLinks } = usePreferences();
   const {
     attributes,
     listeners,
@@ -32,7 +32,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, on
   };
 
   const getTitleClass = () => {
-    switch (fontSizeSection) {
+    switch (fontSizeLinks) {
       case 'compact': return 'text-[11px] sm:text-xs';
       case 'large': return 'text-sm sm:text-base';
       default: return 'text-xs sm:text-sm';
@@ -40,7 +40,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, on
   };
 
   const getDescClass = () => {
-    switch (fontSizeSection) {
+    switch (fontSizeLinks) {
       case 'compact': return 'text-[10px]';
       case 'large': return 'text-xs';
       default: return 'text-[11px]';
