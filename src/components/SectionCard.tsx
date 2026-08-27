@@ -78,46 +78,46 @@ export const SectionCard: React.FC<SectionCardProps> = ({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={"glass-panel p-4 sm:p-5 w-full " + (isDragging ? 'z-50 shadow-2xl ring-2 ring-[var(--color-primary)]' : '')}>
-      <div className="flex items-center justify-between mb-3.5 group">
-        <div className="flex items-center gap-2">
+    <div ref={setNodeRef} style={style} className={"glass-panel p-3 sm:p-4 w-full min-w-0 " + (isDragging ? 'z-50 shadow-2xl ring-2 ring-[var(--color-primary)]' : '')}>
+      <div className="flex items-center justify-between mb-3 group gap-1.5 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
           {isEditMode && (
             <div
               {...attributes}
               {...listeners}
-              className="cursor-grab hover:bg-black/10 p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors -ml-2"
+              className="cursor-grab hover:bg-black/10 p-1 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors -ml-1 flex-shrink-0"
               title="Déplacer la section"
             >
-              <GripVertical size={20} />
+              <GripVertical size={16} />
             </div>
           )}
-          <h2 className="text-xl font-bold text-[var(--color-text-strong)] flex items-center gap-2">
+          <h2 className="text-sm sm:text-base font-bold text-[var(--color-text-strong)] truncate min-w-0" title={section.title}>
             {section.title}
           </h2>
         </div>
 
         {isEditMode && (
-          <div className="flex items-center gap-2 transition-opacity">
+          <div className="flex items-center gap-0.5 flex-shrink-0 transition-opacity">
             <button
               onClick={() => onAddItem(section.id)}
-              className="p-1.5 text-green-400 hover:bg-green-400/10 rounded-md transition-colors"
+              className="p-1 text-green-400 hover:bg-green-400/10 rounded-md transition-colors"
               title="Ajouter un lien"
             >
-              <Plus size={18} />
+              <Plus size={16} />
             </button>
             <button
               onClick={() => onEditSection(section)}
-              className="p-1.5 text-blue-400 hover:bg-blue-400/10 rounded-md transition-colors"
+              className="p-1 text-blue-400 hover:bg-blue-400/10 rounded-md transition-colors"
               title="Modifier la section"
             >
-              <Edit2 size={18} />
+              <Edit2 size={16} />
             </button>
             <button
               onClick={() => onDeleteSection(section.id)}
-              className="p-1.5 text-red-400 hover:bg-red-400/10 rounded-md transition-colors"
+              className="p-1 text-red-400 hover:bg-red-400/10 rounded-md transition-colors"
               title="Supprimer la section"
             >
-              <Trash2 size={18} />
+              <Trash2 size={16} />
             </button>
           </div>
         )}

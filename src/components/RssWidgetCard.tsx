@@ -165,52 +165,52 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={"glass-panel p-4 sm:p-5 w-full flex flex-col " + (isDragging ? 'z-50 shadow-2xl ring-2 ring-[var(--color-primary)]' : '')}>
-      <div className="flex items-center justify-between mb-3 pb-2 border-b border-[var(--color-border)]">
-        <div className="flex items-center gap-2">
+    <div ref={setNodeRef} style={style} className={"glass-panel p-3 sm:p-4 w-full flex flex-col min-w-0 " + (isDragging ? 'z-50 shadow-2xl ring-2 ring-[var(--color-primary)]' : '')}>
+      <div className="flex items-center justify-between mb-3 pb-2 border-b border-[var(--color-border)] gap-1.5 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
           {isEditMode && (
             <div
               {...attributes}
               {...listeners}
-              className="cursor-grab hover:bg-black/10 p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors -ml-2"
+              className="cursor-grab hover:bg-black/10 p-1 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors -ml-1 flex-shrink-0"
               title="Déplacer le widget"
             >
-              <GripVertical size={20} />
+              <GripVertical size={16} />
             </div>
           )}
-          <div className="p-1.5 rounded-lg bg-orange-500/10 text-orange-400">
-            <Rss size={18} />
+          <div className="p-1 rounded-lg bg-orange-500/10 text-orange-400 flex-shrink-0">
+            <Rss size={16} />
           </div>
-          <h2 className="text-xl font-bold text-[var(--color-text-strong)] truncate max-w-[200px]">
+          <h2 className="text-sm sm:text-base font-bold text-[var(--color-text-strong)] truncate min-w-0" title={section.title}>
             {section.title}
           </h2>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 flex-shrink-0">
           <button
             onClick={fetchRssFeed}
             disabled={loading}
-            className={"p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-black/10 rounded-md transition-all " + (loading ? 'animate-spin' : '')}
+            className={"p-1 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-black/10 rounded-md transition-all " + (loading ? 'animate-spin' : '')}
             title="Rafraîchir le flux"
           >
-            <RotateCw size={16} />
+            <RotateCw size={14} />
           </button>
 
           {isEditMode && (
             <>
               <button
                 onClick={() => onEditSection(section)}
-                className="p-1.5 text-blue-400 hover:bg-blue-400/10 rounded-md transition-colors"
+                className="p-1 text-blue-400 hover:bg-blue-400/10 rounded-md transition-colors"
                 title="Modifier le widget"
               >
-                <Edit2 size={16} />
+                <Edit2 size={14} />
               </button>
               <button
                 onClick={() => onDeleteSection(section.id)}
-                className="p-1.5 text-red-400 hover:bg-red-400/10 rounded-md transition-colors"
+                className="p-1 text-red-400 hover:bg-red-400/10 rounded-md transition-colors"
                 title="Supprimer le widget"
               >
-                <Trash2 size={16} />
+                <Trash2 size={14} />
               </button>
             </>
           )}

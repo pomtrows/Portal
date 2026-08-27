@@ -35,33 +35,33 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, on
         href={isEditMode ? undefined : item.url}
         target={isEditMode ? undefined : "_blank"}
         rel="noopener noreferrer"
-        className={"block w-full min-w-0 h-full p-2.5 sm:p-3 glass-panel interactive-element bg-black/10 hover:bg-[var(--color-surface-hover)] border-[var(--color-border)]/50 " + (isEditMode ? 'cursor-default ' : 'cursor-pointer ')}
+        className={"block w-full min-w-0 h-full p-2 sm:p-2.5 glass-panel interactive-element bg-black/10 hover:bg-[var(--color-surface-hover)] border-[var(--color-border)]/50 " + (isEditMode ? 'cursor-default pr-12 ' : 'cursor-pointer ')}
         onClick={(e) => {
           if (isEditMode) e.preventDefault();
         }}
       >
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
           {isEditMode && (
             <div
               {...attributes}
               {...listeners}
-              className="cursor-grab hover:bg-black/10 p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors -ml-1.5 self-center"
+              className="cursor-grab hover:bg-black/10 p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors -ml-1 flex-shrink-0 self-center"
               title="Déplacer le lien"
             >
-              <GripVertical size={16} />
+              <GripVertical size={15} />
             </div>
           )}
-          <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-primary)] overflow-hidden">
-            <Suspense fallback={<div className="w-5 h-5 animate-pulse bg-white/20 rounded-full" />}>
-              <LazyDynamicIcon name={item.icon} className="w-7 h-7 rounded-md" />
+          <div className="w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0 flex items-center justify-center rounded-lg bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-primary)] overflow-hidden">
+            <Suspense fallback={<div className="w-4 h-4 animate-pulse bg-white/20 rounded-full" />}>
+              <LazyDynamicIcon name={item.icon} className="w-5 h-5 sm:w-6 sm:h-6 rounded-md" />
             </Suspense>
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-[var(--color-text-strong)] font-semibold text-sm sm:text-[15px] truncate">
+            <h3 className="text-[var(--color-text-strong)] font-semibold text-xs sm:text-sm truncate">
               {item.title}
             </h3>
             {item.description && (
-              <p className="text-[var(--color-text-muted)] text-xs mt-0.5 line-clamp-2">
+              <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 line-clamp-1">
                 {item.description}
               </p>
             )}
@@ -70,20 +70,20 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, on
       </a>
 
       {isEditMode && (
-        <div className="absolute top-2 right-2 flex items-center gap-1 transition-opacity bg-[var(--color-surface)] p-1 rounded-lg border border-[var(--color-border)] shadow-md">
+        <div className="absolute top-1 right-1 flex items-center gap-0.5 transition-opacity bg-[var(--color-surface)] p-0.5 rounded-md border border-[var(--color-border)] shadow-md z-10">
           <button
             onClick={() => onEdit(item)}
-            className="p-1.5 text-blue-400 hover:bg-blue-400/10 rounded-md transition-colors"
+            className="p-1 text-blue-400 hover:bg-blue-400/10 rounded transition-colors"
             title="Modifier le lien"
           >
-            <Edit2 size={14} />
+            <Edit2 size={12} />
           </button>
           <button
             onClick={() => onDelete(item.id)}
-            className="p-1.5 text-red-400 hover:bg-red-400/10 rounded-md transition-colors"
+            className="p-1 text-red-400 hover:bg-red-400/10 rounded transition-colors"
             title="Supprimer le lien"
           >
-            <Trash2 size={14} />
+            <Trash2 size={12} />
           </button>
         </div>
       )}
