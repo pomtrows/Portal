@@ -43,6 +43,7 @@ interface DashboardProps {
   onDeleteItem: (sectionId: string, itemId: string) => void;
   onReorderSections: (sections: Section[]) => void;
   onReorderItems: (sectionId: string, items: LinkItem[]) => void;
+  onUpdateSectionSpan?: (sectionId: string, col_span: number) => void;
 }
 
 function distributeSections(sections: Section[], columnCount: number): Section[][] {
@@ -70,41 +71,19 @@ function distributeSections(sections: Section[], columnCount: number): Section[]
   return cols;
 }
 
-function getColSpanClass(colSpan?: number, maxCols: number = 3): string {
-  const span = Math.min(Math.max(1, colSpan || 1), maxCols);
-  switch (span) {
-    case 1:
-      return 'col-span-1';
-    case 2:
-      return 'col-span-1 md:col-span-2';
-    case 3:
-      return 'col-span-1 sm:col-span-2 lg:col-span-3';
-    case 4:
-      return 'col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4';
-    case 5:
-      return 'col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 xl:col-span-5';
-    case 6:
-      return 'col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 xl:col-span-6';
-    case 7:
-      return 'col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 xl:col-span-7';
-    case 8:
-      return 'col-span-1 sm:col-span-2 md:col-span-4 lg:col-span-6 xl:col-span-8';
-    default:
-      return 'col-span-1';
-  }
-}
-
 interface ColumnDropContainerProps {
   id: string;
   colIdx: number;
+  columnCount: number;
   sections: Section[];
   isEditMode: boolean;
-  renderSection: (section: Section) => React.ReactNode;
+  renderSection: (section: Section, colIdx: number, columnCount: number) => React.ReactNode;
 }
 
 const ColumnDropContainer: React.FC<ColumnDropContainerProps> = ({
   id,
   colIdx,
+  columnCount,
   sections,
   isEditMode,
   renderSection,
@@ -122,7 +101,7 @@ const ColumnDropContainer: React.FC<ColumnDropContainerProps> = ({
       }`}
     >
       <SortableContext items={sections.map(s => s.id)} strategy={verticalListSortingStrategy}>
-        {sections.map(renderSection)}
+        {sections.map(s => renderSection(s, colIdx, columnCount))}
       </SortableContext>
 
       {isEditMode && sections.length === 0 && (
@@ -152,6 +131,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onDeleteItem,
   onReorderSections,
   onReorderItems,
+  onUpdateSectionSpan,
 }) => {
   const { columnCount } = useLayout(activePageId);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -185,17 +165,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
     };
   }).filter((section): section is Section => section !== null && (section.type === 'rss' || section.type === 'weather' || section.type === 'traffic' || section.type === 'search' || section.items.length > 0 || isEditMode));
 
-  // Split wide sections (col_span > 1) and standard column sections
-  const wideSections = filteredSections.filter(s => (s.col_span || 1) > 1);
-  const standardSections = filteredSections.filter(s => (s.col_span || 1) <= 1);
-
-  const [columns, setColumns] = useState<Section[][]>(() => distributeSections(standardSections, columnCount));
+  const [columns, setColumns] = useState<Section[][]>(() => distributeSections(filteredSections, columnCount));
 
   useEffect(() => {
     if (!activeId) {
-      setColumns(distributeSections(standardSections, columnCount));
+      setColumns(distributeSections(filteredSections, columnCount));
     }
-  }, [standardSections, columnCount, activeId]);
+  }, [filteredSections, columnCount, activeId]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -229,29 +205,35 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const { active, over } = event;
     if (!over) return;
 
-    const activeItemId = String(active.id);
-    const overItemId = String(over.id);
+    const activeIdStr = String(active.id);
+    const overIdStr = String(over.id);
 
-    const fromCol = findColumnIndex(activeItemId, columns);
-    const toCol = findColumnIndex(overItemId, columns);
+    const sourceColIdx = findColumnIndex(activeIdStr, columns);
+    const targetColIdx = findColumnIndex(overIdStr, columns);
 
-    if (fromCol === -1 || toCol === -1 || fromCol === toCol) {
+    if (sourceColIdx === -1 || targetColIdx === -1 || sourceColIdx === targetColIdx) {
       return;
     }
 
     setColumns(prevCols => {
       const newCols = prevCols.map(col => [...col]);
-      const activeItemIndex = newCols[fromCol].findIndex(item => item.id === activeItemId);
+      const sourceCol = newCols[sourceColIdx];
+      const targetCol = newCols[targetColIdx];
+
+      const activeItemIndex = sourceCol.findIndex(item => item.id === activeIdStr);
       if (activeItemIndex === -1) return prevCols;
 
-      const [movedItem] = newCols[fromCol].splice(activeItemIndex, 1);
+      const [movedItem] = sourceCol.splice(activeItemIndex, 1);
 
-      if (overItemId.startsWith('col-')) {
-        newCols[toCol].push(movedItem);
+      if (overIdStr.startsWith('col-')) {
+        targetCol.push(movedItem);
       } else {
-        const overItemIndex = newCols[toCol].findIndex(item => item.id === overItemId);
-        const insertIndex = overItemIndex !== -1 ? overItemIndex : newCols[toCol].length;
-        newCols[toCol].splice(insertIndex, 0, movedItem);
+        const overItemIndex = targetCol.findIndex(item => item.id === overIdStr);
+        if (overItemIndex !== -1) {
+          targetCol.splice(overItemIndex, 0, movedItem);
+        } else {
+          targetCol.push(movedItem);
+        }
       }
 
       return newCols;
@@ -264,36 +246,35 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
     if (!over) return;
 
-    const activeItemId = String(active.id);
-    const overItemId = String(over.id);
+    const activeIdStr = String(active.id);
+    const overIdStr = String(over.id);
 
-    const fromCol = findColumnIndex(activeItemId, columns);
-    const toCol = findColumnIndex(overItemId, columns);
+    const sourceColIdx = findColumnIndex(activeIdStr, columns);
+    const targetColIdx = findColumnIndex(overIdStr, columns);
 
-    let finalCols = columns;
+    if (sourceColIdx === -1 || targetColIdx === -1) return;
 
-    if (fromCol !== -1 && toCol !== -1) {
-      if (fromCol === toCol && activeItemId !== overItemId && !overItemId.startsWith('col-')) {
-        const colItems = [...columns[fromCol]];
-        const oldIndex = colItems.findIndex(i => i.id === activeItemId);
-        const newIndex = colItems.findIndex(i => i.id === overItemId);
-        if (oldIndex !== -1 && newIndex !== -1) {
-          finalCols = columns.map((col, idx) => 
-            idx === fromCol ? arrayMove(colItems, oldIndex, newIndex) : col
-          );
-          setColumns(finalCols);
-        }
+    let finalColumns = columns.map(col => [...col]);
+
+    if (sourceColIdx === targetColIdx) {
+      const col = finalColumns[sourceColIdx];
+      const oldIndex = col.findIndex(item => item.id === activeIdStr);
+      const newIndex = col.findIndex(item => item.id === overIdStr);
+
+      if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+        finalColumns[sourceColIdx] = arrayMove(col, oldIndex, newIndex);
+        setColumns(finalColumns);
       }
     }
 
-    // Flatten finalCols with exact column index and position
-    const flattened: Section[] = [...wideSections];
-    finalCols.forEach((col, colIdx) => {
-      col.forEach((sec, rowIdx) => {
+    // Recalculate positions: position = colIdx * 1000 + rowIdx
+    const flattened: Section[] = [];
+    finalColumns.forEach((col, cIdx) => {
+      col.forEach((sec, rIdx) => {
         flattened.push({
           ...sec,
-          position: colIdx * 1000 + rowIdx,
-          column_index: colIdx,
+          position: cIdx * 1000 + rIdx,
+          column_index: cIdx
         });
       });
     });
@@ -301,82 +282,66 @@ export const Dashboard: React.FC<DashboardProps> = ({
     onReorderSections(flattened);
   };
 
-  const renderSection = (section: Section) => {
+  const renderSection = (section: Section, colIdx: number, columnCount: number) => {
+    const maxAllowedSpan = Math.max(1, columnCount - colIdx);
+    const effectiveSpan = Math.min(Math.max(1, section.col_span || 1), maxAllowedSpan);
+    const isMultiSpan = effectiveSpan > 1;
+
+    const spanWrapperStyle: React.CSSProperties = isMultiSpan
+      ? {
+          width: `calc(${effectiveSpan * 100}% + ${(effectiveSpan - 1)} * var(--dashboard-gap, 1rem))`,
+          maxWidth: 'none',
+          zIndex: 10,
+          position: 'relative',
+        }
+      : {
+          width: '100%',
+        };
+
+    const cardProps = {
+      section,
+      isEditMode,
+      onEditSection,
+      onDeleteSection,
+      onUpdateSpan: onUpdateSectionSpan,
+      maxAllowedSpan,
+    };
+
+    let cardContent: React.ReactNode = null;
+
     if (section.type === 'rss') {
-      return (
-        <RssWidgetCard
+      cardContent = <RssWidgetCard key={section.id} {...cardProps} />;
+    } else if (section.type === 'weather') {
+      cardContent = <WeatherWidgetCard key={section.id} {...cardProps} />;
+    } else if (section.type === 'traffic') {
+      cardContent = <TrafficWidgetCard key={section.id} {...cardProps} />;
+    } else if (section.type === 'search') {
+      cardContent = <SearchWidgetCard key={section.id} {...cardProps} />;
+    } else {
+      cardContent = (
+        <SectionCard
           key={section.id}
-          section={section}
-          isEditMode={isEditMode}
-          onEditSection={onEditSection}
-          onDeleteSection={onDeleteSection}
+          {...cardProps}
+          onAddItem={onAddItem}
+          onEditItem={onEditItem}
+          onDeleteItem={onDeleteItem}
+          onReorderItems={onReorderItems}
         />
       );
     }
-    if (section.type === 'weather') {
-      return (
-        <WeatherWidgetCard
-          key={section.id}
-          section={section}
-          isEditMode={isEditMode}
-          onEditSection={onEditSection}
-          onDeleteSection={onDeleteSection}
-        />
-      );
-    }
-    if (section.type === 'traffic') {
-      return (
-        <TrafficWidgetCard
-          key={section.id}
-          section={section}
-          isEditMode={isEditMode}
-          onEditSection={onEditSection}
-          onDeleteSection={onDeleteSection}
-        />
-      );
-    }
-    if (section.type === 'search') {
-      return (
-        <SearchWidgetCard
-          key={section.id}
-          section={section}
-          isEditMode={isEditMode}
-          onEditSection={onEditSection}
-          onDeleteSection={onDeleteSection}
-        />
-      );
-    }
+
     return (
-      <SectionCard
-        key={section.id}
-        section={section}
-        isEditMode={isEditMode}
-        onEditSection={onEditSection}
-        onDeleteSection={onDeleteSection}
-        onAddItem={onAddItem}
-        onEditItem={onEditItem}
-        onDeleteItem={onDeleteItem}
-        onReorderItems={onReorderItems}
-      />
+      <div key={section.id} style={spanWrapperStyle} className="min-w-0 transition-all duration-150">
+        {cardContent}
+      </div>
     );
   };
 
   return (
-    <div className="w-full max-w-[1920px] 2xl:max-w-[98%] mx-auto px-4 sm:px-6 pb-12">
-      {/* Wide sections / widgets (col_span > 1) */}
-      {wideSections.length > 0 && (
-        <div className={`grid ${getColumnsClass()} mb-4 lg:mb-6`}>
-          {wideSections.map((section) => (
-            <div
-              key={section.id}
-              className={`w-full min-w-0 transition-all duration-200 ${getColSpanClass(section.col_span, columnCount)}`}
-            >
-              {renderSection(section)}
-            </div>
-          ))}
-        </div>
-      )}
-
+    <div
+      className="w-full max-w-[1920px] 2xl:max-w-[98%] mx-auto px-4 sm:px-6 pb-12"
+      style={{ '--dashboard-gap': '1rem' } as React.CSSProperties}
+    >
       {/* Column-based containers with vertical stacking & DnD between/within columns */}
       <DndContext
         sensors={sensors}
@@ -391,6 +356,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               key={colIdx}
               id={`col-${colIdx}`}
               colIdx={colIdx}
+              columnCount={columnCount}
               sections={colSections}
               isEditMode={isEditMode}
               renderSection={renderSection}

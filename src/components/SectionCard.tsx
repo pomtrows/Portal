@@ -29,6 +29,8 @@ interface SectionCardProps {
   onEditItem: (sectionId: string, item: LinkItem) => void;
   onDeleteItem: (sectionId: string, itemId: string) => void;
   onReorderItems?: (sectionId: string, items: LinkItem[]) => void;
+  onUpdateSpan?: (sectionId: string, col_span: number) => void;
+  maxAllowedSpan?: number;
 }
 
 export const SectionCard: React.FC<SectionCardProps> = ({
@@ -39,7 +41,9 @@ export const SectionCard: React.FC<SectionCardProps> = ({
   onAddItem,
   onEditItem,
   onDeleteItem,
-  onReorderItems
+  onReorderItems,
+  onUpdateSpan,
+  maxAllowedSpan = 8,
 }) => {
   const { fontSizeSection } = usePreferences();
 
@@ -70,12 +74,9 @@ export const SectionCard: React.FC<SectionCardProps> = ({
 
   const handleDragEndItems = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id || !onReorderItems) return;
-
-    const oldIndex = section.items.findIndex(i => i.id === active.id);
-    const newIndex = section.items.findIndex(i => i.id === over.id);
-
-    if (oldIndex !== -1 && newIndex !== -1) {
+    if (over && active.id !== over.id && onReorderItems) {
+      const oldIndex = section.items.findIndex(i => i.id === active.id);
+      const newIndex = section.items.findIndex(i => i.id === over.id);
       const newItems = arrayMove(section.items, oldIndex, newIndex);
       onReorderItems(section.id, newItems);
     }
@@ -118,6 +119,34 @@ export const SectionCard: React.FC<SectionCardProps> = ({
 
         {isEditMode && (
           <div className="flex items-center gap-0.5 flex-shrink-0 transition-opacity">
+            {onUpdateSpan && (
+              <div
+                className="flex items-center bg-black/10 dark:bg-white/10 rounded-md px-1 py-0.5 text-xs font-bold gap-1 text-[var(--color-text-strong)] mr-1"
+                title="Largeur de la section (nombre de colonnes)"
+              >
+                <button
+                  type="button"
+                  onClick={() => onUpdateSpan(section.id, Math.max(1, (section.col_span || 1) - 1))}
+                  disabled={(section.col_span || 1) <= 1}
+                  className="px-1 hover:text-[var(--color-primary)] disabled:opacity-25 transition-colors"
+                  title="Réduire d'une colonne"
+                >
+                  -
+                </button>
+                <span className="text-[11px] select-none font-semibold px-0.5">
+                  {section.col_span || 1} col{(section.col_span || 1) > 1 ? 's' : ''}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onUpdateSpan(section.id, Math.min(maxAllowedSpan, (section.col_span || 1) + 1))}
+                  disabled={(section.col_span || 1) >= maxAllowedSpan}
+                  className="px-1 hover:text-[var(--color-primary)] disabled:opacity-25 transition-colors"
+                  title="Étendre d'une colonne"
+                >
+                  +
+                </button>
+              </div>
+            )}
             <button
               onClick={() => onAddItem(section.id)}
               className="p-1 text-green-400 hover:bg-green-400/10 rounded-md transition-colors"

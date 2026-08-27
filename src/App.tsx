@@ -548,6 +548,26 @@ function App() {
     }
   };
 
+  const handleUpdateSectionSpan = async (sectionId: string, col_span: number) => {
+    setConfig(prev => ({
+      ...prev,
+      sections: prev.sections.map(s => s.id === sectionId ? { ...s, col_span } : s)
+    }));
+
+    const target = config.sections.find(s => s.id === sectionId);
+    if (!target) return;
+
+    if (target.type === 'links' || !target.type) {
+      await supabase.from('sections').update({
+        widget_url: JSON.stringify({ col_span })
+      }).eq('id', sectionId);
+    } else {
+      await supabase.from('sections').update({
+        col_span
+      }).eq('id', sectionId);
+    }
+  };
+
   // Item handlers
   const handleAddItem = (sectionId: string) => {
     setEditingItem({ sectionId, item: null });
@@ -812,6 +832,7 @@ function App() {
             onDeleteItem={handleDeleteItem}
             onReorderSections={handleReorderSections}
             onReorderItems={handleReorderItems}
+            onUpdateSectionSpan={handleUpdateSectionSpan}
           />
         ) : (
           <div className="text-center py-20 text-[var(--color-text-muted)]">
