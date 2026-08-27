@@ -102,6 +102,8 @@ export const WeatherWidgetCard: React.FC<WeatherWidgetCardProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'hourly' | 'daily'>('hourly');
 
+  const location = parseWeatherConfig(section.widget_url);
+
   const loadWeather = useCallback(async () => {
     const loc = parseWeatherConfig(section.widget_url);
     setLoading(true);

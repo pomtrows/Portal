@@ -41,6 +41,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   isEditMode,
   onAddSection,
   onAddRssWidget,
+  onAddWeatherWidget,
   onEditSection,
   onDeleteSection,
   onAddItem,
