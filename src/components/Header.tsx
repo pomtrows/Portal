@@ -46,26 +46,28 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 glass-panel border-x-0 border-t-0 rounded-none mb-8 px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between relative gap-2 sm:gap-4">
+    <header className="sticky top-0 z-50 glass-panel border-x-0 border-t-0 rounded-none mb-8 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between relative gap-2 sm:gap-4">
       
       {/* MOBILE BURGER (Left on mobile, hidden on PC) */}
-      <button
-        onClick={onOpenMobileMenu}
-        className="md:hidden p-2 -ml-1 text-[var(--color-text-strong)] hover:bg-black/10 rounded-lg transition-colors flex-shrink-0"
-        title="Menu"
-      >
-        <Menu size={24} />
-      </button>
+      <div className="md:hidden flex items-center justify-start flex-shrink-0 w-10">
+        <button
+          onClick={onOpenMobileMenu}
+          className="p-2 -ml-1 text-[var(--color-text-strong)] hover:bg-black/10 rounded-lg transition-colors"
+          title="Menu"
+        >
+          <Menu size={24} />
+        </button>
+      </div>
 
-      {/* TITLE (Full remaining width on mobile, left column on PC) */}
-      <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0 justify-start">
+      {/* TITLE (Centered on mobile, left on PC) */}
+      <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0 justify-center md:justify-start">
         {isEditingTitle ? (
-          <div className="flex items-center gap-1.5 sm:gap-2 w-full max-w-xs sm:max-w-sm min-w-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 w-full max-w-xs sm:max-w-sm min-w-0 justify-center">
             <input
               type="text"
               value={tempTitle}
               onChange={(e) => setTempTitle(e.target.value)}
-              className="bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-2.5 py-1 text-lg sm:text-xl font-bold focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)] flex-1 min-w-0"
+              className="bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-2.5 py-1 text-lg sm:text-xl font-bold focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)] flex-1 min-w-0 text-center md:text-left"
               autoFocus
               onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
             />
@@ -77,8 +79,8 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-2 group min-w-0">
-            <h1 className="text-lg sm:text-2xl font-bold text-[var(--color-text-strong)] tracking-tight truncate whitespace-nowrap">
+          <div className="flex items-center gap-2 group min-w-0 justify-center">
+            <h1 className="text-xl sm:text-2xl font-bold text-[var(--color-text-strong)] tracking-tight truncate whitespace-nowrap text-center md:text-left">
               {title}
             </h1>
             {isEditMode && (
@@ -96,6 +98,9 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         )}
       </div>
+
+      {/* MOBILE RIGHT SPACER (Balances the burger button so title is dead-centered) */}
+      <div className="md:hidden flex-shrink-0 w-10 pointer-events-none" aria-hidden="true" />
 
       {/* PC CENTER (Search & Toggle) */}
       <div className="hidden md:flex flex-row items-center gap-4 flex-1 justify-center">
