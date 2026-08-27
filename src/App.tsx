@@ -818,9 +818,9 @@ function App() {
         onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
       />
 
-      {/* Full-width Tabs Navigation Bar with Screen-Wide Divider Line */}
-      <div className="hidden md:block w-full border-b border-[var(--color-border)]/40 mb-5">
-        <div className="w-full max-w-[1920px] 2xl:max-w-[98%] mx-auto px-4 sm:px-6 pt-1 pb-3 flex flex-wrap gap-2 items-center">
+      {/* Full-width Tabs Navigation Bar with Screen-Wide Primary Blue Divider Line */}
+      <div className="hidden md:block w-full border-b-2 border-[var(--color-primary)] mb-5">
+        <div className="w-full max-w-[1920px] 2xl:max-w-[98%] mx-auto px-4 sm:px-6 flex flex-wrap gap-1.5 items-end">
           {config.pages.map(page => (
             <div key={page.id} className="relative group flex items-center">
               {editingPageId === page.id ? (
@@ -830,7 +830,7 @@ function App() {
                   onChange={e => setTempPageTitle(e.target.value)}
                   onBlur={() => handleSavePageTitle(page.id)}
                   onKeyDown={e => e.key === 'Enter' && handleSavePageTitle(page.id)}
-                  className="px-3.5 py-1.5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-primary)] text-[var(--color-text-strong)] text-sm focus:outline-none"
+                  className="px-4 py-1.5 rounded-t-lg bg-[var(--color-surface)] border-2 border-b-0 border-[var(--color-primary)] text-[var(--color-text-strong)] text-sm focus:outline-none"
                 />
               ) : (
                 <button
@@ -841,7 +841,7 @@ function App() {
                       setTempPageTitle(page.title);
                     }
                   }}
-                  className={`px-3.5 py-1.5 rounded-lg font-medium text-sm transition-colors ${
+                  className={`px-4 py-1.5 rounded-t-lg font-medium text-sm transition-colors ${
                     activePageId === page.id 
                       ? 'bg-[var(--color-primary)] text-white shadow-sm' 
                       : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]'
@@ -866,7 +866,7 @@ function App() {
           {isEditMode && (
             <button
               onClick={handleAddPage}
-              className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface)] transition-colors ml-1"
+              className="p-1.5 rounded-t-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface)] transition-colors ml-1"
               title="Ajouter une page"
             >
               <Plus size={18} />
