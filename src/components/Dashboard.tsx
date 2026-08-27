@@ -101,9 +101,10 @@ function getSectionRowSpan(section: Section, colSpan: number = 1): number {
   if (count === 0) return 2;
   const innerCols = Math.max(1, colSpan);
   const itemRows = Math.ceil(count / innerCols);
-  // Header + padding + itemRows * item height
-  const totalPx = 68 + itemRows * 64;
-  return Math.max(2, Math.ceil(totalPx / 50.4));
+  // Header + padding: 75px, each item row with title/description/gap: ~72px
+  const totalPx = 75 + itemRows * 72;
+  const baseSpan = Math.ceil(totalPx / 50.4);
+  return Math.max(2, baseSpan + 1);
 }
 
 /**
