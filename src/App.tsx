@@ -666,6 +666,7 @@ function App() {
         onTitleChange={handleTitleChange}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        activePageId={activePageId}
         isEditMode={isEditMode}
         onToggleEditMode={() => setIsEditMode(!isEditMode)}
         onOpenAccountModal={() => setIsAccountModalOpen(true)}
@@ -754,6 +755,7 @@ function App() {
           <Dashboard
             sections={currentSections}
             searchQuery={searchQuery}
+            activePageId={activePageId}
             isEditMode={isEditMode}
             onAddSection={handleAddSection}
             onAddRssWidget={handleAddRssWidget}

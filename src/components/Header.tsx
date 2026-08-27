@@ -9,6 +9,7 @@ interface HeaderProps {
   onTitleChange: (newTitle: string) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  activePageId?: string | null;
   isEditMode: boolean;
   onToggleEditMode: () => void;
   onOpenAccountModal: () => void;
@@ -23,6 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
   onTitleChange,
   searchQuery,
   onSearchChange,
+  activePageId,
   isEditMode,
   onToggleEditMode,
   onOpenAccountModal,
@@ -34,7 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(title);
   const { theme, setTheme } = useTheme();
-  const { columnCount, setColumnCount } = useLayout();
+  const { columnCount, setColumnCount } = useLayout(activePageId);
 
   const handleTitleSubmit = () => {
     if (tempTitle.trim()) {
@@ -134,7 +136,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
           <div className="absolute right-0 top-full mt-2 w-48 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 max-h-[380px] overflow-y-auto">
             <div className="px-4 py-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider border-b border-[var(--color-border)] sticky top-0 bg-[var(--color-surface)]">
-              Colonnes (Max)
+              Colonnes de la page
             </div>
             {([1, 2, 3, 4, 5, 6, 7, 8] as ColumnCount[]).map((c) => (
               <button

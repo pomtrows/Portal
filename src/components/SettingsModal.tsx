@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   X,
-  LayoutGrid,
   Palette,
   Type,
   Clock,
@@ -9,7 +8,6 @@ import {
   Sliders,
   Sparkles
 } from 'lucide-react';
-import { useLayout, type ColumnCount } from '../hooks/useLayout';
 import { useTheme, type Theme } from '../hooks/useTheme';
 import { usePreferences, type FontSize } from '../hooks/usePreferences';
 
@@ -37,8 +35,7 @@ const DAYS = [
 ];
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'layout' | 'theme' | 'fonts' | 'schedule'>('layout');
-  const { columnCount, setColumnCount } = useLayout();
+  const [activeTab, setActiveTab] = useState<'theme' | 'fonts' | 'schedule'>('theme');
   const { theme, setTheme } = useTheme();
   const {
     fontSizeSection,
@@ -87,17 +84,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         {/* Navigation Tabs */}
         <div className="flex border-b border-[var(--color-border)] bg-black/5 dark:bg-black/20 px-4 pt-2 gap-1 overflow-x-auto scrollbar-none">
           <button
-            onClick={() => setActiveTab('layout')}
-            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-t-lg text-xs font-bold transition-all border-b-2 ${
-              activeTab === 'layout'
-                ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-surface)] shadow-xs'
-                : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'
-            }`}
-          >
-            <LayoutGrid size={15} />
-            <span>Colonnes</span>
-          </button>
-          <button
             onClick={() => setActiveTab('theme')}
             className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-t-lg text-xs font-bold transition-all border-b-2 ${
               activeTab === 'theme'
@@ -134,34 +120,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
         {/* Tab Content */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
-          {/* TAB 1: COLONNES */}
-          {activeTab === 'layout' && (
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-bold text-[var(--color-text-strong)] mb-1">Nombre de colonnes</h3>
-                <p className="text-xs text-[var(--color-text-muted)]">
-                  Définissez la grille d'affichage maximale pour les écrans larges (actuellement : {columnCount} colonne{columnCount > 1 ? 's' : ''}).
-                </p>
-              </div>
-
-              <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-                {([1, 2, 3, 4, 5, 6, 7, 8] as ColumnCount[]).map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setColumnCount(c)}
-                    className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all ${
-                      columnCount === c
-                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-2 ring-[var(--color-primary)] font-extrabold shadow-sm'
-                        : 'border-[var(--color-border)] bg-black/5 hover:bg-black/10 text-[var(--color-text)] font-semibold'
-                    }`}
-                  >
-                    <span className="text-lg">{c}</span>
-                    <span className="text-[10px] opacity-75">{c > 1 ? 'cols' : 'col'}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* TAB 2: THÈMES */}
           {activeTab === 'theme' && (

@@ -2,34 +2,46 @@ import { useState, useEffect } from 'react';
 
 export type ColumnCount = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
-const LISTENERS = new Set<(count: ColumnCount) => void>();
+type LayoutListener = (pageId: string, count: ColumnCount) => void;
+const LISTENERS = new Set<LayoutListener>();
 
-function getInitialColumnCount(): ColumnCount {
-  const saved = localStorage.getItem('portal-columns');
+export function getPageColumnCount(pageId?: string | null): ColumnCount {
+  if (!pageId) return 3;
+  const saved = localStorage.getItem(`portal-columns-${pageId}`);
   if (saved) {
     const val = parseInt(saved, 10);
+    if (val >= 1 && val <= 8) return val as ColumnCount;
+  }
+  // Fallback to legacy global value if present, else 3
+  const legacy = localStorage.getItem('portal-columns');
+  if (legacy) {
+    const val = parseInt(legacy, 10);
     if (val >= 1 && val <= 8) return val as ColumnCount;
   }
   return 3;
 }
 
-let globalColumnCount: ColumnCount = getInitialColumnCount();
+export function useLayout(pageId?: string | null) {
+  const [columnCount, setColumnCountState] = useState<ColumnCount>(() => getPageColumnCount(pageId));
 
-export function useLayout() {
-  const [columnCount, setColumnCountState] = useState<ColumnCount>(globalColumnCount);
+  // Sync state whenever pageId changes
+  useEffect(() => {
+    setColumnCountState(getPageColumnCount(pageId));
+  }, [pageId]);
 
   useEffect(() => {
-    const listener = (count: ColumnCount) => {
-      setColumnCountState(count);
+    const listener: LayoutListener = (changedPageId, count) => {
+      if (changedPageId === pageId || !pageId) {
+        setColumnCountState(count);
+      }
     };
     LISTENERS.add(listener);
 
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'portal-columns' && e.newValue) {
+      if (pageId && e.key === `portal-columns-${pageId}` && e.newValue) {
         const val = parseInt(e.newValue, 10);
         if (val >= 1 && val <= 8) {
-          globalColumnCount = val as ColumnCount;
-          LISTENERS.forEach(l => l(val as ColumnCount));
+          setColumnCountState(val as ColumnCount);
         }
       }
     };
@@ -39,12 +51,14 @@ export function useLayout() {
       LISTENERS.delete(listener);
       window.removeEventListener('storage', handleStorage);
     };
-  }, []);
+  }, [pageId]);
 
   const setColumnCount = (count: ColumnCount) => {
-    globalColumnCount = count;
-    localStorage.setItem('portal-columns', count.toString());
-    LISTENERS.forEach((listener) => listener(count));
+    if (pageId) {
+      localStorage.setItem(`portal-columns-${pageId}`, count.toString());
+      setColumnCountState(count);
+      LISTENERS.forEach((listener) => listener(pageId, count));
+    }
   };
 
   return { columnCount, setColumnCount };

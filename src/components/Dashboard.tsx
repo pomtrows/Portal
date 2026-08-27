@@ -29,6 +29,7 @@ import {
 interface DashboardProps {
   sections: Section[];
   searchQuery: string;
+  activePageId?: string | null;
   isEditMode: boolean;
   onAddSection: () => void;
   onAddRssWidget: () => void;
@@ -113,6 +114,7 @@ const ColumnDropContainer: React.FC<ColumnDropContainerProps> = ({
 export const Dashboard: React.FC<DashboardProps> = ({
   sections,
   searchQuery,
+  activePageId,
   isEditMode,
   onAddSection,
   onAddRssWidget,
@@ -127,7 +129,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onReorderSections,
   onReorderItems,
 }) => {
-  const { columnCount } = useLayout();
+  const { columnCount } = useLayout(activePageId);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const getColumnsClass = () => {
