@@ -498,7 +498,7 @@ function App() {
       />
 
       {/* Tabs */}
-      <div className="hidden md:flex max-w-[1400px] mx-auto px-6 py-4 flex-wrap gap-2 items-center mb-2">
+      <div className="hidden md:flex w-full max-w-[1920px] 2xl:max-w-[98%] mx-auto px-4 sm:px-6 py-4 flex-wrap gap-2 items-center mb-2">
         {config.pages.map(page => (
           <div key={page.id} className="relative group flex items-center">
             {editingPageId === page.id ? (

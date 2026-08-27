@@ -30,17 +30,17 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, on
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={"group relative " + (isDragging ? 'z-50' : '')}>
+    <div ref={setNodeRef} style={style} className={"group relative w-full min-w-0 " + (isDragging ? 'z-50' : '')}>
       <a
         href={isEditMode ? undefined : item.url}
         target={isEditMode ? undefined : "_blank"}
         rel="noopener noreferrer"
-        className={"block h-full p-2.5 sm:p-3 glass-panel interactive-element bg-black/10 hover:bg-[var(--color-surface-hover)] border-[var(--color-border)]/50 " + (isEditMode ? 'cursor-default ' : 'cursor-pointer ')}
+        className={"block w-full min-w-0 h-full p-2.5 sm:p-3 glass-panel interactive-element bg-black/10 hover:bg-[var(--color-surface-hover)] border-[var(--color-border)]/50 " + (isEditMode ? 'cursor-default ' : 'cursor-pointer ')}
         onClick={(e) => {
           if (isEditMode) e.preventDefault();
         }}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           {isEditMode && (
             <div
               {...attributes}

@@ -51,12 +51,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const getColumnsClass = () => {
     switch (columnCount) {
-      case 1: return 'grid grid-cols-1 gap-6 items-start';
-      case 2: return 'grid grid-cols-1 md:grid-cols-2 gap-6 items-start';
-      case 3: return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start';
-      case 4: return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start';
-      case 5: return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 items-start';
-      default: return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start';
+      case 1: return 'grid grid-cols-1 gap-4 lg:gap-6 items-start';
+      case 2: return 'grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 items-start';
+      case 3: return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 items-start';
+      case 4: return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 lg:gap-5 items-start';
+      case 5: return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4 items-start';
+      case 6: return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 lg:gap-3.5 items-start';
+      case 7: return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5 lg:gap-3 items-start';
+      case 8: return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2.5 lg:gap-3 items-start';
+      default: return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 items-start';
     }
   };
 
@@ -96,7 +99,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto px-6 pb-12">
+    <div className="w-full max-w-[1920px] 2xl:max-w-[98%] mx-auto px-4 sm:px-6 pb-12">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
