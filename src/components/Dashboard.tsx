@@ -527,6 +527,7 @@ function resolveCascadeGeometries(
       onUpdateSpan: (id: string, col_span: number) => {
         handleUpdateSpan(id, col_span);
       },
+      onResize: handleResize,
       maxAllowedSpan: columnCount - (geo.grid_x ?? 0),
     };
 
@@ -553,52 +554,7 @@ function resolveCascadeGeometries(
       );
     }
 
-    return (
-      <div className="relative group w-full h-full flex flex-col min-h-0">
-        {/* Card Component */}
-        <div className="flex-1 w-full h-full min-h-0">{cardContent}</div>
-
-        {/* 2D Grid Positioning & Resizing overlay in Edit Mode */}
-        {isEditMode && (
-          <div className="flex items-center justify-between gap-1 py-1 px-2.5 text-[10px] bg-black/10 dark:bg-white/10 rounded-b-xl border border-t-0 border-[var(--color-border)]/40 backdrop-blur-sm">
-            {/* Position indicator */}
-            <div className="flex items-center gap-1 text-[9px] text-[var(--color-text-muted)] font-mono">
-              <span>Case: ({ (geo.grid_x ?? 0) + 1 }, { (geo.grid_y ?? 0) + 1 })</span>
-            </div>
-
-            {/* Geometry stats & W / H size controls */}
-            <div className="flex items-center gap-1.5 font-mono">
-              {(!section.type || section.type === 'links') ? (
-                <span className="text-[9px] bg-black/15 dark:bg-white/15 rounded px-1.5 py-0.5 font-sans opacity-75" title="Hauteur ajustée automatiquement au nombre de liens">
-                  H: auto ({geo.row_span ?? 1})
-                </span>
-              ) : (
-                <div className="flex items-center gap-0.5 bg-black/15 dark:bg-white/15 rounded px-1.5 py-0.5" title="Hauteur du widget">
-                  <span className="text-[9px] font-bold mr-0.5">H:</span>
-                  <button
-                    type="button"
-                    onClick={() => handleResize(section.id, 0, -1)}
-                    disabled={(geo.row_span ?? 1) <= 1}
-                    className="px-1 hover:text-[var(--color-primary)] disabled:opacity-20 font-bold"
-                  >
-                    -
-                  </button>
-                  <span className="font-bold text-[9px]">{geo.row_span ?? 1}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleResize(section.id, 0, 1)}
-                    disabled={(geo.row_span ?? 1) >= 20}
-                    className="px-1 hover:text-[var(--color-primary)] disabled:opacity-20 font-bold"
-                  >
-                    +
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    );
+    return cardContent;
   };
 
   return (
