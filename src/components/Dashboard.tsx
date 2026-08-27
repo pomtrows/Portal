@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { Section, LinkItem } from '../types';
 import { SectionCard } from './SectionCard';
 import { RssWidgetCard } from './RssWidgetCard';
@@ -134,7 +134,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onUpdateSectionSpan,
 }) => {
   const { columnCount } = useLayout(activePageId);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [dragColumns, setDragColumns] = useState<Section[][] | null>(null);
 
   const getColumnsClass = () => {
     switch (columnCount) {
@@ -150,28 +150,29 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
-  const filteredSections = sections.map(section => {
-    if (section.type === 'rss' || section.type === 'weather' || section.type === 'traffic' || section.type === 'search') {
-      const matches = section.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (section.widget_url && section.widget_url.toLowerCase().includes(searchQuery.toLowerCase()));
-      return matches || isEditMode ? section : null;
-    }
-    return {
-      ...section,
-      items: section.items.filter(item => 
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
-      )
-    };
-  }).filter((section): section is Section => section !== null && (section.type === 'rss' || section.type === 'weather' || section.type === 'traffic' || section.type === 'search' || section.items.length > 0 || isEditMode));
+  const filteredSections = useMemo(() => {
+    return sections.map(section => {
+      if (section.type === 'rss' || section.type === 'weather' || section.type === 'traffic' || section.type === 'search') {
+        const matches = section.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (section.widget_url && section.widget_url.toLowerCase().includes(searchQuery.toLowerCase()));
+        return matches || isEditMode ? section : null;
+      }
+      return {
+        ...section,
+        items: section.items.filter(item => 
+          item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
+        )
+      };
+    }).filter((section): section is Section => section !== null && (section.type === 'rss' || section.type === 'weather' || section.type === 'traffic' || section.type === 'search' || section.items.length > 0 || isEditMode));
+  }, [sections, searchQuery, isEditMode]);
 
-  const [columns, setColumns] = useState<Section[][]>(() => distributeSections(filteredSections, columnCount));
-
-  useEffect(() => {
-    if (!activeId) {
-      setColumns(distributeSections(filteredSections, columnCount));
-    }
-  }, [filteredSections, columnCount, activeId]);
+  // Synchronously compute current columns whenever sections or columnCount changes.
+  // During drag, use dragColumns.
+  const columns = useMemo(() => {
+    if (dragColumns) return dragColumns;
+    return distributeSections(filteredSections, columnCount);
+  }, [dragColumns, filteredSections, columnCount]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -197,8 +198,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return currentCols.findIndex(col => col.some(item => item.id === id));
   };
 
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(String(event.active.id));
+  const handleDragStart = (_event: DragStartEvent) => {
+    setDragColumns(distributeSections(filteredSections, columnCount));
   };
 
   const handleDragOver = (event: DragOverEvent) => {
@@ -210,61 +211,62 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
     if (activeIdStr === overIdStr) return;
 
-    const sourceColIdx = findColumnIndex(activeIdStr, columns);
-    const targetColIdx = findColumnIndex(overIdStr, columns);
+    const currentActiveCols = dragColumns || distributeSections(filteredSections, columnCount);
+
+    const sourceColIdx = findColumnIndex(activeIdStr, currentActiveCols);
+    const targetColIdx = findColumnIndex(overIdStr, currentActiveCols);
 
     if (sourceColIdx === -1 || targetColIdx === -1 || sourceColIdx === targetColIdx) {
       return;
     }
 
-    setColumns(prevCols => {
-      const newCols = prevCols.map(col => [...col]);
-      const sourceCol = newCols[sourceColIdx];
-      const targetCol = newCols[targetColIdx];
+    const newCols = currentActiveCols.map(col => [...col]);
+    const sourceCol = newCols[sourceColIdx];
+    const targetCol = newCols[targetColIdx];
 
-      const activeItemIndex = sourceCol.findIndex(item => item.id === activeIdStr);
-      if (activeItemIndex === -1) return prevCols;
+    const activeItemIndex = sourceCol.findIndex(item => item.id === activeIdStr);
+    if (activeItemIndex === -1) return;
 
-      const [movedItem] = sourceCol.splice(activeItemIndex, 1);
+    const [movedItem] = sourceCol.splice(activeItemIndex, 1);
 
-      if (overIdStr.startsWith('col-')) {
-        targetCol.push(movedItem);
+    if (overIdStr.startsWith('col-')) {
+      targetCol.push(movedItem);
+    } else {
+      const overItemIndex = targetCol.findIndex(item => item.id === overIdStr);
+      if (overItemIndex !== -1) {
+        const isBelowOverItem =
+          over.rect &&
+          active.rect.current.translated &&
+          active.rect.current.translated.top >
+            over.rect.top + (over.rect.height || 0) / 2;
+
+        const insertIndex = isBelowOverItem ? overItemIndex + 1 : overItemIndex;
+        targetCol.splice(insertIndex, 0, movedItem);
       } else {
-        const overItemIndex = targetCol.findIndex(item => item.id === overIdStr);
-        if (overItemIndex !== -1) {
-          // Check if dragging below or above the hovered item
-          const isBelowOverItem =
-            over.rect &&
-            active.rect.current.translated &&
-            active.rect.current.translated.top >
-              over.rect.top + (over.rect.height || 0) / 2;
-
-          const insertIndex = isBelowOverItem ? overItemIndex + 1 : overItemIndex;
-          targetCol.splice(insertIndex, 0, movedItem);
-        } else {
-          targetCol.push(movedItem);
-        }
+        targetCol.push(movedItem);
       }
+    }
 
-      return newCols;
-    });
+    setDragColumns(newCols);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    setActiveId(null);
+    const currentActiveCols = dragColumns || distributeSections(filteredSections, columnCount);
+
+    setDragColumns(null);
 
     if (!over) return;
 
     const activeIdStr = String(active.id);
     const overIdStr = String(over.id);
 
-    const sourceColIdx = findColumnIndex(activeIdStr, columns);
-    const targetColIdx = findColumnIndex(overIdStr, columns);
+    const sourceColIdx = findColumnIndex(activeIdStr, currentActiveCols);
+    const targetColIdx = findColumnIndex(overIdStr, currentActiveCols);
 
     if (sourceColIdx === -1 || targetColIdx === -1) return;
 
-    let finalColumns = columns.map(col => [...col]);
+    const finalColumns = currentActiveCols.map(col => [...col]);
 
     if (sourceColIdx === targetColIdx) {
       const col = finalColumns[sourceColIdx];
@@ -277,7 +279,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
         finalColumns[sourceColIdx] = arrayMove(col, oldIndex, newIndex);
-        setColumns(finalColumns);
       }
     }
 
@@ -335,11 +336,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
       cardContent = (
         <SectionCard
           key={section.id}
-          {...cardProps}
+          section={section}
+          isEditMode={isEditMode}
+          onEditSection={onEditSection}
+          onDeleteSection={onDeleteSection}
           onAddItem={onAddItem}
           onEditItem={onEditItem}
           onDeleteItem={onDeleteItem}
           onReorderItems={onReorderItems}
+          onUpdateSpan={onUpdateSectionSpan}
+          maxAllowedSpan={maxAllowedSpan}
         />
       );
     }

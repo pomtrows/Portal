@@ -726,7 +726,9 @@ function App() {
     );
   }
 
-  const currentSections = config.sections.filter(s => s.page_id === activePageId);
+  const currentSections = config.sections.filter(
+    s => s.page_id === activePageId || (!s.page_id && config.pages.length > 0 && activePageId === config.pages[0]?.id)
+  );
 
   return (
     <div className="min-h-screen bg-[var(--color-background)]">
@@ -822,6 +824,7 @@ function App() {
       <main>
         {activePageId ? (
           <Dashboard
+            key={activePageId}
             sections={currentSections}
             searchQuery={searchQuery}
             activePageId={activePageId}
