@@ -282,7 +282,7 @@ export const WeatherWidgetCard: React.FC<WeatherWidgetCardProps> = ({
                 }`}
               >
                 <Clock size={13} />
-                <span>Aujourd'hui</span>
+                <span>24h</span>
               </button>
               <button
                 type="button"
@@ -302,7 +302,7 @@ export const WeatherWidgetCard: React.FC<WeatherWidgetCardProps> = ({
             {activeTab === 'hourly' && (
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-[11px] font-bold text-slate-900 dark:text-slate-200 px-1">
-                  <span>Prévisions d'aujourd'hui</span>
+                  <span>Prévisions sur 24h</span>
                   <span className="text-[10px] text-slate-700 dark:text-slate-400">
                     {data.hourly.length}h
                   </span>
