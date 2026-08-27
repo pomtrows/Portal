@@ -55,8 +55,8 @@ function getSectionRowSpan(section: Section, colSpan: number = 1): number {
   if (count === 0) return 2;
   const innerCols = Math.max(1, colSpan);
   const itemRows = Math.ceil(count / innerCols);
-  // Header (~28px) + padding (~20px) + itemRows * (item height ~46px + gap 10px = 56px)
-  const totalPx = 52 + itemRows * 56;
+  // Header (~32px) + padding (~24px) + itemRows * (item button ~52px + gap 10px = 62px)
+  const totalPx = 60 + itemRows * 62;
   return Math.max(2, Math.ceil(totalPx / 50.4));
 }
 
