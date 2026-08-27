@@ -360,7 +360,7 @@ export const WeatherWidgetCard: React.FC<WeatherWidgetCardProps> = ({
                       className="flex items-center justify-between p-2.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/50 hover:bg-slate-200/90 dark:hover:bg-slate-700/60 border border-slate-200/80 dark:border-slate-700/50 transition-colors text-xs"
                     >
                       {/* Day name */}
-                      <div className="w-24 font-bold text-slate-950 dark:text-white truncate">
+                      <div className="w-28 font-bold text-slate-950 dark:text-white truncate">
                         {day.dayName}
                       </div>
 

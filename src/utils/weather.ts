@@ -196,13 +196,11 @@ export async function fetchWeatherData(location: WeatherLocation): Promise<Weath
 
   const daily: DailyForecast[] = [];
   const daysCount = Math.min(7, dailyDates.length);
-  const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
 
   for (let i = 0; i < daysCount; i++) {
     const dateObj = new Date(dailyDates[i] + 'T00:00:00');
-    let dayName = dayNames[dateObj.getDay()];
-    if (i === 0) dayName = "Aujourd'hui";
-    else if (i === 1) dayName = 'Demain';
+    const dayName = dayNames[dateObj.getDay()];
 
     daily.push({
       date: dailyDates[i],
