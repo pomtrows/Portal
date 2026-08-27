@@ -23,6 +23,8 @@ import {
   type TrafficLocation
 } from '../utils/traffic';
 
+import { usePreferences } from '../hooks/usePreferences';
+
 interface TrafficWidgetCardProps {
   section: Section;
   isEditMode: boolean;
@@ -36,6 +38,7 @@ export const TrafficWidgetCard: React.FC<TrafficWidgetCardProps> = ({
   onEditSection,
   onDeleteSection,
 }) => {
+  const { fontSizeSection } = usePreferences();
   const {
     attributes,
     listeners,
@@ -49,6 +52,14 @@ export const TrafficWidgetCard: React.FC<TrafficWidgetCardProps> = ({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+  };
+
+  const getTitleClass = () => {
+    switch (fontSizeSection) {
+      case 'compact': return 'text-xs sm:text-sm font-bold';
+      case 'large': return 'text-base sm:text-lg font-bold';
+      default: return 'text-sm sm:text-base font-bold';
+    }
   };
 
   const initialConfig = parseTrafficConfig(section.widget_url);
@@ -116,7 +127,7 @@ export const TrafficWidgetCard: React.FC<TrafficWidgetCardProps> = ({
           <div className="p-1 rounded-lg bg-emerald-900/10 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 flex-shrink-0">
             <Car size={17} />
           </div>
-          <h2 className="text-lg font-bold text-slate-950 dark:text-white truncate">
+          <h2 className={`${getTitleClass()} text-slate-950 dark:text-white truncate`} title={section.title || `${startLoc.name} ➔ ${endLoc.name}`}>
             {section.title || `${startLoc.name} ➔ ${endLoc.name}`}
           </h2>
         </div>

@@ -31,6 +31,8 @@ import {
   type SearchEngine
 } from '../utils/searchEngines';
 
+import { usePreferences } from '../hooks/usePreferences';
+
 interface SearchWidgetCardProps {
   section: Section;
   isEditMode: boolean;
@@ -62,6 +64,7 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
   onEditSection,
   onDeleteSection,
 }) => {
+  const { fontSizeSection } = usePreferences();
   const {
     attributes,
     listeners,
@@ -75,6 +78,14 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+  };
+
+  const getTitleClass = () => {
+    switch (fontSizeSection) {
+      case 'compact': return 'text-xs sm:text-sm font-bold';
+      case 'large': return 'text-base sm:text-lg font-bold';
+      default: return 'text-sm sm:text-base font-bold';
+    }
   };
 
   const config = parseSearchConfig(section.widget_url);
@@ -157,7 +168,7 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
           <div className="p-1 rounded-lg bg-indigo-900/10 dark:bg-indigo-500/15 text-indigo-800 dark:text-indigo-300 flex-shrink-0">
             <Search size={17} />
           </div>
-          <h2 className="text-lg font-bold text-slate-950 dark:text-white truncate">
+          <h2 className={`${getTitleClass()} text-slate-950 dark:text-white truncate`} title={section.title || config.title}>
             {section.title || config.title}
           </h2>
         </div>

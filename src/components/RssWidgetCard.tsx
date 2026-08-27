@@ -68,7 +68,7 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
   onEditSection,
   onDeleteSection,
 }) => {
-  const { fontSizeRss } = usePreferences();
+  const { fontSizeRss, fontSizeSection } = usePreferences();
   const {
     attributes,
     listeners,
@@ -82,6 +82,14 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+  };
+
+  const getSectionTitleClass = () => {
+    switch (fontSizeSection) {
+      case 'compact': return 'text-xs sm:text-sm font-bold';
+      case 'large': return 'text-base sm:text-lg font-bold';
+      default: return 'text-sm sm:text-base font-bold';
+    }
   };
 
   const getRssTitleClass = () => {
@@ -208,7 +216,7 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
           <div className="p-1 rounded-lg bg-orange-500/10 text-orange-400 flex-shrink-0">
             <Rss size={16} />
           </div>
-          <h2 className="text-sm sm:text-base font-bold text-[var(--color-text-strong)] truncate min-w-0" title={section.title}>
+          <h2 className={`${getSectionTitleClass()} text-[var(--color-text-strong)] truncate min-w-0`} title={section.title}>
             {section.title}
           </h2>
         </div>

@@ -33,6 +33,7 @@ import {
   getWeatherInfo,
   type WeatherData
 } from '../utils/weather';
+import { usePreferences } from '../hooks/usePreferences';
 
 interface WeatherWidgetCardProps {
   section: Section;
@@ -83,6 +84,7 @@ export const WeatherWidgetCard: React.FC<WeatherWidgetCardProps> = ({
   onEditSection,
   onDeleteSection,
 }) => {
+  const { fontSizeSection } = usePreferences();
   const {
     attributes,
     listeners,
@@ -96,6 +98,14 @@ export const WeatherWidgetCard: React.FC<WeatherWidgetCardProps> = ({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+  };
+
+  const getTitleClass = () => {
+    switch (fontSizeSection) {
+      case 'compact': return 'text-xs sm:text-sm font-bold';
+      case 'large': return 'text-base sm:text-lg font-bold';
+      default: return 'text-sm sm:text-base font-bold';
+    }
   };
 
   const [data, setData] = useState<WeatherData | null>(null);
@@ -157,7 +167,7 @@ export const WeatherWidgetCard: React.FC<WeatherWidgetCardProps> = ({
           <div className="p-1 rounded-lg bg-blue-900/10 dark:bg-sky-500/15 text-blue-800 dark:text-sky-300 flex-shrink-0">
             <CloudSun size={17} />
           </div>
-          <h2 className="text-lg font-bold text-slate-950 dark:text-white truncate">
+          <h2 className={`${getTitleClass()} text-slate-950 dark:text-white truncate`} title={section.title || location.name}>
             {section.title || location.name}
           </h2>
         </div>

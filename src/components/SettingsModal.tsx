@@ -169,10 +169,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               <div className="space-y-2.5">
                 <div>
                   <h3 className="text-sm font-bold text-[var(--color-text-strong)]">
-                    Taille de police des Sections
+                    Taille de police des Sections & Widgets
                   </h3>
                   <p className="text-xs text-[var(--color-text-muted)]">
-                    Ajuste la taille des titres de vos blocs et catégories.
+                    Ajuste la taille des titres de vos sections et de vos widgets (Flux RSS, Météo, Trajet, Recherche).
                   </p>
                 </div>
 
@@ -194,7 +194,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         <div className={`text-slate-500 dark:text-slate-400 mt-1 truncate font-bold ${
                           size === 'compact' ? 'text-xs' : size === 'normal' ? 'text-sm' : 'text-base'
                         }`}>
-                          Titre Section
+                          Titre Section / Widget
                         </div>
                       </button>
                     );
