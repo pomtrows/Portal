@@ -157,7 +157,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onReorderSections: _onReorderSections,
   onReorderItems,
   onUpdateSectionGeometry,
-  onUpdateAllGeometries,
+  onUpdateAllGeometries: _onUpdateAllGeometries,
 }) => {
   const { columnCount } = useLayout(activePageId);
   const { gridLayouts } = usePreferences();
@@ -228,6 +228,51 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setActiveId(String(event.active.id));
   };
 
+/**
+ * Resolves 2D collision so that a moved section never overlaps with existing sections.
+ * If (targetX, targetY) overlaps with any existing section, it pushes targetY down to the bottom of the colliding section.
+ */
+function findNonCollidingY(
+  movingSectionId: string,
+  targetX: number,
+  targetY: number,
+  w: number,
+  h: number,
+  currentLayouts: Record<string, GridItemGeometry>
+): number {
+  let adjustedY = Math.max(0, targetY);
+  let hasCollision = true;
+  let iterations = 0;
+
+  while (hasCollision && iterations < 50) {
+    hasCollision = false;
+    iterations++;
+
+    for (const [id, geo] of Object.entries(currentLayouts)) {
+      if (id === movingSectionId) continue;
+      const otherX = geo.grid_x ?? 0;
+      const otherY = geo.grid_y ?? 0;
+      const otherW = geo.col_span ?? 1;
+      const otherH = geo.row_span ?? 1;
+
+      // Check horizontal overlap
+      const horizontalOverlap = targetX < otherX + otherW && targetX + w > otherX;
+      if (!horizontalOverlap) continue;
+
+      // Check vertical overlap
+      const verticalOverlap = adjustedY < otherY + otherH && adjustedY + h > otherY;
+      if (verticalOverlap) {
+        // Push adjustedY below the colliding item
+        adjustedY = otherY + otherH;
+        hasCollision = true;
+        break; // re-check with all items from the new adjustedY
+      }
+    }
+  }
+
+  return adjustedY;
+}
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
@@ -240,23 +285,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const sourceGeo = layoutMap[sourceId];
     const targetGeo = layoutMap[targetId];
 
-    if (sourceGeo && targetGeo && onUpdateAllGeometries) {
-      // Swap coordinates or move source to target location
-      const updates: Record<string, { grid_x: number; grid_y: number; col_span: number; row_span: number }> = {
-        [sourceId]: {
-          grid_x: targetGeo.grid_x ?? 0,
-          grid_y: targetGeo.grid_y ?? 0,
-          col_span: sourceGeo.col_span ?? 1,
-          row_span: sourceGeo.row_span ?? 1,
-        },
-        [targetId]: {
-          grid_x: sourceGeo.grid_x ?? 0,
-          grid_y: sourceGeo.grid_y ?? 0,
-          col_span: targetGeo.col_span ?? 1,
-          row_span: targetGeo.row_span ?? 1,
-        },
-      };
-      onUpdateAllGeometries(updates);
+    if (sourceGeo && targetGeo && onUpdateSectionGeometry) {
+      // Place source directly below target section without collision
+      const targetX = targetGeo.grid_x ?? 0;
+      const targetY = (targetGeo.grid_y ?? 0) + (targetGeo.row_span ?? 1);
+      const w = sourceGeo.col_span ?? 1;
+      const h = sourceGeo.row_span ?? 1;
+
+      const nonCollidingY = findNonCollidingY(sourceId, targetX, targetY, w, h, layoutMap);
+      onUpdateSectionGeometry(sourceId, { grid_x: targetX, grid_y: nonCollidingY });
     }
   };
 
@@ -264,9 +301,36 @@ export const Dashboard: React.FC<DashboardProps> = ({
     if (!onUpdateSectionGeometry) return;
     const geo = layoutMap[sectionId] || { grid_x: 0, grid_y: 0, col_span: 1, row_span: 1 };
     const w = geo.col_span ?? 1;
+    const h = geo.row_span ?? 1;
     const newX = Math.min(Math.max(0, (geo.grid_x ?? 0) + dx), columnCount - w);
-    const newY = Math.max(0, (geo.grid_y ?? 0) + dy);
-    onUpdateSectionGeometry(sectionId, { grid_x: newX, grid_y: newY });
+    let rawY = Math.max(0, (geo.grid_y ?? 0) + dy);
+
+    if (dx !== 0) {
+      // When moving laterally, always ensure it drops below any item existing in that column
+      rawY = findNonCollidingY(sectionId, newX, (geo.grid_y ?? 0), w, h, layoutMap);
+    } else if (dy > 0) {
+      // When moving down, find next non-colliding slot
+      rawY = findNonCollidingY(sectionId, newX, rawY, w, h, layoutMap);
+    } else if (dy < 0) {
+      // When moving up, check if slot is free
+      let canMoveUp = true;
+      for (const [id, otherGeo] of Object.entries(layoutMap)) {
+        if (id === sectionId) continue;
+        const otherX = otherGeo.grid_x ?? 0;
+        const otherY = otherGeo.grid_y ?? 0;
+        const otherW = otherGeo.col_span ?? 1;
+        const otherH = otherGeo.row_span ?? 1;
+        const horiz = newX < otherX + otherW && newX + w > otherX;
+        const vert = rawY < otherY + otherH && rawY + h > otherY;
+        if (horiz && vert) {
+          canMoveUp = false;
+          break;
+        }
+      }
+      if (!canMoveUp) return;
+    }
+
+    onUpdateSectionGeometry(sectionId, { grid_x: newX, grid_y: rawY });
   };
 
   const handleResize = (sectionId: string, dw: number, dh: number) => {
@@ -275,8 +339,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const curX = geo.grid_x ?? 0;
     const maxW = Math.max(1, columnCount - curX);
     const newW = Math.min(Math.max(1, (geo.col_span ?? 1) + dw), maxW);
-    const newH = Math.min(Math.max(1, (geo.row_span ?? 1) + dh), 12);
-    onUpdateSectionGeometry(sectionId, { col_span: newW, row_span: newH });
+    const newH = Math.min(Math.max(1, (geo.row_span ?? 1) + dh), 25);
+    const nonCollidingY = findNonCollidingY(sectionId, curX, geo.grid_y ?? 0, newW, newH, layoutMap);
+    onUpdateSectionGeometry(sectionId, { grid_x: curX, grid_y: nonCollidingY, col_span: newW, row_span: newH });
   };
 
   const renderSection = (section: Section, geo: GridItemGeometry) => {
