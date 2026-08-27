@@ -55,9 +55,9 @@ function getSectionRowSpan(section: Section, colSpan: number = 1): number {
   if (count === 0) return 2;
   const innerCols = Math.max(1, colSpan);
   const itemRows = Math.ceil(count / innerCols);
-  // Header (~36px) + padding (~20px) + itemRows * (~50px per item) = 56px + itemRows * 50px
-  const totalPx = 56 + itemRows * 50;
-  return Math.max(2, Math.ceil(totalPx / 50.4));
+  // Header (~36px) + padding (~24px) + itemRows * (~58px per item card + 10px gap)
+  const totalPx = 65 + itemRows * 58;
+  return Math.max(2, Math.ceil(totalPx / 48) + 1);
 }
 
 /**
@@ -467,7 +467,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               return (
                 <div
                   key={section.id}
-                  className="w-full h-full min-w-0 transition-all duration-150 relative z-10"
+                  className="w-full min-h-full h-auto min-w-0 transition-all duration-150 relative z-10"
                   style={{
                     gridColumnStart: (geo.grid_x ?? 0) + 1,
                     gridColumnEnd: `span ${clampedColSpan}`,
