@@ -91,10 +91,10 @@ interface DashboardProps {
 }
 
 function getSectionRowSpan(section: Section, colSpan: number = 1): number {
-  if (section.type === 'weather') return section.row_span || 7; // ~310px
-  if (section.type === 'traffic') return section.row_span || 4; // ~180px
-  if (section.type === 'search') return section.row_span || 6; // ~265px
-  if (section.type === 'rss') return section.row_span || 8; // ~360px
+  if (section.type === 'weather') return Math.max(7, section.row_span || 7); // ~310px
+  if (section.type === 'traffic') return Math.max(4, section.row_span || 4); // ~180px
+  if (section.type === 'search') return Math.max(6, section.row_span || 6); // ~265px
+  if (section.type === 'rss') return Math.max(8, section.row_span || 8); // ~360px
 
   // For links sections, compute strictly according to items count and column width
   const count = section.items?.length || 0;
@@ -145,7 +145,8 @@ function computeAutoLayout(
     let gx = saved?.grid_x ?? s.grid_x;
     let gy = saved?.grid_y ?? s.grid_y;
     let w = Math.min(saved?.col_span ?? s.col_span ?? 1, columnCount);
-    let h = isLinks ? getSectionRowSpan(s, w) : Math.max(1, saved?.row_span ?? s.row_span ?? getSectionRowSpan(s, w));
+    const minH = getSectionRowSpan(s, w);
+    let h = isLinks ? minH : Math.max(minH, saved?.row_span ?? s.row_span ?? minH);
 
     if (gx === undefined && s.position !== undefined && s.position >= 1000) {
       gy = Math.floor(s.position / 1000);
@@ -165,7 +166,8 @@ function computeAutoLayout(
   unplaced.forEach((s) => {
     const isLinks = !s.type || s.type === 'links';
     const w = Math.min(s.col_span || 1, columnCount);
-    const h = isLinks ? getSectionRowSpan(s, w) : Math.max(1, s.row_span || getSectionRowSpan(s, w));
+    const minH = getSectionRowSpan(s, w);
+    const h = isLinks ? minH : Math.max(minH, s.row_span || minH);
     let placed = false;
     let y = 0;
 
@@ -514,7 +516,10 @@ function findNonCollidingY(
                 geo.col_span || 1,
                 columnCount - (geo.grid_x ?? 0)
               );
-              const clampedRowSpan = Math.max(1, geo.row_span || 1);
+              const clampedRowSpan = Math.max(
+                getSectionRowSpan(section, clampedColSpan),
+                geo.row_span || 1
+              );
 
               return (
                 <div
