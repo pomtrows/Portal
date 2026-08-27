@@ -4,6 +4,8 @@ import { Rss, Edit2, Trash2, GripVertical, RotateCw, ExternalLink, AlertCircle }
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+import { usePreferences } from '../hooks/usePreferences';
+
 interface RssItem {
   title: string;
   link: string;
@@ -66,6 +68,7 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
   onEditSection,
   onDeleteSection,
 }) => {
+  const { fontSizeRss } = usePreferences();
   const {
     attributes,
     listeners,
@@ -79,6 +82,30 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+  };
+
+  const getRssTitleClass = () => {
+    switch (fontSizeRss) {
+      case 'compact': return 'text-xs font-semibold';
+      case 'large': return 'text-base font-semibold';
+      default: return 'text-sm font-semibold';
+    }
+  };
+
+  const getRssDescClass = () => {
+    switch (fontSizeRss) {
+      case 'compact': return 'text-[11px]';
+      case 'large': return 'text-sm';
+      default: return 'text-xs';
+    }
+  };
+
+  const getRssDateClass = () => {
+    switch (fontSizeRss) {
+      case 'compact': return 'text-[10px]';
+      case 'large': return 'text-xs';
+      default: return 'text-[11px]';
+    }
   };
 
   const [items, setItems] = useState<RssItem[]>([]);
@@ -257,20 +284,20 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
             className="group/item block p-2.5 rounded-xl bg-black/10 hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)]/40 hover:border-[var(--color-primary)]/50 transition-all"
           >
             <div className="flex items-start justify-between gap-2">
-              <h3 className="font-semibold text-sm text-[var(--color-text-strong)] group-hover/item:text-[var(--color-primary)] transition-colors line-clamp-2">
+              <h3 className={`font-semibold ${getRssTitleClass()} text-[var(--color-text-strong)] group-hover/item:text-[var(--color-primary)] transition-colors line-clamp-2`}>
                 {item.title}
               </h3>
               <ExternalLink size={14} className="text-[var(--color-text-muted)] opacity-0 group-hover/item:opacity-100 transition-opacity flex-shrink-0 mt-0.5" />
             </div>
 
             {item.description && (
-              <p className="text-xs text-[var(--color-text-muted)] mt-1 line-clamp-2">
+              <p className={`${getRssDescClass()} text-[var(--color-text-muted)] mt-1 line-clamp-2`}>
                 {item.description}
               </p>
             )}
 
             {item.pubDate && (
-              <div className="text-[11px] text-[var(--color-text-muted)]/70 mt-2 font-mono">
+              <div className={`${getRssDateClass()} text-[var(--color-text-muted)]/70 mt-2 font-mono`}>
                 {formatDate(item.pubDate)}
               </div>
             )}

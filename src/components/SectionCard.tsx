@@ -18,6 +18,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+import { usePreferences } from '../hooks/usePreferences';
+
 interface SectionCardProps {
   section: Section;
   isEditMode: boolean;
@@ -39,6 +41,8 @@ export const SectionCard: React.FC<SectionCardProps> = ({
   onDeleteItem,
   onReorderItems
 }) => {
+  const { fontSizeSection } = usePreferences();
+
   // Sortable hook for the Section itself
   const {
     attributes,
@@ -59,7 +63,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 5,
       },
     })
   );
@@ -77,6 +81,14 @@ export const SectionCard: React.FC<SectionCardProps> = ({
     }
   };
 
+  const getTitleClass = () => {
+    switch (fontSizeSection) {
+      case 'compact': return 'text-xs sm:text-sm font-bold';
+      case 'large': return 'text-base sm:text-lg font-bold';
+      default: return 'text-sm sm:text-base font-bold';
+    }
+  };
+
   return (
     <div ref={setNodeRef} style={style} className={"glass-panel p-3 sm:p-4 w-full min-w-0 " + (isDragging ? 'z-50 shadow-2xl ring-2 ring-[var(--color-primary)]' : '')}>
       <div className="flex items-center justify-between mb-3 group gap-1.5 min-w-0">
@@ -91,7 +103,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
               <GripVertical size={16} />
             </div>
           )}
-          <h2 className="text-sm sm:text-base font-bold text-[var(--color-text-strong)] truncate min-w-0" title={section.title}>
+          <h2 className={`${getTitleClass()} text-[var(--color-text-strong)] truncate min-w-0`} title={section.title}>
             {section.title}
           </h2>
         </div>

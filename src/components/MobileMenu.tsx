@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Search, Settings, LogOut, User, Plus, Trash2 } from 'lucide-react';
+import { X, Search, Settings, LogOut, User, Plus, Trash2, Edit3 } from 'lucide-react';
 import { supabase } from '../utils/supabase';
 import type { Page } from '../types';
 
@@ -19,6 +19,7 @@ interface MobileMenuProps {
   isEditMode: boolean;
   onToggleEditMode: () => void;
   onOpenAccountModal: () => void;
+  onOpenSettingsModal: () => void;
 }
 
 export const MobileMenu: React.FC<MobileMenuProps> = ({
@@ -36,7 +37,8 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
   onChangeProfile,
   isEditMode,
   onToggleEditMode,
-  onOpenAccountModal
+  onOpenAccountModal,
+  onOpenSettingsModal
 }) => {
   if (!isOpen) return null;
 
@@ -123,7 +125,15 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
           </div>
 
           <div className="mt-auto border-t border-[var(--color-border)] pt-4 flex flex-col gap-2">
-             <button
+            <button
+              onClick={() => { onOpenSettingsModal(); onClose(); }}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--color-background)] text-[var(--color-text-strong)] border border-[var(--color-border)] font-medium"
+            >
+              <Settings size={18} />
+              <span>Paramètres</span>
+            </button>
+
+            <button
               onClick={() => { onToggleEditMode(); onClose(); }}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${
                 isEditMode 
@@ -131,7 +141,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
                   : 'bg-[var(--color-background)] text-[var(--color-text-strong)] border border-[var(--color-border)]'
               }`}
             >
-              <Settings size={18} className={isEditMode ? 'animate-spin-slow' : ''} />
+              <Edit3 size={18} />
               <span>{isEditMode ? 'Terminer l\'édition' : 'Mode Édition'}</span>
             </button>
             

@@ -2,17 +2,23 @@ import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { SectionModal, ItemModal, RssModal, WeatherModal, TrafficModal, SearchModal } from './components/EditModals';
+import { SettingsModal } from './components/SettingsModal';
 import { MobileMenu } from './components/MobileMenu';
 import { Auth } from './components/Auth';
 import { AccountModal } from './components/AccountModal';
 import type { DashboardConfig, Section, LinkItem, Page } from './types';
 import { Plus, Trash2 } from 'lucide-react';
 import { supabase } from './utils/supabase';
+import { usePreferences } from './hooks/usePreferences';
 import type { Session } from '@supabase/supabase-js';
 
 function App() {
+  const { schedule, getCurrentScheduledProfile } = usePreferences();
   const [session, setSession] = useState<Session | null>(null);
   const [currentProfile, setCurrentProfile] = useState<'perso' | 'pro'>(() => {
+    if (schedule.enabled) {
+      return getCurrentScheduledProfile();
+    }
     return (localStorage.getItem('portal-profile') as 'perso' | 'pro') || 'perso';
   });
   const [config, setConfig] = useState<DashboardConfig>({ title: 'Mon Portail', pages: [], sections: [] });
@@ -25,6 +31,7 @@ function App() {
 
   // Modals state
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isSectionModalOpen, setIsSectionModalOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<Section | null>(null);
 
@@ -46,6 +53,17 @@ function App() {
   // Page Editing
   const [editingPageId, setEditingPageId] = useState<string | null>(null);
   const [tempPageTitle, setTempPageTitle] = useState('');
+
+  // Auto-schedule check on mount or when schedule changes
+  useEffect(() => {
+    if (schedule.enabled) {
+      const autoProf = getCurrentScheduledProfile();
+      if (autoProf !== currentProfile) {
+        setCurrentProfile(autoProf);
+        localStorage.setItem('portal-profile', autoProf);
+      }
+    }
+  }, [schedule.enabled, schedule.proDays, schedule.proStartTime, schedule.proEndTime]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -651,6 +669,7 @@ function App() {
         isEditMode={isEditMode}
         onToggleEditMode={() => setIsEditMode(!isEditMode)}
         onOpenAccountModal={() => setIsAccountModalOpen(true)}
+        onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
         profile={currentProfile}
         onChangeProfile={handleChangeProfile}
         onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
@@ -672,6 +691,7 @@ function App() {
         isEditMode={isEditMode}
         onToggleEditMode={() => setIsEditMode(!isEditMode)}
         onOpenAccountModal={() => setIsAccountModalOpen(true)}
+        onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
       />
 
       {/* Tabs */}
@@ -759,6 +779,11 @@ function App() {
       <AccountModal
         isOpen={isAccountModalOpen}
         onClose={() => setIsAccountModalOpen(false)}
+      />
+
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
       />
 
       <SectionModal

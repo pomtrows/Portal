@@ -12,6 +12,7 @@ interface HeaderProps {
   isEditMode: boolean;
   onToggleEditMode: () => void;
   onOpenAccountModal: () => void;
+  onOpenSettingsModal: () => void;
   profile: 'perso' | 'pro';
   onChangeProfile: (p: 'perso' | 'pro') => void;
   onOpenMobileMenu: () => void;
@@ -25,6 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
   isEditMode,
   onToggleEditMode,
   onOpenAccountModal,
+  onOpenSettingsModal,
   profile,
   onChangeProfile,
   onOpenMobileMenu
@@ -42,40 +44,39 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 glass-panel border-x-0 border-t-0 rounded-none mb-8 px-6 py-4 flex items-center justify-between relative">
+    <header className="sticky top-0 z-50 glass-panel border-x-0 border-t-0 rounded-none mb-8 px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between relative gap-2 sm:gap-4">
       
-      {/* MOBILE BURGER (Left) */}
-      <div className="md:hidden flex items-center justify-start flex-1">
-        <button
-          onClick={onOpenMobileMenu}
-          className="p-2 -ml-2 text-[var(--color-text-strong)] hover:bg-black/10 rounded-lg transition-colors"
-        >
-          <Menu size={24} />
-        </button>
-      </div>
+      {/* MOBILE BURGER (Left on mobile, hidden on PC) */}
+      <button
+        onClick={onOpenMobileMenu}
+        className="md:hidden p-2 -ml-1 text-[var(--color-text-strong)] hover:bg-black/10 rounded-lg transition-colors flex-shrink-0"
+        title="Menu"
+      >
+        <Menu size={24} />
+      </button>
 
-      {/* TITLE (Left on PC, Center on Mobile) */}
-      <div className="flex items-center gap-4 flex-1 justify-center md:justify-start">
+      {/* TITLE (Full remaining width on mobile, left column on PC) */}
+      <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0 justify-start">
         {isEditingTitle ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 w-full max-w-xs sm:max-w-sm min-w-0">
             <input
               type="text"
               value={tempTitle}
               onChange={(e) => setTempTitle(e.target.value)}
-              className="bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-3 py-1.5 text-xl font-bold focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)] w-full max-w-[200px]"
+              className="bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-2.5 py-1 text-lg sm:text-xl font-bold focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)] flex-1 min-w-0"
               autoFocus
               onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
             />
-            <button onClick={handleTitleSubmit} className="p-1.5 text-green-400 hover:bg-green-400/10 rounded-md transition-colors">
-              <Check size={20} />
+            <button onClick={handleTitleSubmit} className="p-1.5 text-green-400 hover:bg-green-400/10 rounded-md transition-colors flex-shrink-0">
+              <Check size={18} />
             </button>
-            <button onClick={() => setIsEditingTitle(false)} className="p-1.5 text-red-400 hover:bg-red-400/10 rounded-md transition-colors">
-              <X size={20} />
+            <button onClick={() => setIsEditingTitle(false)} className="p-1.5 text-red-400 hover:bg-red-400/10 rounded-md transition-colors flex-shrink-0">
+              <X size={18} />
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-2 group">
-            <h1 className="text-2xl font-bold text-[var(--color-text-strong)] tracking-tight">
+          <div className="flex items-center gap-2 group min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold text-[var(--color-text-strong)] tracking-tight truncate whitespace-nowrap">
               {title}
             </h1>
             {isEditMode && (
@@ -84,7 +85,7 @@ export const Header: React.FC<HeaderProps> = ({
                   setTempTitle(title);
                   setIsEditingTitle(true);
                 }}
-                className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all"
+                className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all flex-shrink-0"
                 title="Renommer le portail"
               >
                 <Edit3 size={16} />
@@ -169,14 +170,23 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <button
+          onClick={onOpenSettingsModal}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-[var(--color-text)] bg-black/10 hover:bg-black/20 border border-[var(--color-border)] transition-all"
+          title="Paramètres du portail"
+        >
+          <Settings size={17} />
+          <span>Paramètres</span>
+        </button>
+
+        <button
           onClick={onToggleEditMode}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-medium transition-all duration-200 ${
             isEditMode 
               ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20' 
               : 'bg-black/20 hover:bg-[var(--color-surface-hover)] text-[var(--color-text)] border border-[var(--color-border)]'
           }`}
         >
-          <Settings size={18} className={isEditMode ? 'animate-spin-slow' : ''} />
+          <Edit3 size={17} />
           <span>{isEditMode ? 'Terminer' : 'Éditer'}</span>
         </button>
 
@@ -196,9 +206,6 @@ export const Header: React.FC<HeaderProps> = ({
           <LogOut size={20} />
         </button>
       </div>
-
-      {/* MOBILE EMPTY RIGHT (Balances layout) */}
-      <div className="md:hidden flex-1"></div>
 
     </header>
   );

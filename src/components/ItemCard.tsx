@@ -3,6 +3,7 @@ import type { LinkItem } from '../types';
 import { Edit2, Trash2, GripVertical } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { usePreferences } from '../hooks/usePreferences';
 
 const LazyDynamicIcon = React.lazy(() => import('./DynamicIcon').then(m => ({ default: m.DynamicIcon })));
 
@@ -14,6 +15,7 @@ interface ItemCardProps {
 }
 
 export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, onDelete }) => {
+  const { fontSizeSection } = usePreferences();
   const {
     attributes,
     listeners,
@@ -27,6 +29,22 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, on
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+  };
+
+  const getTitleClass = () => {
+    switch (fontSizeSection) {
+      case 'compact': return 'text-[11px] sm:text-xs';
+      case 'large': return 'text-sm sm:text-base';
+      default: return 'text-xs sm:text-sm';
+    }
+  };
+
+  const getDescClass = () => {
+    switch (fontSizeSection) {
+      case 'compact': return 'text-[10px]';
+      case 'large': return 'text-xs';
+      default: return 'text-[11px]';
+    }
   };
 
   return (
@@ -57,11 +75,11 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, on
             </Suspense>
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-[var(--color-text-strong)] font-semibold text-xs sm:text-sm truncate">
+            <h3 className={`text-[var(--color-text-strong)] font-semibold ${getTitleClass()} truncate`}>
               {item.title}
             </h3>
             {item.description && (
-              <p className="text-[var(--color-text-muted)] text-[11px] mt-0.5 line-clamp-1">
+              <p className={`text-[var(--color-text-muted)] ${getDescClass()} mt-0.5 line-clamp-1`}>
                 {item.description}
               </p>
             )}
