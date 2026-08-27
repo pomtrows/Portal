@@ -10,18 +10,33 @@ import { useLayout } from '../hooks/useLayout';
 import { usePreferences, type GridItemGeometry } from '../hooks/usePreferences';
 import {
   DndContext,
-  closestCenter,
+  pointerWithin,
+  rectIntersection,
+  closestCorners,
   PointerSensor,
   useSensor,
   useSensors,
   useDroppable,
   type DragStartEvent,
   type DragEndEvent,
+  type CollisionDetection,
 } from '@dnd-kit/core';
 import {
   SortableContext,
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
+
+const pointerFirstCollisionDetection: CollisionDetection = (args) => {
+  const pointerCollisions = pointerWithin(args);
+  if (pointerCollisions.length > 0) {
+    return pointerCollisions;
+  }
+  const rectCollisions = rectIntersection(args);
+  if (rectCollisions.length > 0) {
+    return rectCollisions;
+  }
+  return closestCorners(args);
+};
 
 const DroppableGridCell: React.FC<{
   id: string;
@@ -454,7 +469,7 @@ function findNonCollidingY(
     <div className="w-full max-w-[1920px] 2xl:max-w-[98%] mx-auto px-4 sm:px-6 pb-12">
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={pointerFirstCollisionDetection}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
