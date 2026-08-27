@@ -244,7 +244,7 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
             }`}
           >
             <Sparkles size={11} />
-            <span>Assistants IA</span>
+            <span>IA</span>
           </button>
           <button
             type="button"

@@ -967,7 +967,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
           <div>
             <div className="text-xs font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5 mb-2">
               <Sparkles size={13} />
-              <span>Assistants IA</span>
+              <span>IA</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {aiEngines.map((engine) => {
