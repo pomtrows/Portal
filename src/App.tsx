@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
-import { SectionModal, ItemModal, RssModal, WeatherModal } from './components/EditModals';
+import { SectionModal, ItemModal, RssModal, WeatherModal, TrafficModal } from './components/EditModals';
 import { MobileMenu } from './components/MobileMenu';
 import { Auth } from './components/Auth';
 import { AccountModal } from './components/AccountModal';
@@ -33,6 +33,9 @@ function App() {
 
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
   const [editingWeatherSection, setEditingWeatherSection] = useState<Section | null>(null);
+
+  const [isTrafficModalOpen, setIsTrafficModalOpen] = useState(false);
+  const [editingTrafficSection, setEditingTrafficSection] = useState<Section | null>(null);
   
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<{ sectionId: string, item: LinkItem | null } | null>(null);
@@ -189,6 +192,11 @@ function App() {
     setIsWeatherModalOpen(true);
   };
 
+  const handleAddTrafficWidget = () => {
+    setEditingTrafficSection(null);
+    setIsTrafficModalOpen(true);
+  };
+
   const handleEditSection = (section: Section) => {
     if (section.type === 'rss') {
       setEditingRssSection(section);
@@ -196,6 +204,9 @@ function App() {
     } else if (section.type === 'weather') {
       setEditingWeatherSection(section);
       setIsWeatherModalOpen(true);
+    } else if (section.type === 'traffic') {
+      setEditingTrafficSection(section);
+      setIsTrafficModalOpen(true);
     } else {
       setEditingSection(section);
       setIsSectionModalOpen(true);
@@ -362,6 +373,54 @@ function App() {
         page_id: activePageId,
         title: newSection.title,
         type: 'weather',
+        widget_url: newSection.widget_url,
+        position: newSection.position,
+        user_id: session.user.id
+      });
+    }
+  };
+
+  const handleSaveTrafficSection = async (sectionData: Partial<Section>) => {
+    if (!session?.user || !activePageId) return;
+
+    if (editingTrafficSection) {
+      // Update
+      const updatedSection: Section = {
+        ...editingTrafficSection,
+        title: sectionData.title || editingTrafficSection.title,
+        widget_url: sectionData.widget_url || editingTrafficSection.widget_url,
+        type: 'traffic'
+      };
+      setConfig(prev => ({
+        ...prev,
+        sections: prev.sections.map(s => s.id === editingTrafficSection.id ? updatedSection : s)
+      }));
+      await supabase.from('sections').update({
+        title: updatedSection.title,
+        widget_url: updatedSection.widget_url,
+        type: 'traffic'
+      }).eq('id', editingTrafficSection.id);
+    } else {
+      // Create
+      const newId = `traffic-${Date.now()}`;
+      const newSection: Section = {
+        id: newId,
+        page_id: activePageId,
+        title: sectionData.title || 'Trajet',
+        type: 'traffic',
+        widget_url: sectionData.widget_url,
+        position: config.sections.length,
+        items: []
+      };
+      setConfig(prev => ({
+        ...prev,
+        sections: [...prev.sections, newSection]
+      }));
+      await supabase.from('sections').insert({
+        id: newId,
+        page_id: activePageId,
+        title: newSection.title,
+        type: 'traffic',
         widget_url: newSection.widget_url,
         position: newSection.position,
         user_id: session.user.id
@@ -620,6 +679,7 @@ function App() {
             onAddSection={handleAddSection}
             onAddRssWidget={handleAddRssWidget}
             onAddWeatherWidget={handleAddWeatherWidget}
+            onAddTrafficWidget={handleAddTrafficWidget}
             onEditSection={handleEditSection}
             onDeleteSection={handleDeleteSection}
             onAddItem={handleAddItem}
@@ -660,6 +720,13 @@ function App() {
         onClose={() => setIsWeatherModalOpen(false)}
         onSave={handleSaveWeatherSection}
         initialData={editingWeatherSection}
+      />
+
+      <TrafficModal
+        isOpen={isTrafficModalOpen}
+        onClose={() => setIsTrafficModalOpen(false)}
+        onSave={handleSaveTrafficSection}
+        initialData={editingTrafficSection}
       />
 
       <ItemModal

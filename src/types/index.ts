@@ -20,7 +20,7 @@ export interface Section {
   id: string;
   page_id: string;
   title: string;
-  type?: 'links' | 'rss' | 'weather';
+  type?: 'links' | 'rss' | 'weather' | 'traffic';
   widget_url?: string;
   display_limit?: number;
   position?: number;

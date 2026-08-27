@@ -3,7 +3,8 @@ import type { Section, LinkItem } from '../types';
 import { SectionCard } from './SectionCard';
 import { RssWidgetCard } from './RssWidgetCard';
 import { WeatherWidgetCard } from './WeatherWidgetCard';
-import { Plus, Rss, CloudSun } from 'lucide-react';
+import { TrafficWidgetCard } from './TrafficWidgetCard';
+import { Plus, Rss, CloudSun, Car } from 'lucide-react';
 import { useLayout } from '../hooks/useLayout';
 import {
   DndContext,
@@ -26,6 +27,7 @@ interface DashboardProps {
   onAddSection: () => void;
   onAddRssWidget: () => void;
   onAddWeatherWidget: () => void;
+  onAddTrafficWidget: () => void;
   onEditSection: (section: Section) => void;
   onDeleteSection: (id: string) => void;
   onAddItem: (sectionId: string) => void;
@@ -42,6 +44,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onAddSection,
   onAddRssWidget,
   onAddWeatherWidget,
+  onAddTrafficWidget,
   onEditSection,
   onDeleteSection,
   onAddItem,
@@ -67,7 +70,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const filteredSections = sections.map(section => {
-    if (section.type === 'rss' || section.type === 'weather') {
+    if (section.type === 'rss' || section.type === 'weather' || section.type === 'traffic') {
       const matches = section.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (section.widget_url && section.widget_url.toLowerCase().includes(searchQuery.toLowerCase()));
       return matches || isEditMode ? section : null;
@@ -79,7 +82,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     };
-  }).filter((section): section is Section => section !== null && (section.type === 'rss' || section.type === 'weather' || section.items.length > 0 || isEditMode));
+  }).filter((section): section is Section => section !== null && (section.type === 'rss' || section.type === 'weather' || section.type === 'traffic' || section.items.length > 0 || isEditMode));
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -134,6 +137,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   />
                 );
               }
+              if (section.type === 'traffic') {
+                return (
+                  <TrafficWidgetCard
+                    key={section.id}
+                    section={section}
+                    isEditMode={isEditMode}
+                    onEditSection={onEditSection}
+                    onDeleteSection={onDeleteSection}
+                  />
+                );
+              }
               return (
                 <SectionCard
                   key={section.id}
@@ -180,6 +194,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
           >
             <CloudSun size={20} />
             <span>Ajouter la météo</span>
+          </button>
+          <button
+            onClick={onAddTrafficWidget}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-dashed border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 hover:border-emerald-500 hover:bg-emerald-500/10 transition-all font-medium"
+          >
+            <Car size={20} />
+            <span>Ajouter un trajet</span>
           </button>
         </div>
       )}

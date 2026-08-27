@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import type { Section, LinkItem } from '../types';
 import { searchCities, parseWeatherConfig, type WeatherLocation } from '../utils/weather';
-import { Search, MapPin, Navigation, Loader2, Check } from 'lucide-react';
+import { searchAddresses, parseTrafficConfig, calculateRoute, type TrafficLocation, type RouteResult } from '../utils/traffic';
+import { Search, MapPin, Navigation, Loader2, Check, Car, Clock } from 'lucide-react';
 
 interface SectionModalProps {
   isOpen: boolean;
@@ -519,5 +520,351 @@ export const WeatherModal: React.FC<WeatherModalProps> = ({
     </div>
   );
 };
+
+interface TrafficModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (section: Partial<Section>) => void;
+  initialData?: Section | null;
+}
+
+export const TrafficModal: React.FC<TrafficModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  initialData,
+}) => {
+  const [title, setTitle] = useState('');
+  const [startQuery, setStartQuery] = useState('');
+  const [endQuery, setEndQuery] = useState('');
+  const [startResults, setStartResults] = useState<TrafficLocation[]>([]);
+  const [endResults, setEndResults] = useState<TrafficLocation[]>([]);
+  const [selectedStart, setSelectedStart] = useState<TrafficLocation | null>(null);
+  const [selectedEnd, setSelectedEnd] = useState<TrafficLocation | null>(null);
+  const [isSearchingStart, setIsSearchingStart] = useState(false);
+  const [isSearchingEnd, setIsSearchingEnd] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [previewRoute, setPreviewRoute] = useState<RouteResult | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (initialData) {
+      setTitle(initialData.title);
+      const conf = parseTrafficConfig(initialData.widget_url);
+      setSelectedStart(conf.start);
+      setSelectedEnd(conf.end);
+      setStartQuery(conf.start.name);
+      setEndQuery(conf.end.name);
+    } else {
+      setTitle('Maison ➔ Travail');
+      setSelectedStart(null);
+      setSelectedEnd(null);
+      setStartQuery('');
+      setEndQuery('');
+    }
+    setStartResults([]);
+    setEndResults([]);
+    setPreviewRoute(null);
+  }, [initialData, isOpen]);
+
+  // Search start
+  useEffect(() => {
+    if (!startQuery.trim() || startQuery.trim().length < 2 || (selectedStart && selectedStart.name === startQuery)) {
+      setStartResults([]);
+      setIsSearchingStart(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearchingStart(true);
+      const res = await searchAddresses(startQuery);
+      setStartResults(res);
+      setIsSearchingStart(false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [startQuery, selectedStart]);
+
+  // Search end
+  useEffect(() => {
+    if (!endQuery.trim() || endQuery.trim().length < 2 || (selectedEnd && selectedEnd.name === endQuery)) {
+      setEndResults([]);
+      setIsSearchingEnd(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearchingEnd(true);
+      const res = await searchAddresses(endQuery);
+      setEndResults(res);
+      setIsSearchingEnd(false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [endQuery, selectedEnd]);
+
+  // Preview route calculation when both start and end are selected
+  useEffect(() => {
+    if (selectedStart && selectedEnd) {
+      setPreviewLoading(true);
+      calculateRoute(selectedStart, selectedEnd)
+        .then((res) => {
+          setPreviewRoute(res);
+        })
+        .catch((err) => {
+          console.warn('Preview route failed:', err);
+          setPreviewRoute(null);
+        })
+        .finally(() => {
+          setPreviewLoading(false);
+        });
+    } else {
+      setPreviewRoute(null);
+    }
+  }, [selectedStart, selectedEnd]);
+
+  const handleDetectStartLocation = () => {
+    if (!navigator.geolocation) return;
+    setIsLocating(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = parseFloat(pos.coords.latitude.toFixed(4));
+        const lon = parseFloat(pos.coords.longitude.toFixed(4));
+
+        let name = 'Ma position actuelle';
+        let address = `${lat}, ${lon}`;
+        try {
+          const res = await fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.features && data.features[0]) {
+              name = data.features[0].properties.label || name;
+              address = data.features[0].properties.context || address;
+            }
+          }
+        } catch {
+          // ignore
+        }
+
+        const loc: TrafficLocation = {
+          name,
+          address,
+          latitude: lat,
+          longitude: lon,
+        };
+
+        setSelectedStart(loc);
+        setStartQuery(name);
+        setStartResults([]);
+        setIsLocating(false);
+      },
+      () => {
+        setIsLocating(false);
+      },
+      { timeout: 8000 }
+    );
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl w-full max-w-md p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-lg bg-emerald-900/10 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300">
+            <Car size={20} />
+          </div>
+          <h2 className="text-xl font-bold text-[var(--color-text-strong)]">
+            {initialData ? 'Modifier le trajet' : 'Nouveau trajet en voiture'}
+          </h2>
+        </div>
+
+        {/* Title */}
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1">
+            Titre du trajet
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="ex: Maison ➔ Travail"
+            className="w-full bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-3 py-2 focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)] text-sm"
+          />
+        </div>
+
+        {/* Departure Address */}
+        <div className="relative">
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-sm font-medium text-[var(--color-text-muted)] flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+              <span>Point de départ (A)</span>
+            </label>
+            <button
+              type="button"
+              onClick={handleDetectStartLocation}
+              disabled={isLocating}
+              className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:opacity-80 flex items-center gap-1 transition-colors"
+            >
+              {isLocating ? <Loader2 size={12} className="animate-spin" /> : <Navigation size={12} />}
+              <span>Ma position</span>
+            </button>
+          </div>
+
+          <div className="relative">
+            <input
+              type="text"
+              value={startQuery}
+              onChange={(e) => {
+                setStartQuery(e.target.value);
+                if (selectedStart && selectedStart.name !== e.target.value) {
+                  setSelectedStart(null);
+                }
+              }}
+              placeholder="Adresse, rue, code postal, ville de départ..."
+              className="w-full bg-[var(--color-background)] border border-[var(--color-border)] rounded-md pl-9 pr-8 py-2 focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)] text-sm"
+            />
+            <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 dark:text-emerald-400" />
+            {isSearchingStart && (
+              <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] animate-spin" />
+            )}
+          </div>
+
+          {/* Autocomplete Start */}
+          {startResults.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-xl overflow-hidden z-30 max-h-40 overflow-y-auto divide-y divide-[var(--color-border)]/50">
+              {startResults.map((loc, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setSelectedStart(loc);
+                    setStartQuery(loc.name);
+                    setStartResults([]);
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-[var(--color-surface-hover)] flex flex-col text-xs transition-colors"
+                >
+                  <span className="font-bold text-[var(--color-text-strong)] truncate">{loc.name}</span>
+                  {loc.address && <span className="text-[11px] text-[var(--color-text-muted)] truncate">{loc.address}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Arrival Address */}
+        <div className="relative">
+          <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1 flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+            <span>Point d'arrivée (B)</span>
+          </label>
+
+          <div className="relative">
+            <input
+              type="text"
+              value={endQuery}
+              onChange={(e) => {
+                setEndQuery(e.target.value);
+                if (selectedEnd && selectedEnd.name !== e.target.value) {
+                  setSelectedEnd(null);
+                }
+              }}
+              placeholder="Adresse ou destination d'arrivée..."
+              className="w-full bg-[var(--color-background)] border border-[var(--color-border)] rounded-md pl-9 pr-8 py-2 focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)] text-sm"
+            />
+            <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-red-600 dark:text-red-400" />
+            {isSearchingEnd && (
+              <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] animate-spin" />
+            )}
+          </div>
+
+          {/* Autocomplete End */}
+          {endResults.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-xl overflow-hidden z-20 max-h-40 overflow-y-auto divide-y divide-[var(--color-border)]/50">
+              {endResults.map((loc, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setSelectedEnd(loc);
+                    setEndQuery(loc.name);
+                    setEndResults([]);
+                    if (!title || title === 'Maison ➔ Travail') {
+                      setTitle(`${selectedStart ? selectedStart.name : 'Départ'} ➔ ${loc.name}`);
+                    }
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-[var(--color-surface-hover)] flex flex-col text-xs transition-colors"
+                >
+                  <span className="font-bold text-[var(--color-text-strong)] truncate">{loc.name}</span>
+                  {loc.address && <span className="text-[11px] text-[var(--color-text-muted)] truncate">{loc.address}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Route Preview */}
+        {previewLoading && (
+          <div className="p-3 rounded-lg bg-black/10 flex items-center justify-center gap-2 text-xs text-[var(--color-text-muted)] animate-pulse">
+            <Loader2 size={14} className="animate-spin" />
+            <span>Calcul du temps de route...</span>
+          </div>
+        )}
+
+        {previewRoute && !previewLoading && (
+          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <Clock size={16} className="text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+              <div>
+                <div className="font-bold text-[var(--color-text-strong)]">
+                  Temps estimé : {previewRoute.durationFormatted}
+                </div>
+                <div className="text-[11px] text-[var(--color-text-muted)]">
+                  Distance : {previewRoute.distanceFormatted}
+                </div>
+              </div>
+            </div>
+            <Check size={18} className="text-emerald-600 dark:text-emerald-400" />
+          </div>
+        )}
+
+        {/* Buttons */}
+        <div className="mt-6 flex justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-md bg-[var(--color-background)] text-[var(--color-text)] hover:bg-[var(--color-border)] transition-colors text-sm"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            disabled={!selectedStart || !selectedEnd}
+            onClick={() => {
+              if (selectedStart && selectedEnd) {
+                const finalTitle = title.trim() || `${selectedStart.name} ➔ ${selectedEnd.name}`;
+                onSave({
+                  title: finalTitle,
+                  widget_url: JSON.stringify({
+                    start: selectedStart,
+                    end: selectedEnd,
+                    title: finalTitle,
+                  }),
+                  type: 'traffic',
+                });
+                onClose();
+              }
+            }}
+            className="px-4 py-2 rounded-md bg-[var(--color-primary)] text-white hover:opacity-90 transition-opacity text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Sauvegarder
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 
