@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
-import { SectionModal, ItemModal, RssModal, WeatherModal, TrafficModal } from './components/EditModals';
+import { SectionModal, ItemModal, RssModal, WeatherModal, TrafficModal, SearchModal } from './components/EditModals';
 import { MobileMenu } from './components/MobileMenu';
 import { Auth } from './components/Auth';
 import { AccountModal } from './components/AccountModal';
@@ -36,6 +36,9 @@ function App() {
 
   const [isTrafficModalOpen, setIsTrafficModalOpen] = useState(false);
   const [editingTrafficSection, setEditingTrafficSection] = useState<Section | null>(null);
+
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [editingSearchSection, setEditingSearchSection] = useState<Section | null>(null);
   
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<{ sectionId: string, item: LinkItem | null } | null>(null);
@@ -197,6 +200,11 @@ function App() {
     setIsTrafficModalOpen(true);
   };
 
+  const handleAddSearchWidget = () => {
+    setEditingSearchSection(null);
+    setIsSearchModalOpen(true);
+  };
+
   const handleEditSection = (section: Section) => {
     if (section.type === 'rss') {
       setEditingRssSection(section);
@@ -207,6 +215,9 @@ function App() {
     } else if (section.type === 'traffic') {
       setEditingTrafficSection(section);
       setIsTrafficModalOpen(true);
+    } else if (section.type === 'search') {
+      setEditingSearchSection(section);
+      setIsSearchModalOpen(true);
     } else {
       setEditingSection(section);
       setIsSectionModalOpen(true);
@@ -421,6 +432,54 @@ function App() {
         page_id: activePageId,
         title: newSection.title,
         type: 'traffic',
+        widget_url: newSection.widget_url,
+        position: newSection.position,
+        user_id: session.user.id
+      });
+    }
+  };
+
+  const handleSaveSearchSection = async (sectionData: Partial<Section>) => {
+    if (!session?.user || !activePageId) return;
+
+    if (editingSearchSection) {
+      // Update
+      const updatedSection: Section = {
+        ...editingSearchSection,
+        title: sectionData.title || editingSearchSection.title,
+        widget_url: sectionData.widget_url || editingSearchSection.widget_url,
+        type: 'search'
+      };
+      setConfig(prev => ({
+        ...prev,
+        sections: prev.sections.map(s => s.id === editingSearchSection.id ? updatedSection : s)
+      }));
+      await supabase.from('sections').update({
+        title: updatedSection.title,
+        widget_url: updatedSection.widget_url,
+        type: 'search'
+      }).eq('id', editingSearchSection.id);
+    } else {
+      // Create
+      const newId = `search-${Date.now()}`;
+      const newSection: Section = {
+        id: newId,
+        page_id: activePageId,
+        title: sectionData.title || 'Hub de recherche & IA',
+        type: 'search',
+        widget_url: sectionData.widget_url,
+        position: config.sections.length,
+        items: []
+      };
+      setConfig(prev => ({
+        ...prev,
+        sections: [...prev.sections, newSection]
+      }));
+      await supabase.from('sections').insert({
+        id: newId,
+        page_id: activePageId,
+        title: newSection.title,
+        type: 'search',
         widget_url: newSection.widget_url,
         position: newSection.position,
         user_id: session.user.id
@@ -680,6 +739,7 @@ function App() {
             onAddRssWidget={handleAddRssWidget}
             onAddWeatherWidget={handleAddWeatherWidget}
             onAddTrafficWidget={handleAddTrafficWidget}
+            onAddSearchWidget={handleAddSearchWidget}
             onEditSection={handleEditSection}
             onDeleteSection={handleDeleteSection}
             onAddItem={handleAddItem}
@@ -727,6 +787,13 @@ function App() {
         onClose={() => setIsTrafficModalOpen(false)}
         onSave={handleSaveTrafficSection}
         initialData={editingTrafficSection}
+      />
+
+      <SearchModal
+        isOpen={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+        onSave={handleSaveSearchSection}
+        initialData={editingSearchSection}
       />
 
       <ItemModal

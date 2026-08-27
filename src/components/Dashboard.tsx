@@ -4,7 +4,8 @@ import { SectionCard } from './SectionCard';
 import { RssWidgetCard } from './RssWidgetCard';
 import { WeatherWidgetCard } from './WeatherWidgetCard';
 import { TrafficWidgetCard } from './TrafficWidgetCard';
-import { Plus, Rss, CloudSun, Car } from 'lucide-react';
+import { SearchWidgetCard } from './SearchWidgetCard';
+import { Plus, Rss, CloudSun, Car, Search } from 'lucide-react';
 import { useLayout } from '../hooks/useLayout';
 import {
   DndContext,
@@ -33,6 +34,7 @@ interface DashboardProps {
   onAddRssWidget: () => void;
   onAddWeatherWidget: () => void;
   onAddTrafficWidget: () => void;
+  onAddSearchWidget: () => void;
   onEditSection: (section: Section) => void;
   onDeleteSection: (id: string) => void;
   onAddItem: (sectionId: string) => void;
@@ -116,6 +118,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onAddRssWidget,
   onAddWeatherWidget,
   onAddTrafficWidget,
+  onAddSearchWidget,
   onEditSection,
   onDeleteSection,
   onAddItem,
@@ -142,7 +145,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const filteredSections = sections.map(section => {
-    if (section.type === 'rss' || section.type === 'weather' || section.type === 'traffic') {
+    if (section.type === 'rss' || section.type === 'weather' || section.type === 'traffic' || section.type === 'search') {
       const matches = section.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (section.widget_url && section.widget_url.toLowerCase().includes(searchQuery.toLowerCase()));
       return matches || isEditMode ? section : null;
@@ -154,7 +157,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     };
-  }).filter((section): section is Section => section !== null && (section.type === 'rss' || section.type === 'weather' || section.type === 'traffic' || section.items.length > 0 || isEditMode));
+  }).filter((section): section is Section => section !== null && (section.type === 'rss' || section.type === 'weather' || section.type === 'traffic' || section.type === 'search' || section.items.length > 0 || isEditMode));
 
   const [columns, setColumns] = useState<Section[][]>(() => distributeSections(filteredSections, columnCount));
 
@@ -302,6 +305,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
         />
       );
     }
+    if (section.type === 'search') {
+      return (
+        <SearchWidgetCard
+          key={section.id}
+          section={section}
+          isEditMode={isEditMode}
+          onEditSection={onEditSection}
+          onDeleteSection={onDeleteSection}
+        />
+      );
+    }
     return (
       <SectionCard
         key={section.id}
@@ -375,6 +389,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
           >
             <Car size={20} />
             <span>Ajouter un trajet</span>
+          </button>
+          <button
+            onClick={onAddSearchWidget}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-dashed border-indigo-500/40 text-indigo-700 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:border-indigo-500 hover:bg-indigo-500/10 transition-all font-medium"
+          >
+            <Search size={20} />
+            <span>Ajouter une recherche</span>
           </button>
         </div>
       )}

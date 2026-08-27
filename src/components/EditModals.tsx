@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import type { Section, LinkItem } from '../types';
 import { searchCities, parseWeatherConfig, type WeatherLocation } from '../utils/weather';
 import { searchAddresses, parseTrafficConfig, calculateRoute, type TrafficLocation, type RouteResult } from '../utils/traffic';
-import { Search, MapPin, Navigation, Loader2, Check, Car, Clock } from 'lucide-react';
+import { ALL_SEARCH_ENGINES, parseSearchConfig, type SearchWidgetConfig } from '../utils/searchEngines';
+import { Search, MapPin, Navigation, Loader2, Check, Car, Clock, Sparkles, Globe } from 'lucide-react';
 
 interface SectionModalProps {
   isOpen: boolean;
@@ -865,6 +866,201 @@ export const TrafficModal: React.FC<TrafficModalProps> = ({
     </div>
   );
 };
+
+interface SearchModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (section: Partial<Section>) => void;
+  initialData?: Section | null;
+}
+
+export const SearchModal: React.FC<SearchModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  initialData,
+}) => {
+  const [title, setTitle] = useState('');
+  const [defaultEngineId, setDefaultEngineId] = useState<string>('google');
+  const [enabledEngineIds, setEnabledEngineIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (initialData) {
+      setTitle(initialData.title);
+      const conf = parseSearchConfig(initialData.widget_url);
+      setDefaultEngineId(conf.defaultEngineId);
+      setEnabledEngineIds(conf.enabledEngineIds);
+    } else {
+      setTitle('Hub de recherche & IA');
+      setDefaultEngineId('google');
+      setEnabledEngineIds(ALL_SEARCH_ENGINES.map((e) => e.id));
+    }
+  }, [initialData, isOpen]);
+
+  const toggleEngine = (id: string) => {
+    if (enabledEngineIds.includes(id)) {
+      // Don't allow unchecking everything
+      if (enabledEngineIds.length > 1) {
+        const updated = enabledEngineIds.filter((e) => e !== id);
+        setEnabledEngineIds(updated);
+        if (defaultEngineId === id && updated.length > 0) {
+          setDefaultEngineId(updated[0]);
+        }
+      }
+    } else {
+      setEnabledEngineIds([...enabledEngineIds, id]);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  const aiEngines = ALL_SEARCH_ENGINES.filter((e) => e.category === 'ai');
+  const webEngines = ALL_SEARCH_ENGINES.filter((e) => e.category === 'web');
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-lg bg-indigo-900/10 dark:bg-indigo-500/15 text-indigo-800 dark:text-indigo-300">
+            <Search size={20} />
+          </div>
+          <h2 className="text-xl font-bold text-[var(--color-text-strong)]">
+            {initialData ? 'Modifier le hub de recherche' : 'Nouveau hub de recherche & IA'}
+          </h2>
+        </div>
+
+        {/* Title */}
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1">
+            Titre du widget
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="ex: Hub de recherche & IA"
+            className="w-full bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-3 py-2 focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)] text-sm font-medium"
+          />
+        </div>
+
+        {/* Default Engine */}
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1">
+            Moteur par défaut (lancé lors de l'appui sur Entrée)
+          </label>
+          <select
+            value={defaultEngineId}
+            onChange={(e) => setDefaultEngineId(e.target.value)}
+            className="w-full bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-3 py-2 focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)] text-sm font-semibold cursor-pointer"
+          >
+            {ALL_SEARCH_ENGINES.filter((e) => enabledEngineIds.includes(e.id)).map((engine) => (
+              <option key={engine.id} value={engine.id}>
+                {engine.category === 'ai' ? '🤖 ' : '🔍 '} {engine.name} ({engine.description})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Enabled Engines selection */}
+        <div className="space-y-3 pt-1">
+          {/* AI Assistants */}
+          <div>
+            <div className="text-xs font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5 mb-2">
+              <Sparkles size={13} />
+              <span>Assistants IA</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {aiEngines.map((engine) => {
+                const isChecked = enabledEngineIds.includes(engine.id);
+                return (
+                  <label
+                    key={engine.id}
+                    className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-xs font-semibold transition-all ${
+                      isChecked
+                        ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500/40 text-indigo-950 dark:text-indigo-200'
+                        : 'bg-slate-100/50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-700 text-slate-500 opacity-60'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleEngine(engine.id)}
+                      className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    />
+                    <span>{engine.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Web Search Engines */}
+          <div>
+            <div className="text-xs font-bold text-sky-700 dark:text-sky-300 flex items-center gap-1.5 mb-2">
+              <Globe size={13} />
+              <span>Moteurs Web & Médias</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {webEngines.map((engine) => {
+                const isChecked = enabledEngineIds.includes(engine.id);
+                return (
+                  <label
+                    key={engine.id}
+                    className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-xs font-semibold transition-all ${
+                      isChecked
+                        ? 'bg-sky-50/80 dark:bg-sky-950/40 border-sky-500/40 text-sky-950 dark:text-sky-200'
+                        : 'bg-slate-100/50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-700 text-slate-500 opacity-60'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleEngine(engine.id)}
+                      className="rounded text-sky-600 focus:ring-sky-500 cursor-pointer"
+                    />
+                    <span>{engine.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="mt-6 flex justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-md bg-[var(--color-background)] text-[var(--color-text)] hover:bg-[var(--color-border)] transition-colors text-sm"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            disabled={enabledEngineIds.length === 0}
+            onClick={() => {
+              const conf: SearchWidgetConfig = {
+                title: title.trim() || 'Hub de recherche & IA',
+                defaultEngineId,
+                enabledEngineIds,
+              };
+              onSave({
+                title: conf.title,
+                widget_url: JSON.stringify(conf),
+                type: 'search',
+              });
+              onClose();
+            }}
+            className="px-4 py-2 rounded-md bg-[var(--color-primary)] text-white hover:opacity-90 transition-opacity text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Sauvegarder
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 
 
