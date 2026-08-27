@@ -27,7 +27,7 @@ function parseJinaMarkdown(text: string, limit: number = 10): RssItem[] {
     const lines = block.trim().split('\n').map(l => l.trim()).filter(Boolean);
     if (lines.length === 0) continue;
 
-    const linkMatch = block.match(/https?:\/\/[^\s\)\>]+/);
+    const linkMatch = block.match(/https?:\/\/[^\s)>]+/);
     const link = linkMatch ? linkMatch[0] : '#';
 
     let title = '';

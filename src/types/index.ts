@@ -24,6 +24,7 @@ export interface Section {
   widget_url?: string;
   display_limit?: number;
   position?: number;
+  column_index?: number;
   created_at?: string;
   items: LinkItem[];
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Section, LinkItem } from '../types';
 import { SectionCard } from './SectionCard';
 import { RssWidgetCard } from './RssWidgetCard';
@@ -8,15 +8,20 @@ import { Plus, Rss, CloudSun, Car } from 'lucide-react';
 import { useLayout } from '../hooks/useLayout';
 import {
   DndContext,
-  closestCenter,
+  closestCorners,
+  pointerWithin,
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
+  type DragStartEvent,
+  type DragOverEvent,
+  type DragEndEvent,
+  type CollisionDetection,
 } from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
 import {
   SortableContext,
-  rectSortingStrategy,
+  verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable';
 
@@ -37,6 +42,72 @@ interface DashboardProps {
   onReorderItems: (sectionId: string, items: LinkItem[]) => void;
 }
 
+function distributeSections(sections: Section[], columnCount: number): Section[][] {
+  const cols: Section[][] = Array.from({ length: columnCount }, () => []);
+  const sorted = [...sections].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  const hasEncodedCol = sorted.some(s => (s.position !== undefined && s.position >= 1000) || s.column_index !== undefined);
+
+  if (hasEncodedCol) {
+    sorted.forEach(s => {
+      let col = s.column_index !== undefined 
+        ? s.column_index 
+        : Math.floor((s.position ?? 0) / 1000);
+      if (col < 0 || col >= columnCount) {
+        col = Math.min(Math.max(0, col % columnCount), columnCount - 1);
+      }
+      cols[col].push(s);
+    });
+  } else {
+    sorted.forEach((s, idx) => {
+      const col = (s.position !== undefined ? s.position : idx) % columnCount;
+      cols[col].push(s);
+    });
+  }
+
+  return cols;
+}
+
+interface ColumnDropContainerProps {
+  id: string;
+  colIdx: number;
+  sections: Section[];
+  isEditMode: boolean;
+  renderSection: (section: Section) => React.ReactNode;
+}
+
+const ColumnDropContainer: React.FC<ColumnDropContainerProps> = ({
+  id,
+  colIdx,
+  sections,
+  isEditMode,
+  renderSection,
+}) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id,
+    disabled: !isEditMode,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex flex-col gap-4 min-w-0 w-full transition-all duration-200 rounded-2xl ${
+        isOver && isEditMode ? 'bg-[var(--color-primary)]/10 ring-2 ring-dashed ring-[var(--color-primary)] min-h-[140px]' : ''
+      }`}
+    >
+      <SortableContext items={sections.map(s => s.id)} strategy={verticalListSortingStrategy}>
+        {sections.map(renderSection)}
+      </SortableContext>
+
+      {isEditMode && sections.length === 0 && (
+        <div className="min-h-[140px] border-2 border-dashed border-[var(--color-border)]/60 hover:border-[var(--color-primary)]/50 rounded-2xl flex flex-col items-center justify-center p-4 text-xs text-[var(--color-text-muted)] text-center transition-colors">
+          <span className="font-semibold">Colonne {colIdx + 1} vide</span>
+          <span className="text-[11px] opacity-70 mt-1">Déposez une section ici</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const Dashboard: React.FC<DashboardProps> = ({
   sections,
   searchQuery,
@@ -51,9 +122,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onEditItem,
   onDeleteItem,
   onReorderSections,
-  onReorderItems
+  onReorderItems,
 }) => {
   const { columnCount } = useLayout();
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const getColumnsClass = () => {
     switch (columnCount) {
@@ -84,86 +156,188 @@ export const Dashboard: React.FC<DashboardProps> = ({
     };
   }).filter((section): section is Section => section !== null && (section.type === 'rss' || section.type === 'weather' || section.type === 'traffic' || section.items.length > 0 || isEditMode));
 
+  const [columns, setColumns] = useState<Section[][]>(() => distributeSections(filteredSections, columnCount));
+
+  useEffect(() => {
+    if (!activeId) {
+      setColumns(distributeSections(filteredSections, columnCount));
+    }
+  }, [filteredSections, columnCount, activeId]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // 8px movement before drag starts
+        distance: 8,
       },
     })
   );
 
+  const collisionDetectionStrategy: CollisionDetection = (args) => {
+    const pointerCollisions = pointerWithin(args);
+    if (pointerCollisions.length > 0) {
+      return pointerCollisions;
+    }
+    return closestCorners(args);
+  };
+
+  const findColumnIndex = (id: string, currentCols: Section[][]): number => {
+    if (id.startsWith('col-')) {
+      const idx = parseInt(id.replace('col-', ''), 10);
+      return idx >= 0 && idx < columnCount ? idx : -1;
+    }
+    return currentCols.findIndex(col => col.some(item => item.id === id));
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeItemId = String(active.id);
+    const overItemId = String(over.id);
+
+    const fromCol = findColumnIndex(activeItemId, columns);
+    const toCol = findColumnIndex(overItemId, columns);
+
+    if (fromCol === -1 || toCol === -1 || fromCol === toCol) {
+      return;
+    }
+
+    setColumns(prevCols => {
+      const newCols = prevCols.map(col => [...col]);
+      const activeItemIndex = newCols[fromCol].findIndex(item => item.id === activeItemId);
+      if (activeItemIndex === -1) return prevCols;
+
+      const [movedItem] = newCols[fromCol].splice(activeItemIndex, 1);
+
+      if (overItemId.startsWith('col-')) {
+        newCols[toCol].push(movedItem);
+      } else {
+        const overItemIndex = newCols[toCol].findIndex(item => item.id === overItemId);
+        const insertIndex = overItemIndex !== -1 ? overItemIndex : newCols[toCol].length;
+        newCols[toCol].splice(insertIndex, 0, movedItem);
+      }
+
+      return newCols;
+    });
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    setActiveId(null);
 
-    const oldIndex = sections.findIndex(s => s.id === active.id);
-    const newIndex = sections.findIndex(s => s.id === over.id);
+    if (!over) return;
 
-    if (oldIndex !== -1 && newIndex !== -1) {
-      const newSections = arrayMove(sections, oldIndex, newIndex);
-      onReorderSections(newSections);
+    const activeItemId = String(active.id);
+    const overItemId = String(over.id);
+
+    const fromCol = findColumnIndex(activeItemId, columns);
+    const toCol = findColumnIndex(overItemId, columns);
+
+    let finalCols = columns;
+
+    if (fromCol !== -1 && toCol !== -1) {
+      if (fromCol === toCol && activeItemId !== overItemId && !overItemId.startsWith('col-')) {
+        const colItems = [...columns[fromCol]];
+        const oldIndex = colItems.findIndex(i => i.id === activeItemId);
+        const newIndex = colItems.findIndex(i => i.id === overItemId);
+        if (oldIndex !== -1 && newIndex !== -1) {
+          finalCols = columns.map((col, idx) => 
+            idx === fromCol ? arrayMove(colItems, oldIndex, newIndex) : col
+          );
+          setColumns(finalCols);
+        }
+      }
     }
+
+    // Flatten finalCols with exact column index and position
+    const flattened: Section[] = [];
+    finalCols.forEach((col, colIdx) => {
+      col.forEach((sec, rowIdx) => {
+        flattened.push({
+          ...sec,
+          position: colIdx * 1000 + rowIdx,
+          column_index: colIdx,
+        });
+      });
+    });
+
+    onReorderSections(flattened);
+  };
+
+  const renderSection = (section: Section) => {
+    if (section.type === 'rss') {
+      return (
+        <RssWidgetCard
+          key={section.id}
+          section={section}
+          isEditMode={isEditMode}
+          onEditSection={onEditSection}
+          onDeleteSection={onDeleteSection}
+        />
+      );
+    }
+    if (section.type === 'weather') {
+      return (
+        <WeatherWidgetCard
+          key={section.id}
+          section={section}
+          isEditMode={isEditMode}
+          onEditSection={onEditSection}
+          onDeleteSection={onDeleteSection}
+        />
+      );
+    }
+    if (section.type === 'traffic') {
+      return (
+        <TrafficWidgetCard
+          key={section.id}
+          section={section}
+          isEditMode={isEditMode}
+          onEditSection={onEditSection}
+          onDeleteSection={onDeleteSection}
+        />
+      );
+    }
+    return (
+      <SectionCard
+        key={section.id}
+        section={section}
+        isEditMode={isEditMode}
+        onEditSection={onEditSection}
+        onDeleteSection={onDeleteSection}
+        onAddItem={onAddItem}
+        onEditItem={onEditItem}
+        onDeleteItem={onDeleteItem}
+        onReorderItems={onReorderItems}
+      />
+    );
   };
 
   return (
     <div className="w-full max-w-[1920px] 2xl:max-w-[98%] mx-auto px-4 sm:px-6 pb-12">
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={collisionDetectionStrategy}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <SortableContext items={filteredSections.map(s => s.id)} strategy={rectSortingStrategy}>
-          <div className={getColumnsClass()}>
-            {filteredSections.map(section => {
-              if (section.type === 'rss') {
-                return (
-                  <RssWidgetCard
-                    key={section.id}
-                    section={section}
-                    isEditMode={isEditMode}
-                    onEditSection={onEditSection}
-                    onDeleteSection={onDeleteSection}
-                  />
-                );
-              }
-              if (section.type === 'weather') {
-                return (
-                  <WeatherWidgetCard
-                    key={section.id}
-                    section={section}
-                    isEditMode={isEditMode}
-                    onEditSection={onEditSection}
-                    onDeleteSection={onDeleteSection}
-                  />
-                );
-              }
-              if (section.type === 'traffic') {
-                return (
-                  <TrafficWidgetCard
-                    key={section.id}
-                    section={section}
-                    isEditMode={isEditMode}
-                    onEditSection={onEditSection}
-                    onDeleteSection={onDeleteSection}
-                  />
-                );
-              }
-              return (
-                <SectionCard
-                  key={section.id}
-                  section={section}
-                  isEditMode={isEditMode}
-                  onEditSection={onEditSection}
-                  onDeleteSection={onDeleteSection}
-                  onAddItem={onAddItem}
-                  onEditItem={onEditItem}
-                  onDeleteItem={onDeleteItem}
-                  onReorderItems={onReorderItems}
-                />
-              );
-            })}
-          </div>
-        </SortableContext>
+        <div className={getColumnsClass()}>
+          {columns.map((colSections, colIdx) => (
+            <ColumnDropContainer
+              key={colIdx}
+              id={`col-${colIdx}`}
+              colIdx={colIdx}
+              sections={colSections}
+              isEditMode={isEditMode}
+              renderSection={renderSection}
+            />
+          ))}
+        </div>
       </DndContext>
 
       {filteredSections.length === 0 && !isEditMode && (

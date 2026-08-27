@@ -523,7 +523,7 @@ function App() {
       type: s.type || 'links',
       widget_url: s.widget_url || null,
       display_limit: s.display_limit || null,
-      position: index,
+      position: s.position !== undefined ? s.position : index,
       user_id: session.user.id
     }));
     
@@ -535,7 +535,7 @@ function App() {
         title: s.title,
         type: s.type || 'links',
         widget_url: s.widget_url || null,
-        position: index,
+        position: s.position !== undefined ? s.position : index,
         user_id: session.user.id
       }));
       await supabase.from('sections').upsert(fallbackUpdates, { onConflict: 'id' });
