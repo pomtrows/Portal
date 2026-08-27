@@ -9,7 +9,7 @@ import { AccountModal } from './components/AccountModal';
 import type { DashboardConfig, Section, LinkItem, Page } from './types';
 import { Plus, Trash2 } from 'lucide-react';
 import { supabase } from './utils/supabase';
-import { usePreferences } from './hooks/usePreferences';
+import { usePreferences, hydratePreferencesFromCloud } from './hooks/usePreferences';
 import type { Session } from '@supabase/supabase-js';
 
 function App() {
@@ -68,12 +68,18 @@ function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      if (session?.user?.user_metadata) {
+        hydratePreferencesFromCloud(session.user.user_metadata);
+      }
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session?.user?.user_metadata) {
+        hydratePreferencesFromCloud(session.user.user_metadata);
+      }
     });
 
     return () => subscription.unsubscribe();

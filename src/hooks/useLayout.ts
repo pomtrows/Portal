@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { syncPreferenceToCloud, getAllStoredPageColumns } from './usePreferences';
 
 export type ColumnCount = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
@@ -58,6 +59,9 @@ export function useLayout(pageId?: string | null) {
       localStorage.setItem(`portal-columns-${pageId}`, count.toString());
       setColumnCountState(count);
       LISTENERS.forEach((listener) => listener(pageId, count));
+
+      const updatedCols = { ...getAllStoredPageColumns(), [pageId]: count };
+      syncPreferenceToCloud({ pageColumns: updatedCols });
     }
   };
 

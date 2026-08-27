@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../utils/supabase';
 
 export type FontSize = 'compact' | 'normal' | 'large';
 
@@ -7,6 +8,14 @@ export interface ProfileSchedule {
   proDays: number[]; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
   proStartTime: string; // "08:30"
   proEndTime: string; // "18:00"
+}
+
+export interface UserPreferences {
+  theme?: string;
+  fontSizeSection?: FontSize;
+  fontSizeRss?: FontSize;
+  schedule?: ProfileSchedule;
+  pageColumns?: Record<string, number>;
 }
 
 export const DEFAULT_SCHEDULE: ProfileSchedule = {
@@ -48,9 +57,116 @@ function getStoredSchedule(): ProfileSchedule {
   return DEFAULT_SCHEDULE;
 }
 
+export function getAllStoredPageColumns(): Record<string, number> {
+  const result: Record<string, number> = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('portal-columns-')) {
+      const pageId = key.replace('portal-columns-', '');
+      const val = parseInt(localStorage.getItem(key) || '', 10);
+      if (val >= 1 && val <= 8) {
+        result[pageId] = val;
+      }
+    }
+  }
+  return result;
+}
+
 let globalFontSizeSection: FontSize = getStoredFontSizeSection();
 let globalFontSizeRss: FontSize = getStoredFontSizeRss();
 let globalSchedule: ProfileSchedule = getStoredSchedule();
+
+// Debounce timer for saving to Supabase user_metadata
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingCloudUpdates: Partial<UserPreferences> = {};
+
+export function syncPreferenceToCloud(partial: Partial<UserPreferences>) {
+  pendingCloudUpdates = { ...pendingCloudUpdates, ...partial };
+
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+  }
+
+  saveTimer = setTimeout(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+
+      const currentMetadata = session.user.user_metadata || {};
+      const currentPrefs: UserPreferences = currentMetadata.preferences || {};
+
+      const updatedPrefs: UserPreferences = {
+        ...currentPrefs,
+        ...pendingCloudUpdates,
+        // merge page columns if present
+        pageColumns: {
+          ...(currentPrefs.pageColumns || {}),
+          ...(pendingCloudUpdates.pageColumns || {}),
+        },
+      };
+
+      pendingCloudUpdates = {};
+
+      await supabase.auth.updateUser({
+        data: {
+          ...currentMetadata,
+          preferences: updatedPrefs,
+        },
+      });
+    } catch (err) {
+      console.warn('Error syncing preferences to Supabase user_metadata:', err);
+    }
+  }, 400);
+}
+
+/**
+ * Hydrates local storage and in-memory states with preferences from Supabase user_metadata.
+ */
+export function hydratePreferencesFromCloud(metadata: Record<string, unknown> | null | undefined) {
+  if (!metadata || typeof metadata !== 'object') return;
+  const prefs = metadata.preferences as UserPreferences | undefined;
+  if (!prefs) return;
+
+  let hasChanged = false;
+
+  if (prefs.fontSizeSection && prefs.fontSizeSection !== globalFontSizeSection) {
+    globalFontSizeSection = prefs.fontSizeSection;
+    localStorage.setItem('portal-font-size-section', prefs.fontSizeSection);
+    hasChanged = true;
+  }
+
+  if (prefs.fontSizeRss && prefs.fontSizeRss !== globalFontSizeRss) {
+    globalFontSizeRss = prefs.fontSizeRss;
+    localStorage.setItem('portal-font-size-rss', prefs.fontSizeRss);
+    hasChanged = true;
+  }
+
+  if (prefs.schedule) {
+    globalSchedule = prefs.schedule;
+    localStorage.setItem('portal-profile-schedule', JSON.stringify(prefs.schedule));
+    hasChanged = true;
+  }
+
+  if (prefs.theme) {
+    const currentTheme = localStorage.getItem('portal-theme');
+    if (currentTheme !== prefs.theme) {
+      localStorage.setItem('portal-theme', prefs.theme);
+      document.documentElement.setAttribute('data-theme', prefs.theme);
+    }
+  }
+
+  if (prefs.pageColumns && typeof prefs.pageColumns === 'object') {
+    Object.entries(prefs.pageColumns).forEach(([pageId, col]) => {
+      if (col >= 1 && col <= 8) {
+        localStorage.setItem(`portal-columns-${pageId}`, col.toString());
+      }
+    });
+  }
+
+  if (hasChanged) {
+    LISTENERS.forEach((l) => l());
+  }
+}
 
 export function calculateScheduledProfile(schedule: ProfileSchedule): 'pro' | 'perso' {
   if (!schedule.enabled) return 'perso';
@@ -106,6 +222,7 @@ export function usePreferences() {
     localStorage.setItem('portal-font-size-section', size);
     setFontSizeSectionState(size);
     LISTENERS.forEach((l) => l());
+    syncPreferenceToCloud({ fontSizeSection: size });
   };
 
   const setFontSizeRss = (size: FontSize) => {
@@ -113,6 +230,7 @@ export function usePreferences() {
     localStorage.setItem('portal-font-size-rss', size);
     setFontSizeRssState(size);
     LISTENERS.forEach((l) => l());
+    syncPreferenceToCloud({ fontSizeRss: size });
   };
 
   const setSchedule = (newSchedule: ProfileSchedule) => {
@@ -120,6 +238,7 @@ export function usePreferences() {
     localStorage.setItem('portal-profile-schedule', JSON.stringify(newSchedule));
     setScheduleState(newSchedule);
     LISTENERS.forEach((l) => l());
+    syncPreferenceToCloud({ schedule: newSchedule });
   };
 
   return {
