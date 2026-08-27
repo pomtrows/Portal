@@ -205,7 +205,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onReorderSections: _onReorderSections,
   onReorderItems,
   onUpdateSectionGeometry,
-  onUpdateAllGeometries: _onUpdateAllGeometries,
+  onUpdateAllGeometries,
 }) => {
   const { columnCount } = useLayout(activePageId);
   const { gridLayouts } = usePreferences();
@@ -325,13 +325,97 @@ function findNonCollidingY(
   return adjustedY;
 }
 
+/**
+ * Updates a section's geometry and automatically shifts any colliding sections downwards
+ * so that expanding width or moving a card NEVER overlaps with other cards.
+ */
+function resolveCascadeGeometries(
+  updatedSectionId: string,
+  newGeo: Partial<GridItemGeometry>,
+  currentLayouts: Record<string, GridItemGeometry>,
+  allSections: Section[],
+  cols: number
+): Record<string, { grid_x: number; grid_y: number; col_span: number; row_span: number }> {
+  const result: Record<string, { grid_x: number; grid_y: number; col_span: number; row_span: number }> = {};
+
+  // Copy current layouts with full accurate heights
+  for (const [id, g] of Object.entries(currentLayouts)) {
+    const sec = allSections.find((s) => s.id === id);
+    const w = g.col_span ?? 1;
+    const h = sec ? Math.max(getSectionRowSpan(sec, w), g.row_span || 1) : (g.row_span ?? 1);
+    result[id] = {
+      grid_x: g.grid_x ?? 0,
+      grid_y: g.grid_y ?? 0,
+      col_span: w,
+      row_span: h,
+    };
+  }
+
+  // Apply update to target section
+  const current = result[updatedSectionId] || { grid_x: 0, grid_y: 0, col_span: 1, row_span: 1 };
+  const targetX = newGeo.grid_x ?? current.grid_x;
+  const targetW = Math.min(newGeo.col_span ?? current.col_span, cols - targetX);
+  const targetH = newGeo.row_span ?? current.row_span;
+  const targetY = newGeo.grid_y ?? current.grid_y;
+
+  result[updatedSectionId] = {
+    grid_x: targetX,
+    grid_y: targetY,
+    col_span: targetW,
+    row_span: targetH,
+  };
+
+  // Iteratively push any other sections that collide
+  const fixedIds = new Set<string>([updatedSectionId]);
+  let hasShift = true;
+  let passes = 0;
+
+  while (hasShift && passes < 30) {
+    hasShift = false;
+    passes++;
+
+    for (const [id, item] of Object.entries(result)) {
+      if (fixedIds.has(id)) continue;
+
+      let collides = false;
+      let lowestBlockingY = 0;
+
+      for (const [otherId, otherItem] of Object.entries(result)) {
+        if (otherId === id) continue;
+
+        const horiz = item.grid_x < otherItem.grid_x + otherItem.col_span &&
+                      item.grid_x + item.col_span > otherItem.grid_x;
+        if (!horiz) continue;
+
+        const vert = item.grid_y < otherItem.grid_y + otherItem.row_span &&
+                     item.grid_y + item.row_span > otherItem.grid_y;
+
+        if (vert) {
+          collides = true;
+          const pushDownY = otherItem.grid_y + otherItem.row_span;
+          if (pushDownY > lowestBlockingY) {
+            lowestBlockingY = pushDownY;
+          }
+        }
+      }
+
+      if (collides && lowestBlockingY > item.grid_y) {
+        item.grid_y = lowestBlockingY;
+        hasShift = true;
+      }
+    }
+  }
+
+  return result;
+}
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
 
     const sourceId = String(active.id);
     const sourceGeo = layoutMap[sourceId];
-    if (!sourceGeo || !onUpdateSectionGeometry) return;
+    if (!sourceGeo) return;
 
     const sourceSection = sections.find((s) => s.id === sourceId);
     const w = sourceGeo.col_span ?? 1;
@@ -372,19 +456,60 @@ function findNonCollidingY(
       targetY = Math.max(0, (sourceGeo.grid_y ?? 0) + dyRows);
     }
 
-    const nonCollidingY = findNonCollidingY(sourceId, targetX, targetY, w, h, layoutMap, sections);
-    onUpdateSectionGeometry(sourceId, { grid_x: targetX, grid_y: nonCollidingY });
+    if (onUpdateAllGeometries) {
+      const updates = resolveCascadeGeometries(
+        sourceId,
+        { grid_x: targetX, grid_y: targetY, col_span: w, row_span: h },
+        layoutMap,
+        sections,
+        columnCount
+      );
+      onUpdateAllGeometries(updates);
+    } else if (onUpdateSectionGeometry) {
+      const nonCollidingY = findNonCollidingY(sourceId, targetX, targetY, w, h, layoutMap, sections);
+      onUpdateSectionGeometry(sourceId, { grid_x: targetX, grid_y: nonCollidingY });
+    }
+  };
+
+  const handleUpdateSpan = (sectionId: string, newColSpan: number) => {
+    const geo = layoutMap[sectionId] || { grid_x: 0, grid_y: 0, col_span: 1, row_span: 1 };
+    const curX = geo.grid_x ?? 0;
+    const clampedSpan = Math.min(Math.max(1, newColSpan), columnCount - curX);
+
+    if (onUpdateAllGeometries) {
+      const updates = resolveCascadeGeometries(
+        sectionId,
+        { col_span: clampedSpan },
+        layoutMap,
+        sections,
+        columnCount
+      );
+      onUpdateAllGeometries(updates);
+    } else if (onUpdateSectionGeometry) {
+      onUpdateSectionGeometry(sectionId, { col_span: clampedSpan });
+    }
   };
 
   const handleResize = (sectionId: string, dw: number, dh: number) => {
-    if (!onUpdateSectionGeometry) return;
     const geo = layoutMap[sectionId] || { grid_x: 0, grid_y: 0, col_span: 1, row_span: 1 };
     const curX = geo.grid_x ?? 0;
     const maxW = Math.max(1, columnCount - curX);
     const newW = Math.min(Math.max(1, (geo.col_span ?? 1) + dw), maxW);
     const newH = Math.min(Math.max(1, (geo.row_span ?? 1) + dh), 25);
-    const nonCollidingY = findNonCollidingY(sectionId, curX, geo.grid_y ?? 0, newW, newH, layoutMap, sections);
-    onUpdateSectionGeometry(sectionId, { grid_x: curX, grid_y: nonCollidingY, col_span: newW, row_span: newH });
+
+    if (onUpdateAllGeometries) {
+      const updates = resolveCascadeGeometries(
+        sectionId,
+        { col_span: newW, row_span: newH },
+        layoutMap,
+        sections,
+        columnCount
+      );
+      onUpdateAllGeometries(updates);
+    } else if (onUpdateSectionGeometry) {
+      const nonCollidingY = findNonCollidingY(sectionId, curX, geo.grid_y ?? 0, newW, newH, layoutMap, sections);
+      onUpdateSectionGeometry(sectionId, { grid_x: curX, grid_y: nonCollidingY, col_span: newW, row_span: newH });
+    }
   };
 
   const renderSection = (section: Section, geo: GridItemGeometry) => {
@@ -400,9 +525,7 @@ function findNonCollidingY(
       onEditSection,
       onDeleteSection,
       onUpdateSpan: (id: string, col_span: number) => {
-        if (onUpdateSectionGeometry) {
-          onUpdateSectionGeometry(id, { col_span });
-        }
+        handleUpdateSpan(id, col_span);
       },
       maxAllowedSpan: columnCount - (geo.grid_x ?? 0),
     };
