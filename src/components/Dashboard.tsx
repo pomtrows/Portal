@@ -44,17 +44,20 @@ interface DashboardProps {
   onUpdateAllGeometries?: (updates: Record<string, { grid_x: number; grid_y: number; col_span: number; row_span: number }>) => void;
 }
 
-function estimateDefaultRowSpan(section: Section): number {
-  if (section.type === 'weather') return 7; // ~310px
-  if (section.type === 'traffic') return 4; // ~180px
-  if (section.type === 'search') return 6; // ~265px
-  if (section.type === 'rss') return 8; // ~360px
+function getSectionRowSpan(section: Section, colSpan: number = 1): number {
+  if (section.type === 'weather') return section.row_span || 7; // ~310px
+  if (section.type === 'traffic') return section.row_span || 4; // ~180px
+  if (section.type === 'search') return section.row_span || 6; // ~265px
+  if (section.type === 'rss') return section.row_span || 8; // ~360px
+
+  // For links sections, compute strictly according to items count and column width
   const count = section.items?.length || 0;
-  if (count <= 1) return 2; // ~85px (Title + 1 item)
-  if (count <= 2) return 3; // ~130px
-  if (count <= 4) return 4; // ~175px
-  if (count <= 6) return 6; // ~265px
-  return Math.min(25, Math.max(2, Math.ceil((35 + count * 42) / 46)));
+  if (count === 0) return 2;
+  const innerCols = Math.max(1, colSpan);
+  const itemRows = Math.ceil(count / innerCols);
+  // Header (~36px) + padding (~20px) + itemRows * (~50px per item) = 56px + itemRows * 50px
+  const totalPx = 56 + itemRows * 50;
+  return Math.max(2, Math.ceil(totalPx / 50.4));
 }
 
 /**
@@ -91,11 +94,12 @@ function computeAutoLayout(
 
   // 1. Place items with explicit coordinates first
   sections.forEach((s) => {
+    const isLinks = !s.type || s.type === 'links';
     const saved = savedLayouts[s.id];
     let gx = saved?.grid_x ?? s.grid_x;
     let gy = saved?.grid_y ?? s.grid_y;
     let w = Math.min(saved?.col_span ?? s.col_span ?? 1, columnCount);
-    let h = Math.max(1, saved?.row_span ?? s.row_span ?? estimateDefaultRowSpan(s));
+    let h = isLinks ? getSectionRowSpan(s, w) : Math.max(1, saved?.row_span ?? s.row_span ?? getSectionRowSpan(s, w));
 
     if (gx === undefined && s.position !== undefined && s.position >= 1000) {
       gy = Math.floor(s.position / 1000);
@@ -113,8 +117,9 @@ function computeAutoLayout(
 
   // 2. Auto-place remaining items
   unplaced.forEach((s) => {
+    const isLinks = !s.type || s.type === 'links';
     const w = Math.min(s.col_span || 1, columnCount);
-    const h = Math.max(1, s.row_span || estimateDefaultRowSpan(s));
+    const h = isLinks ? getSectionRowSpan(s, w) : Math.max(1, s.row_span || getSectionRowSpan(s, w));
     let placed = false;
     let y = 0;
 
@@ -370,26 +375,32 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 ({ (geo.grid_x ?? 0) + 1 }, { (geo.grid_y ?? 0) + 1 })
               </span>
 
-              <div className="flex items-center gap-0.5 bg-black/15 dark:bg-white/15 rounded px-1 py-0.2" title="Hauteur en unités">
-                <span className="text-[9px] font-bold mr-0.5">H:</span>
-                <button
-                  type="button"
-                  onClick={() => handleResize(section.id, 0, -1)}
-                  disabled={(geo.row_span ?? 1) <= 1}
-                  className="px-0.5 hover:text-[var(--color-primary)] disabled:opacity-20 font-bold"
-                >
-                  -
-                </button>
-                <span className="font-bold text-[9px]">{geo.row_span ?? 1}</span>
-                <button
-                  type="button"
-                  onClick={() => handleResize(section.id, 0, 1)}
-                  disabled={(geo.row_span ?? 1) >= 12}
-                  className="px-0.5 hover:text-[var(--color-primary)] disabled:opacity-20 font-bold"
-                >
-                  +
-                </button>
-              </div>
+              {(!section.type || section.type === 'links') ? (
+                <span className="text-[9px] bg-black/15 dark:bg-white/15 rounded px-1.5 py-0.5 font-sans opacity-75" title="Hauteur ajustée automatiquement au nombre de liens">
+                  H: auto ({geo.row_span ?? 1})
+                </span>
+              ) : (
+                <div className="flex items-center gap-0.5 bg-black/15 dark:bg-white/15 rounded px-1 py-0.2" title="Hauteur du widget">
+                  <span className="text-[9px] font-bold mr-0.5">H:</span>
+                  <button
+                    type="button"
+                    onClick={() => handleResize(section.id, 0, -1)}
+                    disabled={(geo.row_span ?? 1) <= 1}
+                    className="px-0.5 hover:text-[var(--color-primary)] disabled:opacity-20 font-bold"
+                  >
+                    -
+                  </button>
+                  <span className="font-bold text-[9px]">{geo.row_span ?? 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleResize(section.id, 0, 1)}
+                    disabled={(geo.row_span ?? 1) >= 20}
+                    className="px-0.5 hover:text-[var(--color-primary)] disabled:opacity-20 font-bold"
+                  >
+                    +
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
