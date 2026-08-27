@@ -208,6 +208,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const activeIdStr = String(active.id);
     const overIdStr = String(over.id);
 
+    if (activeIdStr === overIdStr) return;
+
     const sourceColIdx = findColumnIndex(activeIdStr, columns);
     const targetColIdx = findColumnIndex(overIdStr, columns);
 
@@ -230,7 +232,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
       } else {
         const overItemIndex = targetCol.findIndex(item => item.id === overIdStr);
         if (overItemIndex !== -1) {
-          targetCol.splice(overItemIndex, 0, movedItem);
+          // Check if dragging below or above the hovered item
+          const isBelowOverItem =
+            over.rect &&
+            active.rect.current.translated &&
+            active.rect.current.translated.top >
+              over.rect.top + (over.rect.height || 0) / 2;
+
+          const insertIndex = isBelowOverItem ? overItemIndex + 1 : overItemIndex;
+          targetCol.splice(insertIndex, 0, movedItem);
         } else {
           targetCol.push(movedItem);
         }
@@ -259,7 +269,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
     if (sourceColIdx === targetColIdx) {
       const col = finalColumns[sourceColIdx];
       const oldIndex = col.findIndex(item => item.id === activeIdStr);
-      const newIndex = col.findIndex(item => item.id === overIdStr);
+      let newIndex = col.findIndex(item => item.id === overIdStr);
+
+      if (newIndex === -1 && overIdStr.startsWith('col-')) {
+        newIndex = col.length - 1;
+      }
 
       if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
         finalColumns[sourceColIdx] = arrayMove(col, oldIndex, newIndex);

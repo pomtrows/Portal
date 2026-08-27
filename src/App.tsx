@@ -650,10 +650,16 @@ function App() {
   };
 
   const handleReorderSections = async (newSections: Section[]) => {
-    if (!session?.user) return;
+    if (!session?.user || !activePageId) return;
     
-    // Optimistic UI update
-    setConfig(prev => ({ ...prev, sections: newSections }));
+    // Optimistic UI update: preserve sections from other pages
+    setConfig(prev => ({
+      ...prev,
+      sections: [
+        ...prev.sections.filter(s => s.page_id !== activePageId),
+        ...newSections
+      ]
+    }));
 
     // Send the array of updates to Supabase
     const updates = newSections.map((s, index) => ({
