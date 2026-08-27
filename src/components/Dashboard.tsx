@@ -257,7 +257,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const curX = geo.grid_x ?? 0;
     const maxW = Math.max(1, columnCount - curX);
     const newW = Math.min(Math.max(1, (geo.col_span ?? 1) + dw), maxW);
-    const newH = Math.min(Math.max(1, (geo.row_span ?? 1) + dh), 6);
+    const newH = Math.min(Math.max(1, (geo.row_span ?? 1) + dh), 12);
     onUpdateSectionGeometry(sectionId, { col_span: newW, row_span: newH });
   };
 
@@ -305,74 +305,74 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
 
     return (
-      <div className="relative group w-full h-full flex flex-col">
+      <div className="relative group w-full h-full flex flex-col min-h-0">
         {/* Card Component */}
         <div className="flex-1 w-full h-full min-h-0">{cardContent}</div>
 
         {/* 2D Grid Positioning & Resizing overlay in Edit Mode */}
         {isEditMode && (
-          <div className="flex items-center justify-between gap-1 pt-1.5 px-2 pb-0.5 text-[11px] bg-black/5 dark:bg-white/5 rounded-b-xl border border-t-0 border-[var(--color-border)]/50 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-1 py-0.5 px-2 text-[10px] bg-black/10 dark:bg-white/10 rounded-b-xl border border-t-0 border-[var(--color-border)]/40 backdrop-blur-sm">
             {/* Position move buttons */}
             <div className="flex items-center gap-0.5">
               <button
                 type="button"
                 onClick={() => handleMove(section.id, -1, 0)}
                 disabled={(geo.grid_x ?? 0) <= 0}
-                className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded disabled:opacity-20 transition-colors"
+                className="p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded disabled:opacity-20 transition-colors"
                 title="Déplacer vers la gauche"
               >
-                <ArrowLeft size={13} />
+                <ArrowLeft size={12} />
               </button>
               <button
                 type="button"
                 onClick={() => handleMove(section.id, 1, 0)}
                 disabled={(geo.grid_x ?? 0) >= columnCount - (geo.col_span ?? 1)}
-                className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded disabled:opacity-20 transition-colors"
+                className="p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded disabled:opacity-20 transition-colors"
                 title="Déplacer vers la droite"
               >
-                <ArrowRight size={13} />
+                <ArrowRight size={12} />
               </button>
               <button
                 type="button"
                 onClick={() => handleMove(section.id, 0, -1)}
                 disabled={(geo.grid_y ?? 0) <= 0}
-                className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded disabled:opacity-20 transition-colors"
+                className="p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded disabled:opacity-20 transition-colors"
                 title="Déplacer vers le haut"
               >
-                <ArrowUp size={13} />
+                <ArrowUp size={12} />
               </button>
               <button
                 type="button"
                 onClick={() => handleMove(section.id, 0, 1)}
-                className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
+                className="p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
                 title="Déplacer vers le bas"
               >
-                <ArrowDown size={13} />
+                <ArrowDown size={12} />
               </button>
             </div>
 
             {/* Geometry stats & W / H size controls */}
-            <div className="flex items-center gap-2 font-mono">
-              <span className="text-[10px] text-[var(--color-text-muted)] font-sans">
-                Case ({ (geo.grid_x ?? 0) + 1 }, { (geo.grid_y ?? 0) + 1 })
+            <div className="flex items-center gap-1.5 font-mono">
+              <span className="text-[9px] text-[var(--color-text-muted)] font-sans">
+                ({ (geo.grid_x ?? 0) + 1 }, { (geo.grid_y ?? 0) + 1 })
               </span>
 
-              <div className="flex items-center gap-0.5 bg-black/10 dark:bg-white/10 rounded px-1 py-0.5" title="Hauteur en carrés">
-                <span className="text-[10px] font-bold mr-0.5">H:</span>
+              <div className="flex items-center gap-0.5 bg-black/15 dark:bg-white/15 rounded px-1 py-0.2" title="Hauteur en unités">
+                <span className="text-[9px] font-bold mr-0.5">H:</span>
                 <button
                   type="button"
                   onClick={() => handleResize(section.id, 0, -1)}
                   disabled={(geo.row_span ?? 1) <= 1}
-                  className="px-1 hover:text-[var(--color-primary)] disabled:opacity-20 font-bold"
+                  className="px-0.5 hover:text-[var(--color-primary)] disabled:opacity-20 font-bold"
                 >
                   -
                 </button>
-                <span className="font-bold text-[10px]">{geo.row_span ?? 1}</span>
+                <span className="font-bold text-[9px]">{geo.row_span ?? 1}</span>
                 <button
                   type="button"
                   onClick={() => handleResize(section.id, 0, 1)}
-                  disabled={(geo.row_span ?? 1) >= 6}
-                  className="px-1 hover:text-[var(--color-primary)] disabled:opacity-20 font-bold"
+                  disabled={(geo.row_span ?? 1) >= 12}
+                  className="px-0.5 hover:text-[var(--color-primary)] disabled:opacity-20 font-bold"
                 >
                   +
                 </button>
@@ -401,8 +401,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
             style={{
               display: 'grid',
               gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
-              gridAutoRows: 'minmax(140px, auto)',
-              gap: '1rem',
+              gridAutoRows: 'minmax(80px, auto)',
+              gap: '0.75rem',
             }}
           >
             {/* Background Grid Cells in Edit Mode for easy visual placement */}
@@ -419,7 +419,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       gridRowStart: cellY + 1,
                       gridRowEnd: 'span 1',
                     }}
-                    className="border-2 border-dashed border-[var(--color-border)]/30 rounded-2xl min-h-[140px] pointer-events-none flex items-center justify-center text-[10px] text-[var(--color-text-muted)] opacity-25"
+                    className="border border-dashed border-[var(--color-border)]/30 rounded-2xl min-h-[80px] pointer-events-none flex items-center justify-center text-[9px] text-[var(--color-text-muted)] opacity-25"
                   >
                     {cellX + 1}, {cellY + 1}
                   </div>

@@ -151,12 +151,12 @@ export const WeatherWidgetCard: React.FC<WeatherWidgetCardProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`glass-panel p-3 sm:p-3.5 w-full h-full flex flex-col ${
+      className={`glass-panel p-2.5 sm:p-3 w-full h-full flex flex-col ${
         isDragging ? 'z-50 shadow-2xl ring-2 ring-[var(--color-primary)]' : ''
       }`}
     >
       {/* Widget Header */}
-      <div className="flex items-center justify-between mb-2.5 pb-1.5 border-b border-[var(--color-border)]">
+      <div className="flex items-center justify-between mb-1.5 pb-1 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-1.5 min-w-0">
           {isEditMode && (
             <div
