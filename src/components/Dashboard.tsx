@@ -55,9 +55,9 @@ function getSectionRowSpan(section: Section, colSpan: number = 1): number {
   if (count === 0) return 2;
   const innerCols = Math.max(1, colSpan);
   const itemRows = Math.ceil(count / innerCols);
-  // Header (~36px) + padding (~24px) + itemRows * (~58px per item card + 10px gap)
-  const totalPx = 65 + itemRows * 58;
-  return Math.max(2, Math.ceil(totalPx / 48) + 1);
+  // Header (~28px) + padding (~20px) + itemRows * (item height ~46px + gap 10px = 56px)
+  const totalPx = 52 + itemRows * 56;
+  return Math.max(2, Math.ceil(totalPx / 50.4));
 }
 
 /**
