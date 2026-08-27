@@ -2,7 +2,8 @@ import React from 'react';
 import type { Section, LinkItem } from '../types';
 import { SectionCard } from './SectionCard';
 import { RssWidgetCard } from './RssWidgetCard';
-import { Plus, Rss } from 'lucide-react';
+import { WeatherWidgetCard } from './WeatherWidgetCard';
+import { Plus, Rss, CloudSun } from 'lucide-react';
 import { useLayout } from '../hooks/useLayout';
 import {
   DndContext,
@@ -24,6 +25,7 @@ interface DashboardProps {
   isEditMode: boolean;
   onAddSection: () => void;
   onAddRssWidget: () => void;
+  onAddWeatherWidget: () => void;
   onEditSection: (section: Section) => void;
   onDeleteSection: (id: string) => void;
   onAddItem: (sectionId: string) => void;
@@ -64,8 +66,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const filteredSections = sections.map(section => {
-    if (section.type === 'rss') {
-      const matches = section.title.toLowerCase().includes(searchQuery.toLowerCase());
+    if (section.type === 'rss' || section.type === 'weather') {
+      const matches = section.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (section.widget_url && section.widget_url.toLowerCase().includes(searchQuery.toLowerCase()));
       return matches || isEditMode ? section : null;
     }
     return {
@@ -75,7 +78,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     };
-  }).filter((section): section is Section => section !== null && (section.type === 'rss' || section.items.length > 0 || isEditMode));
+  }).filter((section): section is Section => section !== null && (section.type === 'rss' || section.type === 'weather' || section.items.length > 0 || isEditMode));
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -107,16 +110,30 @@ export const Dashboard: React.FC<DashboardProps> = ({
       >
         <SortableContext items={filteredSections.map(s => s.id)} strategy={rectSortingStrategy}>
           <div className={getColumnsClass()}>
-            {filteredSections.map(section => (
-              section.type === 'rss' ? (
-                <RssWidgetCard
-                  key={section.id}
-                  section={section}
-                  isEditMode={isEditMode}
-                  onEditSection={onEditSection}
-                  onDeleteSection={onDeleteSection}
-                />
-              ) : (
+            {filteredSections.map(section => {
+              if (section.type === 'rss') {
+                return (
+                  <RssWidgetCard
+                    key={section.id}
+                    section={section}
+                    isEditMode={isEditMode}
+                    onEditSection={onEditSection}
+                    onDeleteSection={onDeleteSection}
+                  />
+                );
+              }
+              if (section.type === 'weather') {
+                return (
+                  <WeatherWidgetCard
+                    key={section.id}
+                    section={section}
+                    isEditMode={isEditMode}
+                    onEditSection={onEditSection}
+                    onDeleteSection={onDeleteSection}
+                  />
+                );
+              }
+              return (
                 <SectionCard
                   key={section.id}
                   section={section}
@@ -128,8 +145,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   onDeleteItem={onDeleteItem}
                   onReorderItems={onReorderItems}
                 />
-              )
-            ))}
+              );
+            })}
           </div>
         </SortableContext>
       </DndContext>
@@ -155,6 +172,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
           >
             <Rss size={20} />
             <span>Ajouter un flux RSS</span>
+          </button>
+          <button
+            onClick={onAddWeatherWidget}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-dashed border-sky-500/40 text-sky-400 hover:text-sky-300 hover:border-sky-500 hover:bg-sky-500/10 transition-all font-medium"
+          >
+            <CloudSun size={20} />
+            <span>Ajouter la météo</span>
           </button>
         </div>
       )}

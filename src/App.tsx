@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
-import { SectionModal, ItemModal, RssModal } from './components/EditModals';
+import { SectionModal, ItemModal, RssModal, WeatherModal } from './components/EditModals';
 import { MobileMenu } from './components/MobileMenu';
 import { Auth } from './components/Auth';
 import { AccountModal } from './components/AccountModal';
@@ -30,6 +30,9 @@ function App() {
 
   const [isRssModalOpen, setIsRssModalOpen] = useState(false);
   const [editingRssSection, setEditingRssSection] = useState<Section | null>(null);
+
+  const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
+  const [editingWeatherSection, setEditingWeatherSection] = useState<Section | null>(null);
   
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<{ sectionId: string, item: LinkItem | null } | null>(null);
@@ -181,10 +184,18 @@ function App() {
     setIsRssModalOpen(true);
   };
 
+  const handleAddWeatherWidget = () => {
+    setEditingWeatherSection(null);
+    setIsWeatherModalOpen(true);
+  };
+
   const handleEditSection = (section: Section) => {
     if (section.type === 'rss') {
       setEditingRssSection(section);
       setIsRssModalOpen(true);
+    } else if (section.type === 'weather') {
+      setEditingWeatherSection(section);
+      setIsWeatherModalOpen(true);
     } else {
       setEditingSection(section);
       setIsSectionModalOpen(true);
@@ -307,6 +318,54 @@ function App() {
           user_id: session.user.id
         });
       }
+    }
+  };
+
+  const handleSaveWeatherSection = async (sectionData: Partial<Section>) => {
+    if (!session?.user || !activePageId) return;
+
+    if (editingWeatherSection) {
+      // Update
+      const updatedSection: Section = {
+        ...editingWeatherSection,
+        title: sectionData.title || editingWeatherSection.title,
+        widget_url: sectionData.widget_url || editingWeatherSection.widget_url,
+        type: 'weather'
+      };
+      setConfig(prev => ({
+        ...prev,
+        sections: prev.sections.map(s => s.id === editingWeatherSection.id ? updatedSection : s)
+      }));
+      await supabase.from('sections').update({
+        title: updatedSection.title,
+        widget_url: updatedSection.widget_url,
+        type: 'weather'
+      }).eq('id', editingWeatherSection.id);
+    } else {
+      // Create
+      const newId = `weather-${Date.now()}`;
+      const newSection: Section = {
+        id: newId,
+        page_id: activePageId,
+        title: sectionData.title || 'Météo',
+        type: 'weather',
+        widget_url: sectionData.widget_url,
+        position: config.sections.length,
+        items: []
+      };
+      setConfig(prev => ({
+        ...prev,
+        sections: [...prev.sections, newSection]
+      }));
+      await supabase.from('sections').insert({
+        id: newId,
+        page_id: activePageId,
+        title: newSection.title,
+        type: 'weather',
+        widget_url: newSection.widget_url,
+        position: newSection.position,
+        user_id: session.user.id
+      });
     }
   };
 
@@ -560,6 +619,7 @@ function App() {
             isEditMode={isEditMode}
             onAddSection={handleAddSection}
             onAddRssWidget={handleAddRssWidget}
+            onAddWeatherWidget={handleAddWeatherWidget}
             onEditSection={handleEditSection}
             onDeleteSection={handleDeleteSection}
             onAddItem={handleAddItem}
@@ -593,6 +653,13 @@ function App() {
         onClose={() => setIsRssModalOpen(false)}
         onSave={handleSaveRssSection}
         initialData={editingRssSection}
+      />
+
+      <WeatherModal
+        isOpen={isWeatherModalOpen}
+        onClose={() => setIsWeatherModalOpen(false)}
+        onSave={handleSaveWeatherSection}
+        initialData={editingWeatherSection}
       />
 
       <ItemModal
