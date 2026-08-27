@@ -101,10 +101,9 @@ function getSectionRowSpan(section: Section, colSpan: number = 1): number {
   if (count === 0) return 2;
   const innerCols = Math.max(1, colSpan);
   const itemRows = Math.ceil(count / innerCols);
-  // Header + padding: 75px, each item row with title/description/gap: ~72px
-  const totalPx = 75 + itemRows * 72;
-  const baseSpan = Math.ceil(totalPx / 50.4);
-  return Math.max(2, baseSpan + 1);
+  // Header + padding + itemRows * item height
+  const totalPx = 68 + itemRows * 64;
+  return Math.max(2, Math.ceil(totalPx / 50.4));
 }
 
 /**
@@ -615,7 +614,7 @@ function resolveCascadeGeometries(
               return (
                 <div
                   key={section.id}
-                  className="w-full min-h-full h-auto min-w-0 transition-all duration-150 relative z-10"
+                  className="w-full h-full min-w-0 flex flex-col transition-all duration-150 relative z-10"
                   style={{
                     gridColumnStart: (geo.grid_x ?? 0) + 1,
                     gridColumnEnd: `span ${clampedColSpan}`,
