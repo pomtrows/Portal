@@ -9,20 +9,16 @@ import { Plus, Rss, CloudSun, Car, Search } from 'lucide-react';
 import { useLayout } from '../hooks/useLayout';
 import {
   DndContext,
-  closestCorners,
-  pointerWithin,
+  closestCenter,
   PointerSensor,
   useSensor,
   useSensors,
-  useDroppable,
   type DragStartEvent,
-  type DragOverEvent,
   type DragEndEvent,
-  type CollisionDetection,
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable';
 
@@ -46,73 +42,29 @@ interface DashboardProps {
   onUpdateSectionSpan?: (sectionId: string, col_span: number) => void;
 }
 
-function distributeSections(sections: Section[], columnCount: number): Section[][] {
-  const cols: Section[][] = Array.from({ length: columnCount }, () => []);
-  const sorted = [...sections].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-  const hasEncodedCol = sorted.some(s => (s.position !== undefined && s.position >= 1000) || s.column_index !== undefined);
-
-  if (hasEncodedCol) {
-    sorted.forEach(s => {
-      let col = s.column_index !== undefined 
-        ? s.column_index 
-        : Math.floor((s.position ?? 0) / 1000);
-      if (col < 0 || col >= columnCount) {
-        col = Math.min(Math.max(0, col % columnCount), columnCount - 1);
-      }
-      cols[col].push(s);
-    });
-  } else {
-    sorted.forEach((s, idx) => {
-      const col = (s.position !== undefined ? s.position : idx) % columnCount;
-      cols[col].push(s);
-    });
+function getColSpanClass(colSpan: number, maxCols: number): string {
+  const span = Math.min(Math.max(1, colSpan), maxCols);
+  switch (span) {
+    case 1:
+      return 'col-span-1';
+    case 2:
+      return 'col-span-1 sm:col-span-2';
+    case 3:
+      return 'col-span-1 sm:col-span-2 lg:col-span-3';
+    case 4:
+      return 'col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4';
+    case 5:
+      return 'col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 xl:col-span-5';
+    case 6:
+      return 'col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 xl:col-span-6';
+    case 7:
+      return 'col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 xl:col-span-7';
+    case 8:
+      return 'col-span-1 sm:col-span-2 md:col-span-4 lg:col-span-6 xl:col-span-8';
+    default:
+      return 'col-span-1';
   }
-
-  return cols;
 }
-
-interface ColumnDropContainerProps {
-  id: string;
-  colIdx: number;
-  columnCount: number;
-  sections: Section[];
-  isEditMode: boolean;
-  renderSection: (section: Section, colIdx: number, columnCount: number) => React.ReactNode;
-}
-
-const ColumnDropContainer: React.FC<ColumnDropContainerProps> = ({
-  id,
-  colIdx,
-  columnCount,
-  sections,
-  isEditMode,
-  renderSection,
-}) => {
-  const { setNodeRef, isOver } = useDroppable({
-    id,
-    disabled: !isEditMode,
-  });
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`flex flex-col gap-4 min-w-0 w-full transition-all duration-200 rounded-2xl ${
-        isOver && isEditMode ? 'bg-[var(--color-primary)]/10 ring-2 ring-dashed ring-[var(--color-primary)] min-h-[140px]' : ''
-      }`}
-    >
-      <SortableContext items={sections.map(s => s.id)} strategy={verticalListSortingStrategy}>
-        {sections.map(s => renderSection(s, colIdx, columnCount))}
-      </SortableContext>
-
-      {isEditMode && sections.length === 0 && (
-        <div className="min-h-[140px] border-2 border-dashed border-[var(--color-border)]/60 hover:border-[var(--color-primary)]/50 rounded-2xl flex flex-col items-center justify-center p-4 text-xs text-[var(--color-text-muted)] text-center transition-colors">
-          <span className="font-semibold">Colonne {colIdx + 1} vide</span>
-          <span className="text-[11px] opacity-70 mt-1">Déposez une section ici</span>
-        </div>
-      )}
-    </div>
-  );
-};
 
 export const Dashboard: React.FC<DashboardProps> = ({
   sections,
@@ -134,24 +86,25 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onUpdateSectionSpan,
 }) => {
   const { columnCount } = useLayout(activePageId);
-  const [dragColumns, setDragColumns] = useState<Section[][] | null>(null);
+  const [, setActiveId] = useState<string | null>(null);
 
   const getColumnsClass = () => {
     switch (columnCount) {
-      case 1: return 'grid grid-cols-1 gap-4 lg:gap-6 items-start';
-      case 2: return 'grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 items-start';
-      case 3: return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 items-start';
-      case 4: return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 lg:gap-5 items-start';
-      case 5: return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4 items-start';
-      case 6: return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 lg:gap-3.5 items-start';
-      case 7: return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5 lg:gap-3 items-start';
-      case 8: return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2.5 lg:gap-3 items-start';
-      default: return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 items-start';
+      case 1: return 'grid-cols-1 gap-4 lg:gap-6';
+      case 2: return 'grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6';
+      case 3: return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6';
+      case 4: return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 lg:gap-5';
+      case 5: return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4';
+      case 6: return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 lg:gap-3.5';
+      case 7: return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5 lg:gap-3';
+      case 8: return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2.5 lg:gap-3';
+      default: return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6';
     }
   };
 
   const filteredSections = useMemo(() => {
-    return sections.map(section => {
+    const sorted = [...sections].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    return sorted.map(section => {
       if (section.type === 'rss' || section.type === 'weather' || section.type === 'traffic' || section.type === 'search') {
         const matches = section.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (section.widget_url && section.widget_url.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -167,13 +120,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }).filter((section): section is Section => section !== null && (section.type === 'rss' || section.type === 'weather' || section.type === 'traffic' || section.type === 'search' || section.items.length > 0 || isEditMode));
   }, [sections, searchQuery, isEditMode]);
 
-  // Synchronously compute current columns whenever sections or columnCount changes.
-  // During drag, use dragColumns.
-  const columns = useMemo(() => {
-    if (dragColumns) return dragColumns;
-    return distributeSections(filteredSections, columnCount);
-  }, [dragColumns, filteredSections, columnCount]);
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -182,207 +128,92 @@ export const Dashboard: React.FC<DashboardProps> = ({
     })
   );
 
-  const collisionDetectionStrategy: CollisionDetection = (args) => {
-    const pointerCollisions = pointerWithin(args);
-    if (pointerCollisions.length > 0) {
-      return pointerCollisions;
-    }
-    return closestCorners(args);
-  };
-
-  const findColumnIndex = (id: string, currentCols: Section[][]): number => {
-    if (id.startsWith('col-')) {
-      const idx = parseInt(id.replace('col-', ''), 10);
-      return idx >= 0 && idx < columnCount ? idx : -1;
-    }
-    return currentCols.findIndex(col => col.some(item => item.id === id));
-  };
-
-  const handleDragStart = (_event: DragStartEvent) => {
-    setDragColumns(distributeSections(filteredSections, columnCount));
-  };
-
-  const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (!over) return;
-
-    const activeIdStr = String(active.id);
-    const overIdStr = String(over.id);
-
-    if (activeIdStr === overIdStr) return;
-
-    const currentActiveCols = dragColumns || distributeSections(filteredSections, columnCount);
-
-    const sourceColIdx = findColumnIndex(activeIdStr, currentActiveCols);
-    const targetColIdx = findColumnIndex(overIdStr, currentActiveCols);
-
-    if (sourceColIdx === -1 || targetColIdx === -1 || sourceColIdx === targetColIdx) {
-      return;
-    }
-
-    const newCols = currentActiveCols.map(col => [...col]);
-    const sourceCol = newCols[sourceColIdx];
-    const targetCol = newCols[targetColIdx];
-
-    const activeItemIndex = sourceCol.findIndex(item => item.id === activeIdStr);
-    if (activeItemIndex === -1) return;
-
-    const [movedItem] = sourceCol.splice(activeItemIndex, 1);
-
-    if (overIdStr.startsWith('col-')) {
-      targetCol.push(movedItem);
-    } else {
-      const overItemIndex = targetCol.findIndex(item => item.id === overIdStr);
-      if (overItemIndex !== -1) {
-        const isBelowOverItem =
-          over.rect &&
-          active.rect.current.translated &&
-          active.rect.current.translated.top >
-            over.rect.top + (over.rect.height || 0) / 2;
-
-        const insertIndex = isBelowOverItem ? overItemIndex + 1 : overItemIndex;
-        targetCol.splice(insertIndex, 0, movedItem);
-      } else {
-        targetCol.push(movedItem);
-      }
-    }
-
-    setDragColumns(newCols);
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    const currentActiveCols = dragColumns || distributeSections(filteredSections, columnCount);
+    setActiveId(null);
 
-    setDragColumns(null);
+    if (!over || active.id === over.id) return;
 
-    if (!over) return;
+    const oldIndex = filteredSections.findIndex(s => s.id === active.id);
+    const newIndex = filteredSections.findIndex(s => s.id === over.id);
 
-    const activeIdStr = String(active.id);
-    const overIdStr = String(over.id);
-
-    const sourceColIdx = findColumnIndex(activeIdStr, currentActiveCols);
-    const targetColIdx = findColumnIndex(overIdStr, currentActiveCols);
-
-    if (sourceColIdx === -1 || targetColIdx === -1) return;
-
-    const finalColumns = currentActiveCols.map(col => [...col]);
-
-    if (sourceColIdx === targetColIdx) {
-      const col = finalColumns[sourceColIdx];
-      const oldIndex = col.findIndex(item => item.id === activeIdStr);
-      let newIndex = col.findIndex(item => item.id === overIdStr);
-
-      if (newIndex === -1 && overIdStr.startsWith('col-')) {
-        newIndex = col.length - 1;
-      }
-
-      if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-        finalColumns[sourceColIdx] = arrayMove(col, oldIndex, newIndex);
-      }
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const reordered = arrayMove(filteredSections, oldIndex, newIndex);
+      const withPositions = reordered.map((sec, idx) => ({
+        ...sec,
+        position: idx,
+      }));
+      onReorderSections(withPositions);
     }
-
-    // Recalculate positions: position = colIdx * 1000 + rowIdx
-    const flattened: Section[] = [];
-    finalColumns.forEach((col, cIdx) => {
-      col.forEach((sec, rIdx) => {
-        flattened.push({
-          ...sec,
-          position: cIdx * 1000 + rIdx,
-          column_index: cIdx
-        });
-      });
-    });
-
-    onReorderSections(flattened);
   };
 
-  const renderSection = (section: Section, colIdx: number, columnCount: number) => {
-    const maxAllowedSpan = Math.max(1, columnCount - colIdx);
-    const effectiveSpan = Math.min(Math.max(1, section.col_span || 1), maxAllowedSpan);
-    const isMultiSpan = effectiveSpan > 1;
-
-    const spanWrapperStyle: React.CSSProperties = isMultiSpan
-      ? {
-          width: `calc(${effectiveSpan * 100}% + ${(effectiveSpan - 1)} * var(--dashboard-gap, 1rem))`,
-          maxWidth: 'none',
-          zIndex: 10,
-          position: 'relative',
-        }
-      : {
-          width: '100%',
-        };
-
+  const renderSection = (section: Section) => {
     const cardProps = {
       section,
       isEditMode,
       onEditSection,
       onDeleteSection,
       onUpdateSpan: onUpdateSectionSpan,
-      maxAllowedSpan,
+      maxAllowedSpan: columnCount,
     };
 
-    let cardContent: React.ReactNode = null;
-
     if (section.type === 'rss') {
-      cardContent = <RssWidgetCard key={section.id} {...cardProps} />;
-    } else if (section.type === 'weather') {
-      cardContent = <WeatherWidgetCard key={section.id} {...cardProps} />;
-    } else if (section.type === 'traffic') {
-      cardContent = <TrafficWidgetCard key={section.id} {...cardProps} />;
-    } else if (section.type === 'search') {
-      cardContent = <SearchWidgetCard key={section.id} {...cardProps} />;
-    } else {
-      cardContent = (
-        <SectionCard
-          key={section.id}
-          section={section}
-          isEditMode={isEditMode}
-          onEditSection={onEditSection}
-          onDeleteSection={onDeleteSection}
-          onAddItem={onAddItem}
-          onEditItem={onEditItem}
-          onDeleteItem={onDeleteItem}
-          onReorderItems={onReorderItems}
-          onUpdateSpan={onUpdateSectionSpan}
-          maxAllowedSpan={maxAllowedSpan}
-        />
-      );
+      return <RssWidgetCard key={section.id} {...cardProps} />;
     }
-
+    if (section.type === 'weather') {
+      return <WeatherWidgetCard key={section.id} {...cardProps} />;
+    }
+    if (section.type === 'traffic') {
+      return <TrafficWidgetCard key={section.id} {...cardProps} />;
+    }
+    if (section.type === 'search') {
+      return <SearchWidgetCard key={section.id} {...cardProps} />;
+    }
     return (
-      <div key={section.id} style={spanWrapperStyle} className="min-w-0 transition-all duration-150">
-        {cardContent}
-      </div>
+      <SectionCard
+        key={section.id}
+        {...cardProps}
+        onAddItem={onAddItem}
+        onEditItem={onEditItem}
+        onDeleteItem={onDeleteItem}
+        onReorderItems={onReorderItems}
+      />
     );
   };
 
   return (
-    <div
-      className="w-full max-w-[1920px] 2xl:max-w-[98%] mx-auto px-4 sm:px-6 pb-12"
-      style={{ '--dashboard-gap': '1rem' } as React.CSSProperties}
-    >
-      {/* Column-based containers with vertical stacking & DnD between/within columns */}
+    <div className="w-full max-w-[1920px] 2xl:max-w-[98%] mx-auto px-4 sm:px-6 pb-12">
       <DndContext
         sensors={sensors}
-        collisionDetection={collisionDetectionStrategy}
+        collisionDetection={closestCenter}
         onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className={getColumnsClass()}>
-          {columns.map((colSections, colIdx) => (
-            <ColumnDropContainer
-              key={colIdx}
-              id={`col-${colIdx}`}
-              colIdx={colIdx}
-              columnCount={columnCount}
-              sections={colSections}
-              isEditMode={isEditMode}
-              renderSection={renderSection}
-            />
-          ))}
-        </div>
+        <SortableContext
+          items={filteredSections.map(s => s.id)}
+          strategy={rectSortingStrategy}
+        >
+          <div className={`grid ${getColumnsClass()} items-start`}>
+            {filteredSections.map((section) => {
+              const span = Math.min(section.col_span || 1, columnCount);
+              return (
+                <div
+                  key={section.id}
+                  className={`w-full min-w-0 transition-all duration-150 ${getColSpanClass(span, columnCount)}`}
+                  style={{
+                    gridColumn: `span ${span} / span ${span}`,
+                  }}
+                >
+                  {renderSection(section)}
+                </div>
+              );
+            })}
+          </div>
+        </SortableContext>
       </DndContext>
 
       {filteredSections.length === 0 && !isEditMode && (
