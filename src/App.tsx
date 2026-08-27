@@ -122,10 +122,24 @@ function App() {
       const title = configData?.title || (currentProfile === 'pro' ? 'Mon Portail Pro' : 'Mon Portail');
       const pages: Page[] = pagesData || [];
 
-      const sections: Section[] = (sectionsData || []).map((sec: any) => ({
-        ...sec,
-        items: (linksData || []).filter((link: any) => link.section_id === sec.id)
-      }));
+      const sections: Section[] = (sectionsData || []).map((sec: any) => {
+        let col_span = sec.col_span || 1;
+        if (sec.widget_url) {
+          try {
+            const parsed = JSON.parse(sec.widget_url);
+            if (parsed && typeof parsed.col_span === 'number') {
+              col_span = parsed.col_span;
+            }
+          } catch {
+            // raw URL or string
+          }
+        }
+        return {
+          ...sec,
+          col_span,
+          items: (linksData || []).filter((link: any) => link.section_id === sec.id)
+        };
+      });
 
       setConfig({ title, pages, sections });
       
@@ -263,20 +277,26 @@ function App() {
     
     if (editingSection) {
       // Update
-      const updatedSection = { ...editingSection, ...sectionData };
+      const col_span = sectionData.col_span || editingSection.col_span || 1;
+      const updatedSection: Section = { ...editingSection, ...sectionData, col_span };
       setConfig(prev => ({
         ...prev,
         sections: prev.sections.map(s => s.id === editingSection.id ? updatedSection : s)
       }));
-      await supabase.from('sections').update({ title: sectionData.title }).eq('id', editingSection.id);
+      await supabase.from('sections').update({ 
+        title: sectionData.title,
+        widget_url: JSON.stringify({ col_span })
+      }).eq('id', editingSection.id);
     } else {
       // Create
       const newId = `sec-${Date.now()}`;
+      const col_span = sectionData.col_span || 1;
       const newSection: Section = {
         id: newId,
         page_id: activePageId,
         title: sectionData.title || 'Nouvelle section',
         type: 'links',
+        col_span,
         position: config.sections.length,
         items: []
       };
@@ -289,6 +309,7 @@ function App() {
         page_id: activePageId,
         title: newSection.title,
         type: 'links',
+        widget_url: JSON.stringify({ col_span }),
         position: newSection.position,
         user_id: session.user.id
       });
@@ -300,11 +321,13 @@ function App() {
 
     if (editingRssSection) {
       // Update
+      const col_span = sectionData.col_span || editingRssSection.col_span || 1;
       const updatedSection: Section = { 
         ...editingRssSection, 
         title: sectionData.title || editingRssSection.title,
         widget_url: sectionData.widget_url || editingRssSection.widget_url,
         display_limit: sectionData.display_limit || editingRssSection.display_limit || 10,
+        col_span,
         type: 'rss'
       };
       setConfig(prev => ({
@@ -328,6 +351,7 @@ function App() {
     } else {
       // Create
       const newId = `rss-${Date.now()}`;
+      const col_span = sectionData.col_span || 1;
       const newSection: Section = {
         id: newId,
         page_id: activePageId,
@@ -335,6 +359,7 @@ function App() {
         type: 'rss',
         widget_url: sectionData.widget_url,
         display_limit: sectionData.display_limit || 10,
+        col_span,
         position: config.sections.length,
         items: []
       };
@@ -372,10 +397,12 @@ function App() {
 
     if (editingWeatherSection) {
       // Update
+      const col_span = sectionData.col_span || editingWeatherSection.col_span || 1;
       const updatedSection: Section = {
         ...editingWeatherSection,
         title: sectionData.title || editingWeatherSection.title,
         widget_url: sectionData.widget_url || editingWeatherSection.widget_url,
+        col_span,
         type: 'weather'
       };
       setConfig(prev => ({
@@ -390,12 +417,14 @@ function App() {
     } else {
       // Create
       const newId = `weather-${Date.now()}`;
+      const col_span = sectionData.col_span || 1;
       const newSection: Section = {
         id: newId,
         page_id: activePageId,
         title: sectionData.title || 'Météo',
         type: 'weather',
         widget_url: sectionData.widget_url,
+        col_span,
         position: config.sections.length,
         items: []
       };
@@ -420,10 +449,12 @@ function App() {
 
     if (editingTrafficSection) {
       // Update
+      const col_span = sectionData.col_span || editingTrafficSection.col_span || 1;
       const updatedSection: Section = {
         ...editingTrafficSection,
         title: sectionData.title || editingTrafficSection.title,
         widget_url: sectionData.widget_url || editingTrafficSection.widget_url,
+        col_span,
         type: 'traffic'
       };
       setConfig(prev => ({
@@ -438,12 +469,14 @@ function App() {
     } else {
       // Create
       const newId = `traffic-${Date.now()}`;
+      const col_span = sectionData.col_span || 1;
       const newSection: Section = {
         id: newId,
         page_id: activePageId,
         title: sectionData.title || 'Trajet',
         type: 'traffic',
         widget_url: sectionData.widget_url,
+        col_span,
         position: config.sections.length,
         items: []
       };
@@ -468,10 +501,12 @@ function App() {
 
     if (editingSearchSection) {
       // Update
+      const col_span = sectionData.col_span || editingSearchSection.col_span || 1;
       const updatedSection: Section = {
         ...editingSearchSection,
         title: sectionData.title || editingSearchSection.title,
         widget_url: sectionData.widget_url || editingSearchSection.widget_url,
+        col_span,
         type: 'search'
       };
       setConfig(prev => ({
@@ -486,12 +521,14 @@ function App() {
     } else {
       // Create
       const newId = `search-${Date.now()}`;
+      const col_span = sectionData.col_span || 1;
       const newSection: Section = {
         id: newId,
         page_id: activePageId,
         title: sectionData.title || 'Hub de recherche & IA',
         type: 'search',
         widget_url: sectionData.widget_url,
+        col_span,
         position: config.sections.length,
         items: []
       };

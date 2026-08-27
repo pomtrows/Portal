@@ -25,6 +25,7 @@ export interface Section {
   display_limit?: number;
   position?: number;
   column_index?: number;
+  col_span?: number; // 1 to 8 (number of grid columns to span)
   created_at?: string;
   items: LinkItem[];
 }

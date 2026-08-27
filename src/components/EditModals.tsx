@@ -5,6 +5,36 @@ import { searchAddresses, parseTrafficConfig, calculateRoute, type TrafficLocati
 import { ALL_SEARCH_ENGINES, parseSearchConfig, type SearchWidgetConfig } from '../utils/searchEngines';
 import { Search, MapPin, Navigation, Loader2, Check, Car, Clock, Sparkles, Globe } from 'lucide-react';
 
+export const ColumnSpanSelector: React.FC<{
+  value: number;
+  onChange: (val: number) => void;
+  label?: string;
+}> = ({ value, onChange, label = 'Largeur (Nombre de colonnes)' }) => {
+  return (
+    <div>
+      <label className="block text-xs font-bold text-[var(--color-text-strong)] mb-1.5">
+        {label}
+      </label>
+      <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
+        {[1, 2, 3, 4, 5, 6, 7, 8].map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onChange(c)}
+            className={`py-1.5 px-2 rounded-lg text-xs font-bold border transition-all ${
+              value === c
+                ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white shadow-sm ring-2 ring-[var(--color-primary)]/20'
+                : 'border-[var(--color-border)] bg-black/5 hover:bg-black/10 text-[var(--color-text)]'
+            }`}
+          >
+            {c} {c > 1 ? 'cols' : 'col'}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 interface SectionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -14,12 +44,15 @@ interface SectionModalProps {
 
 export const SectionModal: React.FC<SectionModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
   const [title, setTitle] = useState('');
+  const [colSpan, setColSpan] = useState<number>(1);
 
   useEffect(() => {
     if (initialData) {
       setTitle(initialData.title);
+      setColSpan(initialData.col_span || 1);
     } else {
       setTitle('');
+      setColSpan(1);
     }
   }, [initialData, isOpen]);
 
@@ -43,6 +76,8 @@ export const SectionModal: React.FC<SectionModalProps> = ({ isOpen, onClose, onS
               autoFocus
             />
           </div>
+
+          <ColumnSpanSelector value={colSpan} onChange={setColSpan} />
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
@@ -52,7 +87,7 @@ export const SectionModal: React.FC<SectionModalProps> = ({ isOpen, onClose, onS
           <button 
             onClick={() => {
               if (title.trim()) {
-                onSave({ title });
+                onSave({ title, col_span: colSpan });
                 onClose();
               }
             }}
@@ -170,21 +205,23 @@ interface RssModalProps {
   onSave: (section: Partial<Section>) => void;
   initialData?: Section | null;
 }
-
 export const RssModal: React.FC<RssModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
   const [title, setTitle] = useState('');
   const [widgetUrl, setWidgetUrl] = useState('');
   const [displayLimit, setDisplayLimit] = useState<number>(10);
+  const [colSpan, setColSpan] = useState<number>(1);
 
   useEffect(() => {
     if (initialData) {
       setTitle(initialData.title);
       setWidgetUrl(initialData.widget_url || '');
       setDisplayLimit(initialData.display_limit || 10);
+      setColSpan(initialData.col_span || 1);
     } else {
       setTitle('');
       setWidgetUrl('');
       setDisplayLimit(10);
+      setColSpan(1);
     }
   }, [initialData, isOpen]);
 
@@ -235,6 +272,8 @@ export const RssModal: React.FC<RssModalProps> = ({ isOpen, onClose, onSave, ini
               <option value={30}>30 articles</option>
             </select>
           </div>
+
+          <ColumnSpanSelector value={colSpan} onChange={setColSpan} />
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
@@ -248,7 +287,8 @@ export const RssModal: React.FC<RssModalProps> = ({ isOpen, onClose, onSave, ini
                   title: title.trim(), 
                   widget_url: widgetUrl.trim(), 
                   display_limit: displayLimit,
-                  type: 'rss' 
+                  col_span: colSpan,
+                  type: 'rss'
                 });
                 onClose();
               }
@@ -280,6 +320,7 @@ export const WeatherModal: React.FC<WeatherModalProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<WeatherLocation[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<WeatherLocation | null>(null);
+  const [colSpan, setColSpan] = useState<number>(1);
   const [isSearching, setIsSearching] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
@@ -290,10 +331,12 @@ export const WeatherModal: React.FC<WeatherModalProps> = ({
       const loc = parseWeatherConfig(initialData.widget_url);
       setSelectedLocation(loc);
       setSearchQuery(loc.name);
+      setColSpan(initialData.col_span || (loc as any)?.col_span || 1);
     } else {
       setTitle('Météo');
       setSelectedLocation({ name: 'Paris', latitude: 48.8566, longitude: 2.3522, country: 'France' });
       setSearchQuery('');
+      setColSpan(1);
     }
     setResults([]);
     setGeoError(null);
@@ -491,6 +534,8 @@ export const WeatherModal: React.FC<WeatherModalProps> = ({
           </div>
         )}
 
+        <ColumnSpanSelector value={colSpan} onChange={setColSpan} />
+
         <div className="mt-6 flex justify-end gap-3 pt-2">
           <button
             type="button"
@@ -506,7 +551,8 @@ export const WeatherModal: React.FC<WeatherModalProps> = ({
               if (selectedLocation) {
                 onSave({
                   title: title.trim() || `Météo ${selectedLocation.name}`,
-                  widget_url: JSON.stringify(selectedLocation),
+                  widget_url: JSON.stringify({ ...selectedLocation, col_span: colSpan }),
+                  col_span: colSpan,
                   type: 'weather',
                 });
                 onClose();
@@ -542,6 +588,7 @@ export const TrafficModal: React.FC<TrafficModalProps> = ({
   const [endResults, setEndResults] = useState<TrafficLocation[]>([]);
   const [selectedStart, setSelectedStart] = useState<TrafficLocation | null>(null);
   const [selectedEnd, setSelectedEnd] = useState<TrafficLocation | null>(null);
+  const [colSpan, setColSpan] = useState<number>(1);
   const [isSearchingStart, setIsSearchingStart] = useState(false);
   const [isSearchingEnd, setIsSearchingEnd] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
@@ -556,12 +603,14 @@ export const TrafficModal: React.FC<TrafficModalProps> = ({
       setSelectedEnd(conf.end);
       setStartQuery(conf.start.name);
       setEndQuery(conf.end.name);
+      setColSpan(initialData.col_span || (conf as any)?.col_span || 1);
     } else {
       setTitle('Maison ➔ Travail');
       setSelectedStart(null);
       setSelectedEnd(null);
       setStartQuery('');
       setEndQuery('');
+      setColSpan(1);
     }
     setStartResults([]);
     setEndResults([]);
@@ -830,6 +879,8 @@ export const TrafficModal: React.FC<TrafficModalProps> = ({
           </div>
         )}
 
+        <ColumnSpanSelector value={colSpan} onChange={setColSpan} />
+
         {/* Buttons */}
         <div className="mt-6 flex justify-end gap-3 pt-2">
           <button
@@ -851,7 +902,9 @@ export const TrafficModal: React.FC<TrafficModalProps> = ({
                     start: selectedStart,
                     end: selectedEnd,
                     title: finalTitle,
+                    col_span: colSpan,
                   }),
+                  col_span: colSpan,
                   type: 'traffic',
                 });
                 onClose();
@@ -883,6 +936,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   const [title, setTitle] = useState('');
   const [defaultEngineId, setDefaultEngineId] = useState<string>('google');
   const [enabledEngineIds, setEnabledEngineIds] = useState<string[]>([]);
+  const [colSpan, setColSpan] = useState<number>(1);
 
   useEffect(() => {
     if (initialData) {
@@ -890,10 +944,12 @@ export const SearchModal: React.FC<SearchModalProps> = ({
       const conf = parseSearchConfig(initialData.widget_url);
       setDefaultEngineId(conf.defaultEngineId);
       setEnabledEngineIds(conf.enabledEngineIds);
+      setColSpan(initialData.col_span || (conf as any)?.col_span || 1);
     } else {
       setTitle('Hub de recherche & IA');
       setDefaultEngineId('google');
       setEnabledEngineIds(ALL_SEARCH_ENGINES.map((e) => e.id));
+      setColSpan(1);
     }
   }, [initialData, isOpen]);
 
@@ -1026,6 +1082,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
           </div>
         </div>
 
+        <ColumnSpanSelector value={colSpan} onChange={setColSpan} />
+
         {/* Action Buttons */}
         <div className="mt-6 flex justify-end gap-3 pt-2">
           <button
@@ -1039,14 +1097,16 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             type="button"
             disabled={enabledEngineIds.length === 0}
             onClick={() => {
-              const conf: SearchWidgetConfig = {
+              const conf: SearchWidgetConfig & { col_span?: number } = {
                 title: title.trim() || 'Hub de recherche & IA',
                 defaultEngineId,
                 enabledEngineIds,
+                col_span: colSpan,
               };
               onSave({
                 title: conf.title,
                 widget_url: JSON.stringify(conf),
+                col_span: colSpan,
                 type: 'search',
               });
               onClose();
