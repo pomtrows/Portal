@@ -818,59 +818,61 @@ function App() {
         onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
       />
 
-      {/* Tabs */}
-      <div className="hidden md:flex w-full max-w-[1920px] 2xl:max-w-[98%] mx-auto px-4 sm:px-6 py-4 flex-wrap gap-2 items-center mb-2">
-        {config.pages.map(page => (
-          <div key={page.id} className="relative group flex items-center">
-            {editingPageId === page.id ? (
-              <input
-                autoFocus
-                value={tempPageTitle}
-                onChange={e => setTempPageTitle(e.target.value)}
-                onBlur={() => handleSavePageTitle(page.id)}
-                onKeyDown={e => e.key === 'Enter' && handleSavePageTitle(page.id)}
-                className="px-4 py-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-primary)] text-[var(--color-text-strong)] focus:outline-none"
-              />
-            ) : (
-              <button
-                onClick={() => setActivePageId(page.id)}
-                onDoubleClick={() => {
-                  if (isEditMode) {
-                    setEditingPageId(page.id);
-                    setTempPageTitle(page.title);
-                  }
-                }}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  activePageId === page.id 
-                    ? 'bg-[var(--color-primary)] text-white shadow-sm' 
-                    : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]'
-                }`}
-              >
-                {page.title}
-              </button>
-            )}
-            
-            {isEditMode && editingPageId !== page.id && (
-              <button
-                onClick={() => handleDeletePage(page.id)}
-                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full transition-opacity z-10"
-                title="Supprimer la page"
-              >
-                <Trash2 size={12} />
-              </button>
-            )}
-          </div>
-        ))}
+      {/* Full-width Tabs Navigation Bar with Screen-Wide Divider Line */}
+      <div className="hidden md:block w-full border-b border-[var(--color-border)]/40 mb-5">
+        <div className="w-full max-w-[1920px] 2xl:max-w-[98%] mx-auto px-4 sm:px-6 pt-1 pb-3 flex flex-wrap gap-2 items-center">
+          {config.pages.map(page => (
+            <div key={page.id} className="relative group flex items-center">
+              {editingPageId === page.id ? (
+                <input
+                  autoFocus
+                  value={tempPageTitle}
+                  onChange={e => setTempPageTitle(e.target.value)}
+                  onBlur={() => handleSavePageTitle(page.id)}
+                  onKeyDown={e => e.key === 'Enter' && handleSavePageTitle(page.id)}
+                  className="px-3.5 py-1.5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-primary)] text-[var(--color-text-strong)] text-sm focus:outline-none"
+                />
+              ) : (
+                <button
+                  onClick={() => setActivePageId(page.id)}
+                  onDoubleClick={() => {
+                    if (isEditMode) {
+                      setEditingPageId(page.id);
+                      setTempPageTitle(page.title);
+                    }
+                  }}
+                  className={`px-3.5 py-1.5 rounded-lg font-medium text-sm transition-colors ${
+                    activePageId === page.id 
+                      ? 'bg-[var(--color-primary)] text-white shadow-sm' 
+                      : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]'
+                  }`}
+                >
+                  {page.title}
+                </button>
+              )}
+              
+              {isEditMode && editingPageId !== page.id && (
+                <button
+                  onClick={() => handleDeletePage(page.id)}
+                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full transition-opacity z-10"
+                  title="Supprimer la page"
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
+            </div>
+          ))}
 
-        {isEditMode && (
-          <button
-            onClick={handleAddPage}
-            className="p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface)] transition-colors ml-2"
-            title="Ajouter une page"
-          >
-            <Plus size={20} />
-          </button>
-        )}
+          {isEditMode && (
+            <button
+              onClick={handleAddPage}
+              className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface)] transition-colors ml-1"
+              title="Ajouter une page"
+            >
+              <Plus size={18} />
+            </button>
+          )}
+        </div>
       </div>
 
       <main>

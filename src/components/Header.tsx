@@ -46,7 +46,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 glass-panel border-x-0 border-t-0 rounded-none mb-8 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between relative gap-2 sm:gap-4">
+    <header className="sticky top-0 z-50 glass-panel border-x-0 border-t-0 rounded-none mb-2 px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between relative gap-2 sm:gap-4">
       
       {/* MOBILE BURGER (Left on mobile, hidden on PC) */}
       <div className="md:hidden flex items-center justify-start flex-shrink-0 w-10">
