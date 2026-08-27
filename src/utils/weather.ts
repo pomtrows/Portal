@@ -52,56 +52,56 @@ export function getWeatherInfo(code: number, isDay: boolean = true): WeatherCode
   switch (code) {
     case 0:
       return isDay
-        ? { label: 'Ensoleillé', icon: 'Sun', colorClass: 'text-amber-400' }
-        : { label: 'Nuit claire', icon: 'Moon', colorClass: 'text-indigo-300' };
+        ? { label: 'Ensoleillé', icon: 'Sun', colorClass: 'text-amber-500 dark:text-amber-400' }
+        : { label: 'Nuit claire', icon: 'Moon', colorClass: 'text-indigo-700 dark:text-indigo-300' };
     case 1:
       return isDay
-        ? { label: 'Peu nuageux', icon: 'SunMedium', colorClass: 'text-amber-300' }
-        : { label: 'Peu nuageux', icon: 'CloudMoon', colorClass: 'text-indigo-300' };
+        ? { label: 'Peu nuageux', icon: 'SunMedium', colorClass: 'text-amber-600 dark:text-amber-300' }
+        : { label: 'Peu nuageux', icon: 'CloudMoon', colorClass: 'text-indigo-700 dark:text-indigo-300' };
     case 2:
       return isDay
-        ? { label: 'Éclaircies', icon: 'CloudSun', colorClass: 'text-sky-300' }
-        : { label: 'Éclaircies', icon: 'CloudMoon', colorClass: 'text-indigo-300' };
+        ? { label: 'Éclaircies', icon: 'CloudSun', colorClass: 'text-blue-700 dark:text-sky-300' }
+        : { label: 'Éclaircies', icon: 'CloudMoon', colorClass: 'text-indigo-700 dark:text-indigo-300' };
     case 3:
-      return { label: 'Couvert', icon: 'Cloud', colorClass: 'text-slate-400' };
+      return { label: 'Couvert', icon: 'Cloud', colorClass: 'text-slate-700 dark:text-slate-300' };
     case 45:
     case 48:
-      return { label: 'Brouillard', icon: 'CloudFog', colorClass: 'text-slate-400' };
+      return { label: 'Brouillard', icon: 'CloudFog', colorClass: 'text-slate-700 dark:text-slate-300' };
     case 51:
     case 53:
     case 55:
-      return { label: 'Bruine', icon: 'CloudDrizzle', colorClass: 'text-sky-400' };
+      return { label: 'Bruine', icon: 'CloudDrizzle', colorClass: 'text-blue-700 dark:text-sky-400' };
     case 56:
     case 57:
-      return { label: 'Bruine verglaçante', icon: 'CloudSnow', colorClass: 'text-cyan-300' };
+      return { label: 'Bruine verglaçante', icon: 'CloudSnow', colorClass: 'text-blue-800 dark:text-cyan-300' };
     case 61:
-      return { label: 'Pluie faible', icon: 'CloudRain', colorClass: 'text-blue-400' };
+      return { label: 'Pluie faible', icon: 'CloudRain', colorClass: 'text-blue-700 dark:text-blue-400' };
     case 63:
-      return { label: 'Pluie modérée', icon: 'CloudRain', colorClass: 'text-blue-500' };
+      return { label: 'Pluie modérée', icon: 'CloudRain', colorClass: 'text-blue-800 dark:text-blue-400' };
     case 65:
-      return { label: 'Forte pluie', icon: 'CloudRain', colorClass: 'text-blue-600' };
+      return { label: 'Forte pluie', icon: 'CloudRain', colorClass: 'text-blue-900 dark:text-blue-300' };
     case 66:
     case 67:
-      return { label: 'Pluie verglaçante', icon: 'CloudSnow', colorClass: 'text-cyan-400' };
+      return { label: 'Pluie verglaçante', icon: 'CloudSnow', colorClass: 'text-blue-800 dark:text-cyan-400' };
     case 71:
     case 73:
     case 75:
     case 77:
-      return { label: 'Neige', icon: 'CloudSnow', colorClass: 'text-sky-200' };
+      return { label: 'Neige', icon: 'CloudSnow', colorClass: 'text-sky-700 dark:text-sky-200' };
     case 80:
     case 81:
     case 82:
-      return { label: 'Averses', icon: 'CloudRain', colorClass: 'text-blue-400' };
+      return { label: 'Averses', icon: 'CloudRain', colorClass: 'text-blue-700 dark:text-blue-400' };
     case 85:
     case 86:
-      return { label: 'Averses de neige', icon: 'CloudSnow', colorClass: 'text-sky-200' };
+      return { label: 'Averses de neige', icon: 'CloudSnow', colorClass: 'text-sky-700 dark:text-sky-200' };
     case 95:
-      return { label: 'Orage', icon: 'CloudLightning', colorClass: 'text-yellow-400' };
+      return { label: 'Orage', icon: 'CloudLightning', colorClass: 'text-amber-600 dark:text-yellow-400' };
     case 96:
     case 99:
-      return { label: 'Orage avec grêle', icon: 'CloudLightning', colorClass: 'text-amber-500' };
+      return { label: 'Orage avec grêle', icon: 'CloudLightning', colorClass: 'text-amber-700 dark:text-amber-500' };
     default:
-      return { label: 'Variable', icon: 'CloudSun', colorClass: 'text-sky-300' };
+      return { label: 'Variable', icon: 'CloudSun', colorClass: 'text-blue-700 dark:text-sky-300' };
   }
 }
 
