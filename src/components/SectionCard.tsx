@@ -78,8 +78,8 @@ export const SectionCard: React.FC<SectionCardProps> = ({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={"glass-panel p-6 w-full " + (isDragging ? 'z-50 shadow-2xl ring-2 ring-[var(--color-primary)]' : '')}>
-      <div className="flex items-center justify-between mb-6 group">
+    <div ref={setNodeRef} style={style} className={"glass-panel p-4 sm:p-5 w-full " + (isDragging ? 'z-50 shadow-2xl ring-2 ring-[var(--color-primary)]' : '')}>
+      <div className="flex items-center justify-between mb-3.5 group">
         <div className="flex items-center gap-2">
           {isEditMode && (
             <div
@@ -129,7 +129,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
         onDragEnd={handleDragEndItems}
       >
         <SortableContext items={section.items.map(i => i.id)} strategy={rectSortingStrategy}>
-          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
+          <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
             {section.items.map((item) => (
               <ItemCard
                 key={item.id}
@@ -140,7 +140,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
               />
             ))}
             {section.items.length === 0 && (
-              <div className="col-span-full py-8 text-center text-[var(--color-text-muted)] border-2 border-dashed border-[var(--color-border)] rounded-xl">
+              <div className="col-span-full py-6 text-center text-sm text-[var(--color-text-muted)] border-2 border-dashed border-[var(--color-border)] rounded-xl">
                 Aucun lien dans cette section.
               </div>
             )}

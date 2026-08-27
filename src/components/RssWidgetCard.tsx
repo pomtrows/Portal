@@ -18,7 +18,7 @@ interface RssWidgetCardProps {
   onDeleteSection: (id: string) => void;
 }
 
-function parseJinaMarkdown(text: string): RssItem[] {
+function parseJinaMarkdown(text: string, limit: number = 10): RssItem[] {
   const items: RssItem[] = [];
   const blocks = text.split(/(?=###\s+)/g);
   
@@ -57,7 +57,7 @@ function parseJinaMarkdown(text: string): RssItem[] {
     }
   }
 
-  return items.slice(0, 6);
+  return items.slice(0, limit);
 }
 
 export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
@@ -85,6 +85,8 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const limit = section.display_limit || 10;
+
   const fetchRssFeed = useCallback(async () => {
     if (!section.widget_url) {
       setError('Aucune URL de flux configurée.');
@@ -108,7 +110,7 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
         if (data.status !== 'ok' || !Array.isArray(data.items) || data.items.length === 0) {
           throw new Error('rss2json empty');
         }
-        return data.items.slice(0, 6).map((item: any) => ({
+        return data.items.slice(0, limit).map((item: any) => ({
           title: item.title?.replace(/<[^>]*>?/gm, '') || 'Sans titre',
           link: item.link || '#',
           pubDate: item.pubDate,
@@ -125,7 +127,7 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
         if (!res.ok) throw new Error('jina error');
         const data = await res.json();
         const content = data.data?.content || '';
-        const parsed = parseJinaMarkdown(content);
+        const parsed = parseJinaMarkdown(content, limit);
         if (parsed.length === 0) throw new Error('jina empty');
         return parsed;
       })()
@@ -140,7 +142,7 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [section.widget_url]);
+  }, [section.widget_url, limit]);
 
   useEffect(() => {
     fetchRssFeed();
@@ -163,8 +165,8 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={"glass-panel p-6 w-full flex flex-col " + (isDragging ? 'z-50 shadow-2xl ring-2 ring-[var(--color-primary)]' : '')}>
-      <div className="flex items-center justify-between mb-4 pb-2 border-b border-[var(--color-border)]">
+    <div ref={setNodeRef} style={style} className={"glass-panel p-4 sm:p-5 w-full flex flex-col " + (isDragging ? 'z-50 shadow-2xl ring-2 ring-[var(--color-primary)]' : '')}>
+      <div className="flex items-center justify-between mb-3 pb-2 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2">
           {isEditMode && (
             <div
@@ -215,11 +217,11 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 space-y-3">
+      <div className="flex-1 space-y-2 max-h-[580px] overflow-y-auto pr-1">
         {loading && items.length === 0 && (
-          <div className="space-y-3 py-2">
+          <div className="space-y-2 py-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse space-y-2 p-3 rounded-lg bg-black/10">
+              <div key={i} className="animate-pulse space-y-1.5 p-2.5 rounded-lg bg-black/10">
                 <div className="h-4 bg-white/10 rounded w-3/4"></div>
                 <div className="h-3 bg-white/5 rounded w-1/2"></div>
               </div>
@@ -241,7 +243,7 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
         )}
 
         {!loading && !error && items.length === 0 && (
-          <div className="py-8 text-center text-sm text-[var(--color-text-muted)] border-2 border-dashed border-[var(--color-border)] rounded-xl">
+          <div className="py-6 text-center text-sm text-[var(--color-text-muted)] border-2 border-dashed border-[var(--color-border)] rounded-xl">
             Aucun article disponible.
           </div>
         )}
@@ -252,7 +254,7 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
             href={item.link}
             target="_blank"
             rel="noopener noreferrer"
-            className="group/item block p-3 rounded-xl bg-black/10 hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)]/40 hover:border-[var(--color-primary)]/50 transition-all"
+            className="group/item block p-2.5 rounded-xl bg-black/10 hover:bg-[var(--color-surface-hover)] border border-[var(--color-border)]/40 hover:border-[var(--color-primary)]/50 transition-all"
           >
             <div className="flex items-start justify-between gap-2">
               <h3 className="font-semibold text-sm text-[var(--color-text-strong)] group-hover/item:text-[var(--color-primary)] transition-colors line-clamp-2">

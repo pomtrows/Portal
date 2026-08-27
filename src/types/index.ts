@@ -22,6 +22,7 @@ export interface Section {
   title: string;
   type?: 'links' | 'rss';
   widget_url?: string;
+  display_limit?: number;
   position?: number;
   created_at?: string;
   items: LinkItem[];

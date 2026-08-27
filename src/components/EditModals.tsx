@@ -170,14 +170,17 @@ interface RssModalProps {
 export const RssModal: React.FC<RssModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
   const [title, setTitle] = useState('');
   const [widgetUrl, setWidgetUrl] = useState('');
+  const [displayLimit, setDisplayLimit] = useState<number>(10);
 
   useEffect(() => {
     if (initialData) {
       setTitle(initialData.title);
       setWidgetUrl(initialData.widget_url || '');
+      setDisplayLimit(initialData.display_limit || 10);
     } else {
       setTitle('');
       setWidgetUrl('');
+      setDisplayLimit(10);
     }
   }, [initialData, isOpen]);
 
@@ -212,6 +215,22 @@ export const RssModal: React.FC<RssModalProps> = ({ isOpen, onClose, onSave, ini
               className="w-full bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-3 py-2 focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)]"
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1">Nombre d'articles à afficher</label>
+            <select
+              value={displayLimit}
+              onChange={(e) => setDisplayLimit(Number(e.target.value))}
+              className="w-full bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-3 py-2 focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)] cursor-pointer"
+            >
+              <option value={5}>5 articles</option>
+              <option value={8}>8 articles</option>
+              <option value={10}>10 articles (par défaut)</option>
+              <option value={15}>15 articles</option>
+              <option value={20}>20 articles</option>
+              <option value={25}>25 articles</option>
+              <option value={30}>30 articles</option>
+            </select>
+          </div>
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
@@ -221,7 +240,12 @@ export const RssModal: React.FC<RssModalProps> = ({ isOpen, onClose, onSave, ini
           <button 
             onClick={() => {
               if (title.trim() && widgetUrl.trim()) {
-                onSave({ title: title.trim(), widget_url: widgetUrl.trim(), type: 'rss' });
+                onSave({ 
+                  title: title.trim(), 
+                  widget_url: widgetUrl.trim(), 
+                  display_limit: displayLimit,
+                  type: 'rss' 
+                });
                 onClose();
               }
             }}

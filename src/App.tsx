@@ -247,17 +247,27 @@ function App() {
         ...editingRssSection, 
         title: sectionData.title || editingRssSection.title,
         widget_url: sectionData.widget_url || editingRssSection.widget_url,
+        display_limit: sectionData.display_limit || editingRssSection.display_limit || 10,
         type: 'rss'
       };
       setConfig(prev => ({
         ...prev,
         sections: prev.sections.map(s => s.id === editingRssSection.id ? updatedSection : s)
       }));
-      await supabase.from('sections').update({ 
+      const { error } = await supabase.from('sections').update({ 
         title: updatedSection.title,
         widget_url: updatedSection.widget_url,
+        display_limit: updatedSection.display_limit,
         type: 'rss'
       }).eq('id', editingRssSection.id);
+
+      if (error) {
+        await supabase.from('sections').update({ 
+          title: updatedSection.title,
+          widget_url: updatedSection.widget_url,
+          type: 'rss'
+        }).eq('id', editingRssSection.id);
+      }
     } else {
       // Create
       const newId = `rss-${Date.now()}`;
@@ -267,6 +277,7 @@ function App() {
         title: sectionData.title || 'Flux RSS',
         type: 'rss',
         widget_url: sectionData.widget_url,
+        display_limit: sectionData.display_limit || 10,
         position: config.sections.length,
         items: []
       };
@@ -274,15 +285,28 @@ function App() {
         ...prev,
         sections: [...prev.sections, newSection]
       }));
-      await supabase.from('sections').insert({
+      const { error } = await supabase.from('sections').insert({
         id: newId,
         page_id: activePageId,
         title: newSection.title,
         type: 'rss',
         widget_url: newSection.widget_url,
+        display_limit: newSection.display_limit,
         position: newSection.position,
         user_id: session.user.id
       });
+
+      if (error) {
+        await supabase.from('sections').insert({
+          id: newId,
+          page_id: activePageId,
+          title: newSection.title,
+          type: 'rss',
+          widget_url: newSection.widget_url,
+          position: newSection.position,
+          user_id: session.user.id
+        });
+      }
     }
   };
 
@@ -380,11 +404,24 @@ function App() {
       title: s.title,
       type: s.type || 'links',
       widget_url: s.widget_url || null,
+      display_limit: s.display_limit || null,
       position: index,
       user_id: session.user.id
     }));
     
-    await supabase.from('sections').upsert(updates, { onConflict: 'id' });
+    const { error } = await supabase.from('sections').upsert(updates, { onConflict: 'id' });
+    if (error) {
+      const fallbackUpdates = newSections.map((s, index) => ({
+        id: s.id,
+        page_id: s.page_id,
+        title: s.title,
+        type: s.type || 'links',
+        widget_url: s.widget_url || null,
+        position: index,
+        user_id: session.user.id
+      }));
+      await supabase.from('sections').upsert(fallbackUpdates, { onConflict: 'id' });
+    }
   };
 
   const handleReorderItems = async (sectionId: string, newItems: LinkItem[]) => {
