@@ -101,8 +101,8 @@ function getSectionRowSpan(section: Section, colSpan: number = 1): number {
   if (count === 0) return 2;
   const innerCols = Math.max(1, colSpan);
   const itemRows = Math.ceil(count / innerCols);
-  // Header (~32px) + padding (~24px) + itemRows * (item button ~52px + gap 10px = 62px)
-  const totalPx = 60 + itemRows * 62;
+  // Header + padding + itemRows * item height
+  const totalPx = 68 + itemRows * 64;
   return Math.max(2, Math.ceil(totalPx / 50.4));
 }
 
@@ -286,7 +286,8 @@ function findNonCollidingY(
   targetY: number,
   w: number,
   h: number,
-  currentLayouts: Record<string, GridItemGeometry>
+  currentLayouts: Record<string, GridItemGeometry>,
+  allSections?: Section[]
 ): number {
   let adjustedY = Math.max(0, targetY);
   let hasCollision = true;
@@ -298,10 +299,13 @@ function findNonCollidingY(
 
     for (const [id, geo] of Object.entries(currentLayouts)) {
       if (id === movingSectionId) continue;
+      const otherSection = allSections?.find((s) => s.id === id);
       const otherX = geo.grid_x ?? 0;
       const otherY = geo.grid_y ?? 0;
       const otherW = geo.col_span ?? 1;
-      const otherH = geo.row_span ?? 1;
+      const otherH = otherSection
+        ? Math.max(getSectionRowSpan(otherSection, otherW), geo.row_span || 1)
+        : (geo.row_span ?? 1);
 
       // Check horizontal overlap
       const horizontalOverlap = targetX < otherX + otherW && targetX + w > otherX;
@@ -329,8 +333,11 @@ function findNonCollidingY(
     const sourceGeo = layoutMap[sourceId];
     if (!sourceGeo || !onUpdateSectionGeometry) return;
 
+    const sourceSection = sections.find((s) => s.id === sourceId);
     const w = sourceGeo.col_span ?? 1;
-    const h = sourceGeo.row_span ?? 1;
+    const h = sourceSection
+      ? Math.max(getSectionRowSpan(sourceSection, w), sourceGeo.row_span || 1)
+      : (sourceGeo.row_span ?? 1);
 
     let targetX = sourceGeo.grid_x ?? 0;
     let targetY = sourceGeo.grid_y ?? 0;
@@ -347,8 +354,12 @@ function findNonCollidingY(
         }
       } else if (overId !== sourceId && layoutMap[overId]) {
         const targetGeo = layoutMap[overId];
+        const targetSection = sections.find((s) => s.id === overId);
+        const targetH = targetSection
+          ? Math.max(getSectionRowSpan(targetSection, targetGeo.col_span ?? 1), targetGeo.row_span || 1)
+          : (targetGeo.row_span ?? 1);
         targetX = targetGeo.grid_x ?? 0;
-        targetY = (targetGeo.grid_y ?? 0) + (targetGeo.row_span ?? 1);
+        targetY = (targetGeo.grid_y ?? 0) + targetH;
       }
     } else if (event.delta && (Math.abs(event.delta.x) > 15 || Math.abs(event.delta.y) > 15)) {
       const containerEl = document.getElementById('dashboard-grid-container');
@@ -361,7 +372,7 @@ function findNonCollidingY(
       targetY = Math.max(0, (sourceGeo.grid_y ?? 0) + dyRows);
     }
 
-    const nonCollidingY = findNonCollidingY(sourceId, targetX, targetY, w, h, layoutMap);
+    const nonCollidingY = findNonCollidingY(sourceId, targetX, targetY, w, h, layoutMap, sections);
     onUpdateSectionGeometry(sourceId, { grid_x: targetX, grid_y: nonCollidingY });
   };
 
@@ -372,7 +383,7 @@ function findNonCollidingY(
     const maxW = Math.max(1, columnCount - curX);
     const newW = Math.min(Math.max(1, (geo.col_span ?? 1) + dw), maxW);
     const newH = Math.min(Math.max(1, (geo.row_span ?? 1) + dh), 25);
-    const nonCollidingY = findNonCollidingY(sectionId, curX, geo.grid_y ?? 0, newW, newH, layoutMap);
+    const nonCollidingY = findNonCollidingY(sectionId, curX, geo.grid_y ?? 0, newW, newH, layoutMap, sections);
     onUpdateSectionGeometry(sectionId, { grid_x: curX, grid_y: nonCollidingY, col_span: newW, row_span: newH });
   };
 
