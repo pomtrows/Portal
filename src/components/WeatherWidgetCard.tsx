@@ -136,6 +136,24 @@ export const WeatherWidgetCard: React.FC<WeatherWidgetCardProps> = ({
 
   useEffect(() => {
     loadWeather();
+
+    // Auto-refresh weather every 15 minutes
+    const interval = setInterval(() => {
+      loadWeather();
+    }, 900_000);
+
+    // Refresh when user comes back to the tab
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadWeather();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [loadWeather]);
 
   const formatHour = (isoString: string) => {

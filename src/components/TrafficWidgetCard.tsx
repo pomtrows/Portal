@@ -97,6 +97,24 @@ export const TrafficWidgetCard: React.FC<TrafficWidgetCardProps> = ({
   useEffect(() => {
     if (startLoc && endLoc) {
       loadRoute(startLoc, endLoc);
+
+      // Auto-refresh every 5 minutes
+      const interval = setInterval(() => {
+        loadRoute(startLoc, endLoc);
+      }, 300_000);
+
+      // Refresh when user comes back to the tab
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+          loadRoute(startLoc, endLoc);
+        }
+      };
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
     }
   }, [startLoc, endLoc, loadRoute]);
 
