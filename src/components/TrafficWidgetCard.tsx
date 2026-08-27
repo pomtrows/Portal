@@ -117,13 +117,14 @@ export const TrafficWidgetCard: React.FC<TrafficWidgetCardProps> = ({
     >
       {/* Widget Header */}
       <div className="flex items-center justify-between mb-1.5 pb-1 border-b border-[var(--color-border)]">
-        <div className="flex items-center gap-1.5 min-w-0">
+        <div
+          className={`flex items-center gap-1.5 min-w-0 flex-1 ${isEditMode ? 'cursor-grab active:cursor-grabbing select-none' : ''}`}
+          {...(isEditMode ? { ...attributes, ...listeners } : {})}
+        >
           {isEditMode && (
             <div
-              {...attributes}
-              {...listeners}
-              className="cursor-grab hover:bg-black/10 p-1 rounded-lg text-slate-800 dark:text-slate-200 transition-colors -ml-1 flex-shrink-0"
-              title="Déplacer le widget"
+              className="hover:bg-black/10 p-1 rounded-lg text-slate-800 dark:text-slate-200 transition-colors -ml-1 flex-shrink-0"
+              title="Cliquer et glisser pour déplacer le widget"
             >
               <GripVertical size={18} />
             </div>

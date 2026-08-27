@@ -5,7 +5,7 @@ import { RssWidgetCard } from './RssWidgetCard';
 import { WeatherWidgetCard } from './WeatherWidgetCard';
 import { TrafficWidgetCard } from './TrafficWidgetCard';
 import { SearchWidgetCard } from './SearchWidgetCard';
-import { Plus, Rss, CloudSun, Car, Search, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Plus, Rss, CloudSun, Car, Search } from 'lucide-react';
 import { useLayout } from '../hooks/useLayout';
 import { usePreferences, type GridItemGeometry } from '../hooks/usePreferences';
 import {
@@ -14,6 +14,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
   type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core';
@@ -21,6 +22,36 @@ import {
   SortableContext,
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
+
+const DroppableGridCell: React.FC<{
+  id: string;
+  cellX: number;
+  cellY: number;
+}> = ({ id, cellX, cellY }) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id,
+    data: { cellX, cellY },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        gridColumnStart: cellX + 1,
+        gridColumnEnd: 'span 1',
+        gridRowStart: cellY + 1,
+        gridRowEnd: 'span 1',
+      }}
+      className={`border border-dashed rounded-xl min-h-[40px] flex items-center justify-center text-[8px] text-[var(--color-text-muted)] transition-all duration-150 ${
+        isOver
+          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/20 scale-[0.98] ring-2 ring-[var(--color-primary)]/40 opacity-90'
+          : 'border-[var(--color-border)]/25 opacity-20'
+      }`}
+    >
+      {cellX + 1},{cellY + 1}
+    </div>
+  );
+};
 
 interface DashboardProps {
   sections: Section[];
@@ -277,60 +308,44 @@ function findNonCollidingY(
     const { active, over } = event;
     setActiveId(null);
 
-    if (!over || active.id === over.id) return;
-
     const sourceId = String(active.id);
-    const targetId = String(over.id);
-
     const sourceGeo = layoutMap[sourceId];
-    const targetGeo = layoutMap[targetId];
+    if (!sourceGeo || !onUpdateSectionGeometry) return;
 
-    if (sourceGeo && targetGeo && onUpdateSectionGeometry) {
-      // Place source directly below target section without collision
-      const targetX = targetGeo.grid_x ?? 0;
-      const targetY = (targetGeo.grid_y ?? 0) + (targetGeo.row_span ?? 1);
-      const w = sourceGeo.col_span ?? 1;
-      const h = sourceGeo.row_span ?? 1;
+    const w = sourceGeo.col_span ?? 1;
+    const h = sourceGeo.row_span ?? 1;
 
-      const nonCollidingY = findNonCollidingY(sourceId, targetX, targetY, w, h, layoutMap);
-      onUpdateSectionGeometry(sourceId, { grid_x: targetX, grid_y: nonCollidingY });
-    }
-  };
+    let targetX = sourceGeo.grid_x ?? 0;
+    let targetY = sourceGeo.grid_y ?? 0;
 
-  const handleMove = (sectionId: string, dx: number, dy: number) => {
-    if (!onUpdateSectionGeometry) return;
-    const geo = layoutMap[sectionId] || { grid_x: 0, grid_y: 0, col_span: 1, row_span: 1 };
-    const w = geo.col_span ?? 1;
-    const h = geo.row_span ?? 1;
-    const newX = Math.min(Math.max(0, (geo.grid_x ?? 0) + dx), columnCount - w);
-    let rawY = Math.max(0, (geo.grid_y ?? 0) + dy);
-
-    if (dx !== 0) {
-      // When moving laterally, always ensure it drops below any item existing in that column
-      rawY = findNonCollidingY(sectionId, newX, (geo.grid_y ?? 0), w, h, layoutMap);
-    } else if (dy > 0) {
-      // When moving down, find next non-colliding slot
-      rawY = findNonCollidingY(sectionId, newX, rawY, w, h, layoutMap);
-    } else if (dy < 0) {
-      // When moving up, check if slot is free
-      let canMoveUp = true;
-      for (const [id, otherGeo] of Object.entries(layoutMap)) {
-        if (id === sectionId) continue;
-        const otherX = otherGeo.grid_x ?? 0;
-        const otherY = otherGeo.grid_y ?? 0;
-        const otherW = otherGeo.col_span ?? 1;
-        const otherH = otherGeo.row_span ?? 1;
-        const horiz = newX < otherX + otherW && newX + w > otherX;
-        const vert = rawY < otherY + otherH && rawY + h > otherY;
-        if (horiz && vert) {
-          canMoveUp = false;
-          break;
+    if (over) {
+      const overId = String(over.id);
+      if (overId.startsWith('cell-')) {
+        const parts = overId.split('-');
+        const cx = parseInt(parts[1], 10);
+        const cy = parseInt(parts[2], 10);
+        if (!isNaN(cx) && !isNaN(cy)) {
+          targetX = Math.min(Math.max(0, cx), columnCount - w);
+          targetY = Math.max(0, cy);
         }
+      } else if (overId !== sourceId && layoutMap[overId]) {
+        const targetGeo = layoutMap[overId];
+        targetX = targetGeo.grid_x ?? 0;
+        targetY = (targetGeo.grid_y ?? 0) + (targetGeo.row_span ?? 1);
       }
-      if (!canMoveUp) return;
+    } else if (event.delta && (Math.abs(event.delta.x) > 15 || Math.abs(event.delta.y) > 15)) {
+      const containerEl = document.getElementById('dashboard-grid-container');
+      const containerWidth = containerEl?.clientWidth || window.innerWidth;
+      const colWidth = containerWidth / columnCount;
+      const rowHeight = 50.4;
+      const dxCols = Math.round(event.delta.x / colWidth);
+      const dyRows = Math.round(event.delta.y / rowHeight);
+      targetX = Math.min(Math.max(0, (sourceGeo.grid_x ?? 0) + dxCols), columnCount - w);
+      targetY = Math.max(0, (sourceGeo.grid_y ?? 0) + dyRows);
     }
 
-    onUpdateSectionGeometry(sectionId, { grid_x: newX, grid_y: rawY });
+    const nonCollidingY = findNonCollidingY(sourceId, targetX, targetY, w, h, layoutMap);
+    onUpdateSectionGeometry(sourceId, { grid_x: targetX, grid_y: nonCollidingY });
   };
 
   const handleResize = (sectionId: string, dw: number, dh: number) => {
@@ -394,64 +409,26 @@ function findNonCollidingY(
 
         {/* 2D Grid Positioning & Resizing overlay in Edit Mode */}
         {isEditMode && (
-          <div className="flex items-center justify-between gap-1 py-0.5 px-2 text-[10px] bg-black/10 dark:bg-white/10 rounded-b-xl border border-t-0 border-[var(--color-border)]/40 backdrop-blur-sm">
-            {/* Position move buttons */}
-            <div className="flex items-center gap-0.5">
-              <button
-                type="button"
-                onClick={() => handleMove(section.id, -1, 0)}
-                disabled={(geo.grid_x ?? 0) <= 0}
-                className="p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded disabled:opacity-20 transition-colors"
-                title="Déplacer vers la gauche"
-              >
-                <ArrowLeft size={12} />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleMove(section.id, 1, 0)}
-                disabled={(geo.grid_x ?? 0) >= columnCount - (geo.col_span ?? 1)}
-                className="p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded disabled:opacity-20 transition-colors"
-                title="Déplacer vers la droite"
-              >
-                <ArrowRight size={12} />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleMove(section.id, 0, -1)}
-                disabled={(geo.grid_y ?? 0) <= 0}
-                className="p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded disabled:opacity-20 transition-colors"
-                title="Déplacer vers le haut"
-              >
-                <ArrowUp size={12} />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleMove(section.id, 0, 1)}
-                className="p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
-                title="Déplacer vers le bas"
-              >
-                <ArrowDown size={12} />
-              </button>
+          <div className="flex items-center justify-between gap-1 py-1 px-2.5 text-[10px] bg-black/10 dark:bg-white/10 rounded-b-xl border border-t-0 border-[var(--color-border)]/40 backdrop-blur-sm">
+            {/* Position indicator */}
+            <div className="flex items-center gap-1 text-[9px] text-[var(--color-text-muted)] font-mono">
+              <span>Case: ({ (geo.grid_x ?? 0) + 1 }, { (geo.grid_y ?? 0) + 1 })</span>
             </div>
 
             {/* Geometry stats & W / H size controls */}
             <div className="flex items-center gap-1.5 font-mono">
-              <span className="text-[9px] text-[var(--color-text-muted)] font-sans">
-                ({ (geo.grid_x ?? 0) + 1 }, { (geo.grid_y ?? 0) + 1 })
-              </span>
-
               {(!section.type || section.type === 'links') ? (
                 <span className="text-[9px] bg-black/15 dark:bg-white/15 rounded px-1.5 py-0.5 font-sans opacity-75" title="Hauteur ajustée automatiquement au nombre de liens">
                   H: auto ({geo.row_span ?? 1})
                 </span>
               ) : (
-                <div className="flex items-center gap-0.5 bg-black/15 dark:bg-white/15 rounded px-1 py-0.2" title="Hauteur du widget">
+                <div className="flex items-center gap-0.5 bg-black/15 dark:bg-white/15 rounded px-1.5 py-0.5" title="Hauteur du widget">
                   <span className="text-[9px] font-bold mr-0.5">H:</span>
                   <button
                     type="button"
                     onClick={() => handleResize(section.id, 0, -1)}
                     disabled={(geo.row_span ?? 1) <= 1}
-                    className="px-0.5 hover:text-[var(--color-primary)] disabled:opacity-20 font-bold"
+                    className="px-1 hover:text-[var(--color-primary)] disabled:opacity-20 font-bold"
                   >
                     -
                   </button>
@@ -460,7 +437,7 @@ function findNonCollidingY(
                     type="button"
                     onClick={() => handleResize(section.id, 0, 1)}
                     disabled={(geo.row_span ?? 1) >= 20}
-                    className="px-0.5 hover:text-[var(--color-primary)] disabled:opacity-20 font-bold"
+                    className="px-1 hover:text-[var(--color-primary)] disabled:opacity-20 font-bold"
                   >
                     +
                   </button>
@@ -486,6 +463,7 @@ function findNonCollidingY(
           strategy={rectSortingStrategy}
         >
           <div
+            id="dashboard-grid-container"
             className="w-full relative transition-all duration-200"
             style={{
               display: 'grid',
@@ -494,24 +472,18 @@ function findNonCollidingY(
               gap: '0.65rem',
             }}
           >
-            {/* Background Grid Cells in Edit Mode for easy visual placement */}
+            {/* Background Droppable Grid Cells in Edit Mode for easy visual placement */}
             {isEditMode &&
               Array.from({ length: maxRow * columnCount }).map((_, idx) => {
                 const cellX = idx % columnCount;
                 const cellY = Math.floor(idx / columnCount);
                 return (
-                  <div
+                  <DroppableGridCell
                     key={`bg-cell-${cellX}-${cellY}`}
-                    style={{
-                      gridColumnStart: cellX + 1,
-                      gridColumnEnd: 'span 1',
-                      gridRowStart: cellY + 1,
-                      gridRowEnd: 'span 1',
-                    }}
-                    className="border border-dashed border-[var(--color-border)]/25 rounded-xl min-h-[40px] pointer-events-none flex items-center justify-center text-[8px] text-[var(--color-text-muted)] opacity-20"
-                  >
-                    {cellX + 1},{cellY + 1}
-                  </div>
+                    id={`cell-${cellX}-${cellY}`}
+                    cellX={cellX}
+                    cellY={cellY}
+                  />
                 );
               })}
 
