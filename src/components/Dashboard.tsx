@@ -44,6 +44,19 @@ interface DashboardProps {
   onUpdateAllGeometries?: (updates: Record<string, { grid_x: number; grid_y: number; col_span: number; row_span: number }>) => void;
 }
 
+function estimateDefaultRowSpan(section: Section): number {
+  if (section.type === 'weather') return 7; // ~310px
+  if (section.type === 'traffic') return 4; // ~180px
+  if (section.type === 'search') return 6; // ~265px
+  if (section.type === 'rss') return 8; // ~360px
+  const count = section.items?.length || 0;
+  if (count <= 1) return 2; // ~85px (Title + 1 item)
+  if (count <= 2) return 3; // ~130px
+  if (count <= 4) return 4; // ~175px
+  if (count <= 6) return 6; // ~265px
+  return Math.min(25, Math.max(2, Math.ceil((35 + count * 42) / 46)));
+}
+
 /**
  * Packs 2D grid items into free matrix coordinates without collisions.
  */
@@ -82,7 +95,7 @@ function computeAutoLayout(
     let gx = saved?.grid_x ?? s.grid_x;
     let gy = saved?.grid_y ?? s.grid_y;
     let w = Math.min(saved?.col_span ?? s.col_span ?? 1, columnCount);
-    let h = Math.max(1, saved?.row_span ?? s.row_span ?? 1);
+    let h = Math.max(1, saved?.row_span ?? s.row_span ?? estimateDefaultRowSpan(s));
 
     if (gx === undefined && s.position !== undefined && s.position >= 1000) {
       gy = Math.floor(s.position / 1000);
@@ -101,7 +114,7 @@ function computeAutoLayout(
   // 2. Auto-place remaining items
   unplaced.forEach((s) => {
     const w = Math.min(s.col_span || 1, columnCount);
-    const h = Math.max(1, s.row_span || 1);
+    const h = Math.max(1, s.row_span || estimateDefaultRowSpan(s));
     let placed = false;
     let y = 0;
 
@@ -401,8 +414,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
             style={{
               display: 'grid',
               gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
-              gridAutoRows: 'minmax(80px, auto)',
-              gap: '0.75rem',
+              gridAutoRows: '40px',
+              gap: '0.65rem',
             }}
           >
             {/* Background Grid Cells in Edit Mode for easy visual placement */}
@@ -419,9 +432,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       gridRowStart: cellY + 1,
                       gridRowEnd: 'span 1',
                     }}
-                    className="border border-dashed border-[var(--color-border)]/30 rounded-2xl min-h-[80px] pointer-events-none flex items-center justify-center text-[9px] text-[var(--color-text-muted)] opacity-25"
+                    className="border border-dashed border-[var(--color-border)]/25 rounded-xl min-h-[40px] pointer-events-none flex items-center justify-center text-[8px] text-[var(--color-text-muted)] opacity-20"
                   >
-                    {cellX + 1}, {cellY + 1}
+                    {cellX + 1},{cellY + 1}
                   </div>
                 );
               })}
