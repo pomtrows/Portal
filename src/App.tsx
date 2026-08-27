@@ -13,7 +13,12 @@ import { usePreferences, hydratePreferencesFromCloud } from './hooks/usePreferen
 import type { Session } from '@supabase/supabase-js';
 
 function App() {
-  const { schedule, getCurrentScheduledProfile } = usePreferences();
+  const {
+    schedule,
+    getCurrentScheduledProfile,
+    updateSectionGeometry,
+    updateMultipleSectionGeometries,
+  } = usePreferences();
   const [session, setSession] = useState<Session | null>(null);
   const [currentProfile, setCurrentProfile] = useState<'perso' | 'pro'>(() => {
     if (schedule.enabled) {
@@ -549,22 +554,69 @@ function App() {
   };
 
   const handleUpdateSectionSpan = async (sectionId: string, col_span: number) => {
+    handleUpdateSectionGeometry(sectionId, { col_span });
+  };
+
+  const handleUpdateSectionGeometry = async (sectionId: string, geo: { grid_x?: number; grid_y?: number; col_span?: number; row_span?: number }) => {
     setConfig(prev => ({
       ...prev,
-      sections: prev.sections.map(s => s.id === sectionId ? { ...s, col_span } : s)
+      sections: prev.sections.map(s => s.id === sectionId ? { ...s, ...geo } : s)
     }));
+
+    updateSectionGeometry(sectionId, geo);
 
     const target = config.sections.find(s => s.id === sectionId);
     if (!target) return;
 
+    const merged = { ...target, ...geo };
+    const position = (merged.grid_y ?? 0) * 1000 + (merged.grid_x ?? 0);
+
     if (target.type === 'links' || !target.type) {
       await supabase.from('sections').update({
-        widget_url: JSON.stringify({ col_span })
+        position,
+        widget_url: JSON.stringify({
+          col_span: merged.col_span,
+          row_span: merged.row_span,
+          grid_x: merged.grid_x,
+          grid_y: merged.grid_y
+        })
       }).eq('id', sectionId);
     } else {
       await supabase.from('sections').update({
-        col_span
+        position,
+        col_span: merged.col_span
       }).eq('id', sectionId);
+    }
+  };
+
+  const handleUpdateAllGeometries = async (updates: Record<string, { grid_x: number; grid_y: number; col_span: number; row_span: number }>) => {
+    setConfig(prev => ({
+      ...prev,
+      sections: prev.sections.map(s => updates[s.id] ? { ...s, ...updates[s.id] } : s)
+    }));
+
+    updateMultipleSectionGeometries(updates);
+
+    if (!session?.user || !activePageId) return;
+
+    const upsertRows = Object.entries(updates).map(([id, geo]) => {
+      const sec = config.sections.find(s => s.id === id);
+      const position = geo.grid_y * 1000 + geo.grid_x;
+      return {
+        id,
+        page_id: sec?.page_id || activePageId,
+        title: sec?.title || '',
+        type: sec?.type || 'links',
+        position,
+        widget_url: (sec?.type === 'links' || !sec?.type)
+          ? JSON.stringify(geo)
+          : sec?.widget_url || null,
+        user_id: session.user.id
+      };
+    });
+
+    if (upsertRows.length > 0) {
+      await supabase.from('sections').upsert(upsertRows, { onConflict: 'id' });
     }
   };
 
@@ -842,6 +894,8 @@ function App() {
             onReorderSections={handleReorderSections}
             onReorderItems={handleReorderItems}
             onUpdateSectionSpan={handleUpdateSectionSpan}
+            onUpdateSectionGeometry={handleUpdateSectionGeometry}
+            onUpdateAllGeometries={handleUpdateAllGeometries}
           />
         ) : (
           <div className="text-center py-20 text-[var(--color-text-muted)]">

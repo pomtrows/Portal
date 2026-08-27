@@ -3,6 +3,13 @@ import { supabase } from '../utils/supabase';
 
 export type FontSize = 'compact' | 'normal' | 'large';
 
+export interface GridItemGeometry {
+  grid_x?: number;
+  grid_y?: number;
+  col_span?: number;
+  row_span?: number;
+}
+
 export interface ProfileSchedule {
   enabled: boolean;
   proDays: number[]; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
@@ -17,6 +24,7 @@ export interface UserPreferences {
   fontSizeRss?: FontSize;
   schedule?: ProfileSchedule;
   pageColumns?: Record<string, number>;
+  gridLayouts?: Record<string, GridItemGeometry>;
 }
 
 export const DEFAULT_SCHEDULE: ProfileSchedule = {
@@ -27,6 +35,16 @@ export const DEFAULT_SCHEDULE: ProfileSchedule = {
 };
 
 const LISTENERS = new Set<() => void>();
+
+function getStoredGridLayouts(): Record<string, GridItemGeometry> {
+  try {
+    const saved = localStorage.getItem('portal-grid-layouts');
+    if (saved) return JSON.parse(saved);
+  } catch {
+    // ignore
+  }
+  return {};
+}
 
 function getStoredFontSizeSection(): FontSize {
   const saved = localStorage.getItem('portal-font-size-section');
@@ -169,6 +187,12 @@ export function hydratePreferencesFromCloud(metadata: Record<string, unknown> | 
     }
   }
 
+  if (prefs.gridLayouts && typeof prefs.gridLayouts === 'object') {
+    globalGridLayouts = { ...globalGridLayouts, ...prefs.gridLayouts };
+    localStorage.setItem('portal-grid-layouts', JSON.stringify(globalGridLayouts));
+    hasChanged = true;
+  }
+
   if (prefs.pageColumns && typeof prefs.pageColumns === 'object') {
     Object.entries(prefs.pageColumns).forEach(([pageId, col]) => {
       if (col >= 1 && col <= 8) {
@@ -181,6 +205,8 @@ export function hydratePreferencesFromCloud(metadata: Record<string, unknown> | 
     LISTENERS.forEach((l) => l());
   }
 }
+
+let globalGridLayouts: Record<string, GridItemGeometry> = getStoredGridLayouts();
 
 export function calculateScheduledProfile(schedule: ProfileSchedule): 'pro' | 'perso' {
   if (!schedule.enabled) return 'perso';
@@ -207,6 +233,7 @@ export function usePreferences() {
   const [fontSizeLinks, setFontSizeLinksState] = useState<FontSize>(globalFontSizeLinks);
   const [fontSizeRss, setFontSizeRssState] = useState<FontSize>(globalFontSizeRss);
   const [schedule, setScheduleState] = useState<ProfileSchedule>(globalSchedule);
+  const [gridLayouts, setGridLayoutsState] = useState<Record<string, GridItemGeometry>>(globalGridLayouts);
 
   useEffect(() => {
     const listener = () => {
@@ -214,6 +241,7 @@ export function usePreferences() {
       setFontSizeLinksState(globalFontSizeLinks);
       setFontSizeRssState(globalFontSizeRss);
       setScheduleState(globalSchedule);
+      setGridLayoutsState(globalGridLayouts);
     };
     LISTENERS.add(listener);
 
@@ -222,12 +250,14 @@ export function usePreferences() {
         e.key === 'portal-font-size-section' ||
         e.key === 'portal-font-size-links' ||
         e.key === 'portal-font-size-rss' ||
-        e.key === 'portal-profile-schedule'
+        e.key === 'portal-profile-schedule' ||
+        e.key === 'portal-grid-layouts'
       ) {
         globalFontSizeSection = getStoredFontSizeSection();
         globalFontSizeLinks = getStoredFontSizeLinks();
         globalFontSizeRss = getStoredFontSizeRss();
         globalSchedule = getStoredSchedule();
+        globalGridLayouts = getStoredGridLayouts();
         LISTENERS.forEach((l) => l());
       }
     };
@@ -271,6 +301,28 @@ export function usePreferences() {
     syncPreferenceToCloud({ schedule: newSchedule });
   };
 
+  const updateSectionGeometry = (sectionId: string, geo: Partial<GridItemGeometry>) => {
+    const current = globalGridLayouts[sectionId] || {};
+    const updated = { ...current, ...geo };
+    globalGridLayouts = { ...globalGridLayouts, [sectionId]: updated };
+    localStorage.setItem('portal-grid-layouts', JSON.stringify(globalGridLayouts));
+    setGridLayoutsState({ ...globalGridLayouts });
+    LISTENERS.forEach((l) => l());
+    syncPreferenceToCloud({ gridLayouts: globalGridLayouts });
+  };
+
+  const updateMultipleSectionGeometries = (updates: Record<string, Partial<GridItemGeometry>>) => {
+    const next = { ...globalGridLayouts };
+    Object.entries(updates).forEach(([id, geo]) => {
+      next[id] = { ...(next[id] || {}), ...geo };
+    });
+    globalGridLayouts = next;
+    localStorage.setItem('portal-grid-layouts', JSON.stringify(globalGridLayouts));
+    setGridLayoutsState({ ...globalGridLayouts });
+    LISTENERS.forEach((l) => l());
+    syncPreferenceToCloud({ gridLayouts: globalGridLayouts });
+  };
+
   return {
     fontSizeSection,
     setFontSizeSection,
@@ -280,6 +332,9 @@ export function usePreferences() {
     setFontSizeRss,
     schedule,
     setSchedule,
+    gridLayouts,
+    updateSectionGeometry,
+    updateMultipleSectionGeometries,
     getCurrentScheduledProfile: () => calculateScheduledProfile(schedule),
   };
 }

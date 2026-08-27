@@ -25,7 +25,10 @@ export interface Section {
   display_limit?: number;
   position?: number;
   column_index?: number;
-  col_span?: number; // 1 to 8 (number of grid columns to span)
+  grid_x?: number; // 0-indexed column position on the grid
+  grid_y?: number; // 0-indexed row position on the grid
+  col_span?: number; // width in grid cells (1 to N, default 1)
+  row_span?: number; // height in grid cells (1 to M, default 1)
   created_at?: string;
   items: LinkItem[];
 }

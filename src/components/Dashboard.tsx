@@ -5,8 +5,9 @@ import { RssWidgetCard } from './RssWidgetCard';
 import { WeatherWidgetCard } from './WeatherWidgetCard';
 import { TrafficWidgetCard } from './TrafficWidgetCard';
 import { SearchWidgetCard } from './SearchWidgetCard';
-import { Plus, Rss, CloudSun, Car, Search } from 'lucide-react';
+import { Plus, Rss, CloudSun, Car, Search, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useLayout } from '../hooks/useLayout';
+import { usePreferences, type GridItemGeometry } from '../hooks/usePreferences';
 import {
   DndContext,
   closestCenter,
@@ -19,7 +20,6 @@ import {
 import {
   SortableContext,
   rectSortingStrategy,
-  arrayMove,
 } from '@dnd-kit/sortable';
 
 interface DashboardProps {
@@ -40,30 +40,85 @@ interface DashboardProps {
   onReorderSections: (sections: Section[]) => void;
   onReorderItems: (sectionId: string, items: LinkItem[]) => void;
   onUpdateSectionSpan?: (sectionId: string, col_span: number) => void;
+  onUpdateSectionGeometry?: (sectionId: string, geo: { grid_x?: number; grid_y?: number; col_span?: number; row_span?: number }) => void;
+  onUpdateAllGeometries?: (updates: Record<string, { grid_x: number; grid_y: number; col_span: number; row_span: number }>) => void;
 }
 
-function getColSpanClass(colSpan: number, maxCols: number): string {
-  const span = Math.min(Math.max(1, colSpan), maxCols);
-  switch (span) {
-    case 1:
-      return 'col-span-1';
-    case 2:
-      return 'col-span-1 sm:col-span-2';
-    case 3:
-      return 'col-span-1 sm:col-span-2 lg:col-span-3';
-    case 4:
-      return 'col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4';
-    case 5:
-      return 'col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 xl:col-span-5';
-    case 6:
-      return 'col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 xl:col-span-6';
-    case 7:
-      return 'col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4 xl:col-span-7';
-    case 8:
-      return 'col-span-1 sm:col-span-2 md:col-span-4 lg:col-span-6 xl:col-span-8';
-    default:
-      return 'col-span-1';
-  }
+/**
+ * Packs 2D grid items into free matrix coordinates without collisions.
+ */
+function computeAutoLayout(
+  sections: Section[],
+  columnCount: number,
+  savedLayouts: Record<string, GridItemGeometry>
+): Record<string, GridItemGeometry> {
+  const result: Record<string, GridItemGeometry> = {};
+  const gridMap: boolean[][] = [];
+
+  const isOccupied = (x: number, y: number, w: number, h: number) => {
+    for (let dy = 0; dy < h; dy++) {
+      for (let dx = 0; dx < w; dx++) {
+        if (x + dx >= columnCount) return true;
+        if (gridMap[y + dy] && gridMap[y + dy][x + dx]) return true;
+      }
+    }
+    return false;
+  };
+
+  const markOccupied = (x: number, y: number, w: number, h: number) => {
+    for (let dy = 0; dy < h; dy++) {
+      if (!gridMap[y + dy]) gridMap[y + dy] = [];
+      for (let dx = 0; dx < w; dx++) {
+        gridMap[y + dy][x + dx] = true;
+      }
+    }
+  };
+
+  const unplaced: Section[] = [];
+
+  // 1. Place items with explicit coordinates first
+  sections.forEach((s) => {
+    const saved = savedLayouts[s.id];
+    let gx = saved?.grid_x ?? s.grid_x;
+    let gy = saved?.grid_y ?? s.grid_y;
+    let w = Math.min(saved?.col_span ?? s.col_span ?? 1, columnCount);
+    let h = Math.max(1, saved?.row_span ?? s.row_span ?? 1);
+
+    if (gx === undefined && s.position !== undefined && s.position >= 1000) {
+      gy = Math.floor(s.position / 1000);
+      gx = s.position % 1000;
+    }
+
+    if (gx !== undefined && gy !== undefined && gx < columnCount) {
+      w = Math.min(w, columnCount - gx);
+      result[s.id] = { grid_x: gx, grid_y: gy, col_span: w, row_span: h };
+      markOccupied(gx, gy, w, h);
+    } else {
+      unplaced.push(s);
+    }
+  });
+
+  // 2. Auto-place remaining items
+  unplaced.forEach((s) => {
+    const w = Math.min(s.col_span || 1, columnCount);
+    const h = Math.max(1, s.row_span || 1);
+    let placed = false;
+    let y = 0;
+
+    while (!placed) {
+      for (let x = 0; x <= columnCount - w; x++) {
+        if (!isOccupied(x, y, w, h)) {
+          result[s.id] = { grid_x: x, grid_y: y, col_span: w, row_span: h };
+          markOccupied(x, y, w, h);
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) y++;
+    }
+  });
+
+  return result;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -81,44 +136,67 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onAddItem,
   onEditItem,
   onDeleteItem,
-  onReorderSections,
+  onReorderSections: _onReorderSections,
   onReorderItems,
-  onUpdateSectionSpan,
+  onUpdateSectionGeometry,
+  onUpdateAllGeometries,
 }) => {
   const { columnCount } = useLayout(activePageId);
+  const { gridLayouts } = usePreferences();
   const [, setActiveId] = useState<string | null>(null);
-
-  const getColumnsClass = () => {
-    switch (columnCount) {
-      case 1: return 'grid-cols-1 gap-4 lg:gap-6';
-      case 2: return 'grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6';
-      case 3: return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6';
-      case 4: return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 lg:gap-5';
-      case 5: return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4';
-      case 6: return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 lg:gap-3.5';
-      case 7: return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5 lg:gap-3';
-      case 8: return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2.5 lg:gap-3';
-      default: return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6';
-    }
-  };
 
   const filteredSections = useMemo(() => {
     const sorted = [...sections].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-    return sorted.map(section => {
-      if (section.type === 'rss' || section.type === 'weather' || section.type === 'traffic' || section.type === 'search') {
-        const matches = section.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (section.widget_url && section.widget_url.toLowerCase().includes(searchQuery.toLowerCase()));
-        return matches || isEditMode ? section : null;
-      }
-      return {
-        ...section,
-        items: section.items.filter(item => 
-          item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
-        )
-      };
-    }).filter((section): section is Section => section !== null && (section.type === 'rss' || section.type === 'weather' || section.type === 'traffic' || section.type === 'search' || section.items.length > 0 || isEditMode));
+    return sorted
+      .map((section) => {
+        if (
+          section.type === 'rss' ||
+          section.type === 'weather' ||
+          section.type === 'traffic' ||
+          section.type === 'search'
+        ) {
+          const matches =
+            section.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (section.widget_url &&
+              section.widget_url.toLowerCase().includes(searchQuery.toLowerCase()));
+          return matches || isEditMode ? section : null;
+        }
+        return {
+          ...section,
+          items: section.items.filter(
+            (item) =>
+              item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              (item.description &&
+                item.description.toLowerCase().includes(searchQuery.toLowerCase()))
+          ),
+        };
+      })
+      .filter(
+        (section): section is Section =>
+          section !== null &&
+          (section.type === 'rss' ||
+            section.type === 'weather' ||
+            section.type === 'traffic' ||
+            section.type === 'search' ||
+            section.items.length > 0 ||
+            isEditMode)
+      );
   }, [sections, searchQuery, isEditMode]);
+
+  // Compute 2D grid matrix layout
+  const layoutMap = useMemo(() => {
+    return computeAutoLayout(filteredSections, columnCount, gridLayouts);
+  }, [filteredSections, columnCount, gridLayouts]);
+
+  // Determine total rows on the grid
+  const maxRow = useMemo(() => {
+    let max = 0;
+    Object.values(layoutMap).forEach((geo) => {
+      const bottom = (geo.grid_y ?? 0) + (geo.row_span ?? 1);
+      if (bottom > max) max = bottom;
+    });
+    return Math.max(isEditMode ? max + 2 : max, 2);
+  }, [layoutMap, isEditMode]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -138,50 +216,171 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
     if (!over || active.id === over.id) return;
 
-    const oldIndex = filteredSections.findIndex(s => s.id === active.id);
-    const newIndex = filteredSections.findIndex(s => s.id === over.id);
+    const sourceId = String(active.id);
+    const targetId = String(over.id);
 
-    if (oldIndex !== -1 && newIndex !== -1) {
-      const reordered = arrayMove(filteredSections, oldIndex, newIndex);
-      const withPositions = reordered.map((sec, idx) => ({
-        ...sec,
-        position: idx,
-      }));
-      onReorderSections(withPositions);
+    const sourceGeo = layoutMap[sourceId];
+    const targetGeo = layoutMap[targetId];
+
+    if (sourceGeo && targetGeo && onUpdateAllGeometries) {
+      // Swap coordinates or move source to target location
+      const updates: Record<string, { grid_x: number; grid_y: number; col_span: number; row_span: number }> = {
+        [sourceId]: {
+          grid_x: targetGeo.grid_x ?? 0,
+          grid_y: targetGeo.grid_y ?? 0,
+          col_span: sourceGeo.col_span ?? 1,
+          row_span: sourceGeo.row_span ?? 1,
+        },
+        [targetId]: {
+          grid_x: sourceGeo.grid_x ?? 0,
+          grid_y: sourceGeo.grid_y ?? 0,
+          col_span: targetGeo.col_span ?? 1,
+          row_span: targetGeo.row_span ?? 1,
+        },
+      };
+      onUpdateAllGeometries(updates);
     }
   };
 
-  const renderSection = (section: Section) => {
+  const handleMove = (sectionId: string, dx: number, dy: number) => {
+    if (!onUpdateSectionGeometry) return;
+    const geo = layoutMap[sectionId] || { grid_x: 0, grid_y: 0, col_span: 1, row_span: 1 };
+    const w = geo.col_span ?? 1;
+    const newX = Math.min(Math.max(0, (geo.grid_x ?? 0) + dx), columnCount - w);
+    const newY = Math.max(0, (geo.grid_y ?? 0) + dy);
+    onUpdateSectionGeometry(sectionId, { grid_x: newX, grid_y: newY });
+  };
+
+  const handleResize = (sectionId: string, dw: number, dh: number) => {
+    if (!onUpdateSectionGeometry) return;
+    const geo = layoutMap[sectionId] || { grid_x: 0, grid_y: 0, col_span: 1, row_span: 1 };
+    const curX = geo.grid_x ?? 0;
+    const maxW = Math.max(1, columnCount - curX);
+    const newW = Math.min(Math.max(1, (geo.col_span ?? 1) + dw), maxW);
+    const newH = Math.min(Math.max(1, (geo.row_span ?? 1) + dh), 6);
+    onUpdateSectionGeometry(sectionId, { col_span: newW, row_span: newH });
+  };
+
+  const renderSection = (section: Section, geo: GridItemGeometry) => {
     const cardProps = {
-      section,
+      section: {
+        ...section,
+        col_span: geo.col_span,
+        row_span: geo.row_span,
+        grid_x: geo.grid_x,
+        grid_y: geo.grid_y,
+      },
       isEditMode,
       onEditSection,
       onDeleteSection,
-      onUpdateSpan: onUpdateSectionSpan,
-      maxAllowedSpan: columnCount,
+      onUpdateSpan: (id: string, col_span: number) => {
+        if (onUpdateSectionGeometry) {
+          onUpdateSectionGeometry(id, { col_span });
+        }
+      },
+      maxAllowedSpan: columnCount - (geo.grid_x ?? 0),
     };
 
+    let cardContent: React.ReactNode = null;
+
     if (section.type === 'rss') {
-      return <RssWidgetCard key={section.id} {...cardProps} />;
+      cardContent = <RssWidgetCard key={section.id} {...cardProps} />;
+    } else if (section.type === 'weather') {
+      cardContent = <WeatherWidgetCard key={section.id} {...cardProps} />;
+    } else if (section.type === 'traffic') {
+      cardContent = <TrafficWidgetCard key={section.id} {...cardProps} />;
+    } else if (section.type === 'search') {
+      cardContent = <SearchWidgetCard key={section.id} {...cardProps} />;
+    } else {
+      cardContent = (
+        <SectionCard
+          key={section.id}
+          {...cardProps}
+          onAddItem={onAddItem}
+          onEditItem={onEditItem}
+          onDeleteItem={onDeleteItem}
+          onReorderItems={onReorderItems}
+        />
+      );
     }
-    if (section.type === 'weather') {
-      return <WeatherWidgetCard key={section.id} {...cardProps} />;
-    }
-    if (section.type === 'traffic') {
-      return <TrafficWidgetCard key={section.id} {...cardProps} />;
-    }
-    if (section.type === 'search') {
-      return <SearchWidgetCard key={section.id} {...cardProps} />;
-    }
+
     return (
-      <SectionCard
-        key={section.id}
-        {...cardProps}
-        onAddItem={onAddItem}
-        onEditItem={onEditItem}
-        onDeleteItem={onDeleteItem}
-        onReorderItems={onReorderItems}
-      />
+      <div className="relative group w-full h-full flex flex-col">
+        {/* Card Component */}
+        <div className="flex-1 w-full h-full min-h-0">{cardContent}</div>
+
+        {/* 2D Grid Positioning & Resizing overlay in Edit Mode */}
+        {isEditMode && (
+          <div className="flex items-center justify-between gap-1 pt-1.5 px-2 pb-0.5 text-[11px] bg-black/5 dark:bg-white/5 rounded-b-xl border border-t-0 border-[var(--color-border)]/50 backdrop-blur-sm">
+            {/* Position move buttons */}
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={() => handleMove(section.id, -1, 0)}
+                disabled={(geo.grid_x ?? 0) <= 0}
+                className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded disabled:opacity-20 transition-colors"
+                title="Déplacer vers la gauche"
+              >
+                <ArrowLeft size={13} />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleMove(section.id, 1, 0)}
+                disabled={(geo.grid_x ?? 0) >= columnCount - (geo.col_span ?? 1)}
+                className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded disabled:opacity-20 transition-colors"
+                title="Déplacer vers la droite"
+              >
+                <ArrowRight size={13} />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleMove(section.id, 0, -1)}
+                disabled={(geo.grid_y ?? 0) <= 0}
+                className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded disabled:opacity-20 transition-colors"
+                title="Déplacer vers le haut"
+              >
+                <ArrowUp size={13} />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleMove(section.id, 0, 1)}
+                className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded transition-colors"
+                title="Déplacer vers le bas"
+              >
+                <ArrowDown size={13} />
+              </button>
+            </div>
+
+            {/* Geometry stats & W / H size controls */}
+            <div className="flex items-center gap-2 font-mono">
+              <span className="text-[10px] text-[var(--color-text-muted)] font-sans">
+                Case ({ (geo.grid_x ?? 0) + 1 }, { (geo.grid_y ?? 0) + 1 })
+              </span>
+
+              <div className="flex items-center gap-0.5 bg-black/10 dark:bg-white/10 rounded px-1 py-0.5" title="Hauteur en carrés">
+                <span className="text-[10px] font-bold mr-0.5">H:</span>
+                <button
+                  type="button"
+                  onClick={() => handleResize(section.id, 0, -1)}
+                  disabled={(geo.row_span ?? 1) <= 1}
+                  className="px-1 hover:text-[var(--color-primary)] disabled:opacity-20 font-bold"
+                >
+                  -
+                </button>
+                <span className="font-bold text-[10px]">{geo.row_span ?? 1}</span>
+                <button
+                  type="button"
+                  onClick={() => handleResize(section.id, 0, 1)}
+                  disabled={(geo.row_span ?? 1) >= 6}
+                  className="px-1 hover:text-[var(--color-primary)] disabled:opacity-20 font-bold"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -194,21 +393,65 @@ export const Dashboard: React.FC<DashboardProps> = ({
         onDragEnd={handleDragEnd}
       >
         <SortableContext
-          items={filteredSections.map(s => s.id)}
+          items={filteredSections.map((s) => s.id)}
           strategy={rectSortingStrategy}
         >
-          <div className={`grid ${getColumnsClass()} items-start`}>
+          <div
+            className="w-full relative transition-all duration-200"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+              gridAutoRows: 'minmax(140px, auto)',
+              gap: '1rem',
+            }}
+          >
+            {/* Background Grid Cells in Edit Mode for easy visual placement */}
+            {isEditMode &&
+              Array.from({ length: maxRow * columnCount }).map((_, idx) => {
+                const cellX = idx % columnCount;
+                const cellY = Math.floor(idx / columnCount);
+                return (
+                  <div
+                    key={`bg-cell-${cellX}-${cellY}`}
+                    style={{
+                      gridColumnStart: cellX + 1,
+                      gridColumnEnd: 'span 1',
+                      gridRowStart: cellY + 1,
+                      gridRowEnd: 'span 1',
+                    }}
+                    className="border-2 border-dashed border-[var(--color-border)]/30 rounded-2xl min-h-[140px] pointer-events-none flex items-center justify-center text-[10px] text-[var(--color-text-muted)] opacity-25"
+                  >
+                    {cellX + 1}, {cellY + 1}
+                  </div>
+                );
+              })}
+
+            {/* Placed 2D Grid Sections */}
             {filteredSections.map((section) => {
-              const span = Math.min(section.col_span || 1, columnCount);
+              const geo = layoutMap[section.id] || {
+                grid_x: 0,
+                grid_y: 0,
+                col_span: 1,
+                row_span: 1,
+              };
+              const clampedColSpan = Math.min(
+                geo.col_span || 1,
+                columnCount - (geo.grid_x ?? 0)
+              );
+              const clampedRowSpan = Math.max(1, geo.row_span || 1);
+
               return (
                 <div
                   key={section.id}
-                  className={`w-full min-w-0 transition-all duration-150 ${getColSpanClass(span, columnCount)}`}
+                  className="w-full h-full min-w-0 transition-all duration-150 relative z-10"
                   style={{
-                    gridColumn: `span ${span} / span ${span}`,
+                    gridColumnStart: (geo.grid_x ?? 0) + 1,
+                    gridColumnEnd: `span ${clampedColSpan}`,
+                    gridRowStart: (geo.grid_y ?? 0) + 1,
+                    gridRowEnd: `span ${clampedRowSpan}`,
                   }}
                 >
-                  {renderSection(section)}
+                  {renderSection(section, geo)}
                 </div>
               );
             })}
