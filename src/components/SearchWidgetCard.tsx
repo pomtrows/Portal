@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { Section } from '../types';
 import {
   Search,
@@ -117,10 +117,16 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
     }
   });
 
-  // Filter enabled engines based on config
-  const enabledEngines = ALL_SEARCH_ENGINES.filter((e) =>
-    config.enabledEngineIds.includes(e.id)
-  );
+  // Filter and order enabled engines based on config.enabledEngineIds
+  const enabledEngines = useMemo(() => {
+    const fromConfig = (config.enabledEngineIds || [])
+      .map((id) => ALL_SEARCH_ENGINES.find((e) => e.id === id))
+      .filter((e): e is SearchEngine => !!e);
+    const existingIds = new Set(fromConfig.map((e) => e.id));
+    const remaining = ALL_SEARCH_ENGINES.filter((e) => config.enabledEngineIds?.includes(e.id) && !existingIds.has(e.id));
+    const result = [...fromConfig, ...remaining];
+    return result.length > 0 ? result : ALL_SEARCH_ENGINES;
+  }, [config.enabledEngineIds]);
 
   const filteredEngines = enabledEngines.filter((e) => {
     if (selectedCategory === 'all') return true;

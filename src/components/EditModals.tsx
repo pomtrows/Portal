@@ -3,7 +3,7 @@ import type { Section, LinkItem } from '../types';
 import { searchCities, parseWeatherConfig, type WeatherLocation } from '../utils/weather';
 import { searchAddresses, parseTrafficConfig, calculateRoute, type TrafficLocation, type RouteResult } from '../utils/traffic';
 import { ALL_SEARCH_ENGINES, parseSearchConfig, type SearchWidgetConfig } from '../utils/searchEngines';
-import { Search, MapPin, Navigation, Loader2, Check, Car, Clock, Sparkles, Globe } from 'lucide-react';
+import { Search, MapPin, Navigation, Loader2, Check, Car, Clock, Sparkles, Globe, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export const ColumnSpanSelector: React.FC<{
   value: number;
@@ -938,17 +938,25 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   const [enabledEngineIds, setEnabledEngineIds] = useState<string[]>([]);
   const [colSpan, setColSpan] = useState<number>(1);
 
+  const [orderedEngineIds, setOrderedEngineIds] = useState<string[]>([]);
+
   useEffect(() => {
     if (initialData) {
       setTitle(initialData.title);
       const conf = parseSearchConfig(initialData.widget_url);
       setDefaultEngineId(conf.defaultEngineId);
       setEnabledEngineIds(conf.enabledEngineIds);
+      const allIds = ALL_SEARCH_ENGINES.map((e) => e.id);
+      const existing = conf.enabledEngineIds || [];
+      const remaining = allIds.filter((id) => !existing.includes(id));
+      setOrderedEngineIds([...existing, ...remaining]);
       setColSpan(initialData.col_span || (conf as any)?.col_span || 1);
     } else {
       setTitle('Hub de recherche & IA');
       setDefaultEngineId('google');
-      setEnabledEngineIds(ALL_SEARCH_ENGINES.map((e) => e.id));
+      const allIds = ALL_SEARCH_ENGINES.map((e) => e.id);
+      setEnabledEngineIds(allIds);
+      setOrderedEngineIds(allIds);
       setColSpan(1);
     }
   }, [initialData, isOpen]);
@@ -968,10 +976,37 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     }
   };
 
+  const moveEngine = (id: string, delta: number, category: 'ai' | 'web') => {
+    const categoryEngines = orderedEngineIds
+      .map((eid) => ALL_SEARCH_ENGINES.find((e) => e.id === eid))
+      .filter((e): e is (typeof ALL_SEARCH_ENGINES)[0] => e !== undefined && e.category === category);
+
+    const curIdx = categoryEngines.findIndex((e) => e.id === id);
+    const targetIdx = curIdx + delta;
+    if (targetIdx < 0 || targetIdx >= categoryEngines.length) return;
+
+    const targetEngine = categoryEngines[targetIdx];
+    const newOrdered = [...orderedEngineIds];
+    const posA = newOrdered.indexOf(id);
+    const posB = newOrdered.indexOf(targetEngine.id);
+    newOrdered[posA] = targetEngine.id;
+    newOrdered[posB] = id;
+    setOrderedEngineIds(newOrdered);
+
+    // Keep enabledEngineIds ordered consistently
+    const newEnabled = newOrdered.filter((eid) => enabledEngineIds.includes(eid));
+    setEnabledEngineIds(newEnabled);
+  };
+
   if (!isOpen) return null;
 
-  const aiEngines = ALL_SEARCH_ENGINES.filter((e) => e.category === 'ai');
-  const webEngines = ALL_SEARCH_ENGINES.filter((e) => e.category === 'web');
+  const aiEngines = orderedEngineIds
+    .map((eid) => ALL_SEARCH_ENGINES.find((e) => e.id === eid))
+    .filter((e): e is (typeof ALL_SEARCH_ENGINES)[0] => e !== undefined && e.category === 'ai');
+
+  const webEngines = orderedEngineIds
+    .map((eid) => ALL_SEARCH_ENGINES.find((e) => e.id === eid))
+    .filter((e): e is (typeof ALL_SEARCH_ENGINES)[0] => e !== undefined && e.category === 'web');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -1009,42 +1044,71 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             onChange={(e) => setDefaultEngineId(e.target.value)}
             className="w-full bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-3 py-2 focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)] text-sm font-semibold cursor-pointer"
           >
-            {ALL_SEARCH_ENGINES.filter((e) => enabledEngineIds.includes(e.id)).map((engine) => (
-              <option key={engine.id} value={engine.id}>
-                {engine.category === 'ai' ? '🤖 ' : '🔍 '} {engine.name} ({engine.description})
-              </option>
-            ))}
+            {orderedEngineIds
+              .filter((id) => enabledEngineIds.includes(id))
+              .map((id) => ALL_SEARCH_ENGINES.find((e) => e.id === id))
+              .filter((e): e is (typeof ALL_SEARCH_ENGINES)[0] => !!e)
+              .map((engine) => (
+                <option key={engine.id} value={engine.id}>
+                  {engine.category === 'ai' ? '🤖 ' : '🔍 '} {engine.name} ({engine.description})
+                </option>
+              ))}
           </select>
         </div>
 
-        {/* Enabled Engines selection */}
+        {/* Enabled Engines selection with Reordering */}
         <div className="space-y-3 pt-1">
           {/* AI Assistants */}
           <div>
-            <div className="text-xs font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5 mb-2">
-              <Sparkles size={13} />
-              <span>IA</span>
+            <div className="text-xs font-bold text-indigo-700 dark:text-indigo-300 flex items-center justify-between gap-1.5 mb-2">
+              <span className="flex items-center gap-1.5">
+                <Sparkles size={13} />
+                <span>IA (Cochez pour activer, flèches pour réordonner)</span>
+              </span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {aiEngines.map((engine) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {aiEngines.map((engine, idx) => {
                 const isChecked = enabledEngineIds.includes(engine.id);
                 return (
-                  <label
+                  <div
                     key={engine.id}
-                    className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-xs font-semibold transition-all ${
+                    className={`flex items-center justify-between p-1.5 px-2 rounded-lg border text-xs font-semibold transition-all ${
                       isChecked
-                        ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500/40 text-indigo-950 dark:text-indigo-200'
+                        ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500/40 text-indigo-950 dark:text-indigo-200 shadow-xs'
                         : 'bg-slate-100/50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-700 text-slate-500 opacity-60'
                     }`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => toggleEngine(engine.id)}
-                      className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                    />
-                    <span>{engine.name}</span>
-                  </label>
+                    <label className="flex items-center gap-2 cursor-pointer flex-1 min-w-0 py-0.5">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleEngine(engine.id)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      <span className="truncate">{engine.name}</span>
+                    </label>
+
+                    <div className="flex items-center gap-0.5 flex-shrink-0 ml-1">
+                      <button
+                        type="button"
+                        onClick={() => moveEngine(engine.id, -1, 'ai')}
+                        disabled={idx === 0}
+                        className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-20 disabled:hover:bg-transparent text-slate-700 dark:text-slate-300 transition-colors"
+                        title="Déplacer vers la gauche"
+                      >
+                        <ChevronLeft size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveEngine(engine.id, 1, 'ai')}
+                        disabled={idx === aiEngines.length - 1}
+                        className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-20 disabled:hover:bg-transparent text-slate-700 dark:text-slate-300 transition-colors"
+                        title="Déplacer vers la droite"
+                      >
+                        <ChevronRight size={13} />
+                      </button>
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -1052,30 +1116,55 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
           {/* Web Search Engines */}
           <div>
-            <div className="text-xs font-bold text-sky-700 dark:text-sky-300 flex items-center gap-1.5 mb-2">
-              <Globe size={13} />
-              <span>Moteurs Web & Médias</span>
+            <div className="text-xs font-bold text-sky-700 dark:text-sky-300 flex items-center justify-between gap-1.5 mb-2">
+              <span className="flex items-center gap-1.5">
+                <Globe size={13} />
+                <span>Moteurs Web & Médias (Flèches pour réordonner)</span>
+              </span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {webEngines.map((engine) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {webEngines.map((engine, idx) => {
                 const isChecked = enabledEngineIds.includes(engine.id);
                 return (
-                  <label
+                  <div
                     key={engine.id}
-                    className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-xs font-semibold transition-all ${
+                    className={`flex items-center justify-between p-1.5 px-2 rounded-lg border text-xs font-semibold transition-all ${
                       isChecked
-                        ? 'bg-sky-50/80 dark:bg-sky-950/40 border-sky-500/40 text-sky-950 dark:text-sky-200'
+                        ? 'bg-sky-50/80 dark:bg-sky-950/40 border-sky-500/40 text-sky-950 dark:text-sky-200 shadow-xs'
                         : 'bg-slate-100/50 dark:bg-slate-800/30 border-slate-200 dark:border-slate-700 text-slate-500 opacity-60'
                     }`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => toggleEngine(engine.id)}
-                      className="rounded text-sky-600 focus:ring-sky-500 cursor-pointer"
-                    />
-                    <span>{engine.name}</span>
-                  </label>
+                    <label className="flex items-center gap-2 cursor-pointer flex-1 min-w-0 py-0.5">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleEngine(engine.id)}
+                        className="rounded text-sky-600 focus:ring-sky-500 cursor-pointer"
+                      />
+                      <span className="truncate">{engine.name}</span>
+                    </label>
+
+                    <div className="flex items-center gap-0.5 flex-shrink-0 ml-1">
+                      <button
+                        type="button"
+                        onClick={() => moveEngine(engine.id, -1, 'web')}
+                        disabled={idx === 0}
+                        className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-20 disabled:hover:bg-transparent text-slate-700 dark:text-slate-300 transition-colors"
+                        title="Déplacer vers la gauche"
+                      >
+                        <ChevronLeft size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveEngine(engine.id, 1, 'web')}
+                        disabled={idx === webEngines.length - 1}
+                        className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-20 disabled:hover:bg-transparent text-slate-700 dark:text-slate-300 transition-colors"
+                        title="Déplacer vers la droite"
+                      >
+                        <ChevronRight size={13} />
+                      </button>
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -1097,10 +1186,11 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             type="button"
             disabled={enabledEngineIds.length === 0}
             onClick={() => {
+              const orderedEnabled = orderedEngineIds.filter((id) => enabledEngineIds.includes(id));
               const conf: SearchWidgetConfig & { col_span?: number } = {
                 title: title.trim() || 'Hub de recherche & IA',
                 defaultEngineId,
-                enabledEngineIds,
+                enabledEngineIds: orderedEnabled,
                 col_span: colSpan,
               };
               onSave({
