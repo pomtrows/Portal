@@ -15,7 +15,7 @@ interface ItemCardProps {
 }
 
 export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, onDelete }) => {
-  const { fontSizeLinks } = usePreferences();
+  const { fontSizeLinks, linkPadding } = usePreferences();
   const {
     attributes,
     listeners,
@@ -47,13 +47,23 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, on
     }
   };
 
+  const getItemPaddingClass = () => {
+    switch (linkPadding) {
+      case 'xs': return 'p-1 sm:p-1.5';
+      case 'sm': return 'p-1.5 sm:p-2';
+      case 'lg': return 'p-2.5 sm:p-3.5';
+      case 'xl': return 'p-3.5 sm:p-4.5';
+      default: return 'p-2 sm:p-2.5';
+    }
+  };
+
   return (
     <div ref={setNodeRef} style={style} className={"group relative w-full min-w-0 " + (isDragging ? 'z-50' : '')}>
       <a
         href={isEditMode ? undefined : item.url}
         target={isEditMode ? undefined : "_blank"}
         rel="noopener noreferrer"
-        className={"block w-full min-w-0 h-full p-2 sm:p-2.5 glass-panel interactive-element bg-black/10 hover:bg-[var(--color-surface-hover)] border-[var(--color-border)]/50 " + (isEditMode ? 'cursor-default pr-12 ' : 'cursor-pointer ')}
+        className={`block w-full min-w-0 h-full ${getItemPaddingClass()} glass-panel interactive-element bg-black/10 hover:bg-[var(--color-surface-hover)] border-[var(--color-border)]/50 ${isEditMode ? 'cursor-default pr-12 ' : 'cursor-pointer '}`}
         onClick={(e) => {
           if (isEditMode) e.preventDefault();
         }}

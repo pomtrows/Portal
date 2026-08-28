@@ -25,6 +25,7 @@ export interface UserPreferences {
   fontSizeRss?: FontSize;
   sectionPadding?: SpacingLevel;
   linkSpacing?: SpacingLevel;
+  linkPadding?: SpacingLevel;
   schedule?: ProfileSchedule;
   pageColumns?: Record<string, number>;
   gridLayouts?: Record<string, GridItemGeometry>;
@@ -79,6 +80,12 @@ function getStoredLinkSpacing(): SpacingLevel {
   return 'md';
 }
 
+function getStoredLinkPadding(): SpacingLevel {
+  const saved = localStorage.getItem('portal-link-padding');
+  if (saved === 'xs' || saved === 'sm' || saved === 'md' || saved === 'lg' || saved === 'xl') return saved;
+  return 'md';
+}
+
 function getStoredSchedule(): ProfileSchedule {
   try {
     const saved = localStorage.getItem('portal-profile-schedule');
@@ -117,6 +124,7 @@ let globalFontSizeLinks: FontSize = getStoredFontSizeLinks();
 let globalFontSizeRss: FontSize = getStoredFontSizeRss();
 let globalSectionPadding: SpacingLevel = getStoredSectionPadding();
 let globalLinkSpacing: SpacingLevel = getStoredLinkSpacing();
+let globalLinkPadding: SpacingLevel = getStoredLinkPadding();
 let globalSchedule: ProfileSchedule = getStoredSchedule();
 
 // Debounce timer for saving to Supabase user_metadata
@@ -202,6 +210,12 @@ export function hydratePreferencesFromCloud(metadata: Record<string, unknown> | 
     hasChanged = true;
   }
 
+  if (prefs.linkPadding && prefs.linkPadding !== globalLinkPadding) {
+    globalLinkPadding = prefs.linkPadding;
+    localStorage.setItem('portal-link-padding', prefs.linkPadding);
+    hasChanged = true;
+  }
+
   if (prefs.schedule) {
     globalSchedule = prefs.schedule;
     localStorage.setItem('portal-profile-schedule', JSON.stringify(prefs.schedule));
@@ -263,6 +277,7 @@ export function usePreferences() {
   const [fontSizeRss, setFontSizeRssState] = useState<FontSize>(globalFontSizeRss);
   const [sectionPadding, setSectionPaddingState] = useState<SpacingLevel>(globalSectionPadding);
   const [linkSpacing, setLinkSpacingState] = useState<SpacingLevel>(globalLinkSpacing);
+  const [linkPadding, setLinkPaddingState] = useState<SpacingLevel>(globalLinkPadding);
   const [schedule, setScheduleState] = useState<ProfileSchedule>(globalSchedule);
   const [gridLayouts, setGridLayoutsState] = useState<Record<string, GridItemGeometry>>(globalGridLayouts);
 
@@ -273,6 +288,7 @@ export function usePreferences() {
       setFontSizeRssState(globalFontSizeRss);
       setSectionPaddingState(globalSectionPadding);
       setLinkSpacingState(globalLinkSpacing);
+      setLinkPaddingState(globalLinkPadding);
       setScheduleState(globalSchedule);
       setGridLayoutsState(globalGridLayouts);
     };
@@ -285,6 +301,7 @@ export function usePreferences() {
         e.key === 'portal-font-size-rss' ||
         e.key === 'portal-section-padding' ||
         e.key === 'portal-link-spacing' ||
+        e.key === 'portal-link-padding' ||
         e.key === 'portal-profile-schedule' ||
         e.key === 'portal-grid-layouts'
       ) {
@@ -293,6 +310,7 @@ export function usePreferences() {
         globalFontSizeRss = getStoredFontSizeRss();
         globalSectionPadding = getStoredSectionPadding();
         globalLinkSpacing = getStoredLinkSpacing();
+        globalLinkPadding = getStoredLinkPadding();
         globalSchedule = getStoredSchedule();
         globalGridLayouts = getStoredGridLayouts();
         LISTENERS.forEach((l) => l());
@@ -346,6 +364,14 @@ export function usePreferences() {
     syncPreferenceToCloud({ linkSpacing: spacing });
   };
 
+  const setLinkPadding = (padding: SpacingLevel) => {
+    globalLinkPadding = padding;
+    localStorage.setItem('portal-link-padding', padding);
+    setLinkPaddingState(padding);
+    LISTENERS.forEach((l) => l());
+    syncPreferenceToCloud({ linkPadding: padding });
+  };
+
   const setSchedule = (newSchedule: ProfileSchedule) => {
     globalSchedule = newSchedule;
     localStorage.setItem('portal-profile-schedule', JSON.stringify(newSchedule));
@@ -387,6 +413,8 @@ export function usePreferences() {
     setSectionPadding,
     linkSpacing,
     setLinkSpacing,
+    linkPadding,
+    setLinkPadding,
     schedule,
     setSchedule,
     gridLayouts,

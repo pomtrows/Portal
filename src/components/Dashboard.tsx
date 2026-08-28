@@ -110,7 +110,8 @@ function getSectionRowSpan(
   section: Section,
   colSpan: number = 1,
   paddingLevel: SpacingLevel = 'md',
-  spacingLevel: SpacingLevel = 'md'
+  spacingLevel: SpacingLevel = 'md',
+  itemPadLevel: SpacingLevel = 'md'
 ): number {
   if (section.type === 'weather') return Math.max(7, section.row_span || 7); // ~310px
   if (section.type === 'traffic') return Math.max(4, section.row_span || 4); // ~180px
@@ -124,7 +125,9 @@ function getSectionRowSpan(
   const itemRows = Math.ceil(count / innerCols);
 
   const padOverhead = paddingLevel === 'xs' ? 56 : paddingLevel === 'sm' ? 62 : paddingLevel === 'lg' ? 76 : paddingLevel === 'xl' ? 84 : 70;
-  const itemGap = spacingLevel === 'xs' ? 58 : spacingLevel === 'sm' ? 62 : spacingLevel === 'lg' ? 72 : spacingLevel === 'xl' ? 76 : 68;
+  const itemBase = itemPadLevel === 'xs' ? 50 : itemPadLevel === 'sm' ? 54 : itemPadLevel === 'lg' ? 64 : itemPadLevel === 'xl' ? 70 : 58;
+  const gap = spacingLevel === 'xs' ? 6 : spacingLevel === 'sm' ? 8 : spacingLevel === 'lg' ? 12 : spacingLevel === 'xl' ? 14 : 10;
+  const itemGap = itemBase + gap;
 
   const totalPx = padOverhead + itemRows * itemGap;
   return Math.max(2, Math.ceil((totalPx + 10.4) / 50.4));
@@ -138,7 +141,8 @@ function computeAutoLayout(
   columnCount: number,
   savedLayouts: Record<string, GridItemGeometry>,
   paddingLevel: SpacingLevel = 'md',
-  spacingLevel: SpacingLevel = 'md'
+  spacingLevel: SpacingLevel = 'md',
+  itemPadLevel: SpacingLevel = 'md'
 ): Record<string, GridItemGeometry> {
   const result: Record<string, GridItemGeometry> = {};
   const gridMap: boolean[][] = [];
@@ -171,7 +175,7 @@ function computeAutoLayout(
     let gx = saved?.grid_x ?? s.grid_x;
     let gy = saved?.grid_y ?? s.grid_y;
     let w = Math.min(saved?.col_span ?? s.col_span ?? 1, columnCount);
-    const minH = getSectionRowSpan(s, w, paddingLevel, spacingLevel);
+    const minH = getSectionRowSpan(s, w, paddingLevel, spacingLevel, itemPadLevel);
     let h = isLinks ? minH : Math.max(minH, saved?.row_span ?? s.row_span ?? minH);
 
     if (gx === undefined && s.position !== undefined && s.position >= 1000) {
@@ -192,7 +196,7 @@ function computeAutoLayout(
   unplaced.forEach((s) => {
     const isLinks = !s.type || s.type === 'links';
     const w = Math.min(s.col_span || 1, columnCount);
-    const minH = getSectionRowSpan(s, w, paddingLevel, spacingLevel);
+    const minH = getSectionRowSpan(s, w, paddingLevel, spacingLevel, itemPadLevel);
     const h = isLinks ? minH : Math.max(minH, s.row_span || minH);
     let placed = false;
     let y = 0;
@@ -206,7 +210,7 @@ function computeAutoLayout(
           break;
         }
       }
-      if (!placed) y++;
+      y++;
     }
   });
 
@@ -235,7 +239,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const isMobile = useIsMobile();
   const { columnCount } = useLayout(activePageId);
-  const { gridLayouts, sectionPadding, linkSpacing } = usePreferences();
+  const { gridLayouts, sectionPadding, linkSpacing, linkPadding } = usePreferences();
   const [, setActiveId] = useState<string | null>(null);
 
   const filteredSections = useMemo(() => {
@@ -278,8 +282,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // Compute 2D grid matrix layout
   const layoutMap = useMemo(() => {
-    return computeAutoLayout(filteredSections, columnCount, gridLayouts, sectionPadding, linkSpacing);
-  }, [filteredSections, columnCount, gridLayouts, sectionPadding, linkSpacing]);
+    return computeAutoLayout(filteredSections, columnCount, gridLayouts, sectionPadding, linkSpacing, linkPadding);
+  }, [filteredSections, columnCount, gridLayouts, sectionPadding, linkSpacing, linkPadding]);
 
   // Sort sections on mobile according to vertical top-to-bottom grid position
   const orderedSections = useMemo(() => {
@@ -662,7 +666,7 @@ function resolveCascadeGeometries(
                 columnCount - (geo.grid_x ?? 0)
               );
               const clampedRowSpan = Math.max(
-                getSectionRowSpan(section, clampedColSpan, sectionPadding, linkSpacing),
+                getSectionRowSpan(section, clampedColSpan, sectionPadding, linkSpacing, linkPadding),
                 geo.row_span || 1
               );
 

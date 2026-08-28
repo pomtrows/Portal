@@ -51,6 +51,14 @@ const SPACING_LEVELS: { id: SpacingLevel; level: number; label: string; desc: st
   { id: 'xl', level: 5, label: 'Très espacé', desc: 'Écart large' },
 ];
 
+const LINK_PADDING_LEVELS: { id: SpacingLevel; level: number; label: string; desc: string }[] = [
+  { id: 'xs', level: 1, label: 'Très compact', desc: 'Bouton ultra-fin' },
+  { id: 'sm', level: 2, label: 'Compact', desc: 'Bouton fin' },
+  { id: 'md', level: 3, label: 'Normal', desc: 'Recommandé' },
+  { id: 'lg', level: 4, label: 'Aéré', desc: 'Bouton large' },
+  { id: 'xl', level: 5, label: 'Très aéré', desc: 'Bouton grand' },
+];
+
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<'theme' | 'spacing' | 'fonts' | 'schedule'>('theme');
   const { theme, setTheme } = useTheme();
@@ -65,6 +73,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     setSectionPadding,
     linkSpacing,
     setLinkSpacing,
+    linkPadding,
+    setLinkPadding,
     schedule,
     setSchedule,
     getCurrentScheduledProfile,
@@ -260,6 +270,44 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       <button
                         key={item.id}
                         onClick={() => setLinkSpacing(item.id)}
+                        className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-between min-h-[78px] ${
+                          isSelected
+                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-2 ring-[var(--color-primary)] font-extrabold shadow-sm'
+                            : 'border-[var(--color-border)] bg-black/5 hover:bg-black/10 text-[var(--color-text)] font-semibold'
+                        }`}
+                      >
+                        <div className="text-xs font-black">Niv. {item.level}</div>
+                        <div className="text-[11px] font-bold truncate max-w-full">{item.label}</div>
+                        <div className="text-[9px] text-[var(--color-text-muted)] truncate max-w-full">{item.desc}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Link Item Padding (Marge intérieure des liens) */}
+              <div className="space-y-3 pt-4 border-t border-[var(--color-border)]">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-[var(--color-text-strong)]">
+                      Marge intérieure des liens (Épaisseur des boutons)
+                    </h3>
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-[var(--color-primary)]/15 text-[var(--color-primary)] font-bold">
+                      Niveau {LINK_PADDING_LEVELS.find(l => l.id === linkPadding)?.level || 3}/5 : {LINK_PADDING_LEVELS.find(l => l.id === linkPadding)?.label}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                    Contrôle le rembourrage intérieur (padding) à l'intérieur de chaque bouton de lien.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-5 gap-2">
+                  {LINK_PADDING_LEVELS.map((item) => {
+                    const isSelected = linkPadding === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setLinkPadding(item.id)}
                         className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-between min-h-[78px] ${
                           isSelected
                             ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-2 ring-[var(--color-primary)] font-extrabold shadow-sm'
