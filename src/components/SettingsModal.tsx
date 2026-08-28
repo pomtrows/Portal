@@ -6,10 +6,11 @@ import {
   Clock,
   Check,
   Sliders,
-  Sparkles
+  Sparkles,
+  LayoutGrid
 } from 'lucide-react';
 import { useTheme, type Theme } from '../hooks/useTheme';
-import { usePreferences, type FontSize } from '../hooks/usePreferences';
+import { usePreferences, type FontSize, type SpacingLevel } from '../hooks/usePreferences';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -34,8 +35,24 @@ const DAYS = [
   { id: 0, label: 'Dim', name: 'Dimanche' },
 ];
 
+const PADDING_LEVELS: { id: SpacingLevel; level: number; label: string; desc: string }[] = [
+  { id: 'xs', level: 1, label: 'Très compact', desc: 'Marge minime' },
+  { id: 'sm', level: 2, label: 'Compact', desc: 'Marge réduite' },
+  { id: 'md', level: 3, label: 'Normal', desc: 'Recommandé' },
+  { id: 'lg', level: 4, label: 'Aéré', desc: 'Marge généreuse' },
+  { id: 'xl', level: 5, label: 'Très aéré', desc: 'Marge large' },
+];
+
+const SPACING_LEVELS: { id: SpacingLevel; level: number; label: string; desc: string }[] = [
+  { id: 'xs', level: 1, label: 'Très serré', desc: 'Écart minime' },
+  { id: 'sm', level: 2, label: 'Serré', desc: 'Écart réduit' },
+  { id: 'md', level: 3, label: 'Normal', desc: 'Recommandé' },
+  { id: 'lg', level: 4, label: 'Espacé', desc: 'Écart généreux' },
+  { id: 'xl', level: 5, label: 'Très espacé', desc: 'Écart large' },
+];
+
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'theme' | 'fonts' | 'schedule'>('theme');
+  const [activeTab, setActiveTab] = useState<'theme' | 'spacing' | 'fonts' | 'schedule'>('theme');
   const { theme, setTheme } = useTheme();
   const {
     fontSizeSection,
@@ -44,6 +61,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     setFontSizeLinks,
     fontSizeRss,
     setFontSizeRss,
+    sectionPadding,
+    setSectionPadding,
+    linkSpacing,
+    setLinkSpacing,
     schedule,
     setSchedule,
     getCurrentScheduledProfile,
@@ -63,7 +84,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-xl bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="w-full max-w-2xl bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface)]">
           <div className="flex items-center gap-2">
@@ -87,7 +108,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         <div className="flex border-b border-[var(--color-border)] bg-black/5 dark:bg-black/20 px-4 pt-2 gap-1 overflow-x-auto scrollbar-none">
           <button
             onClick={() => setActiveTab('theme')}
-            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-t-lg text-xs font-bold transition-all border-b-2 ${
+            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
               activeTab === 'theme'
                 ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-surface)] shadow-xs'
                 : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'
@@ -97,8 +118,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             <span>Style & Thème</span>
           </button>
           <button
+            onClick={() => setActiveTab('spacing')}
+            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
+              activeTab === 'spacing'
+                ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-surface)] shadow-xs'
+                : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'
+            }`}
+          >
+            <LayoutGrid size={15} />
+            <span>Espacements & Marges</span>
+          </button>
+          <button
             onClick={() => setActiveTab('fonts')}
-            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-t-lg text-xs font-bold transition-all border-b-2 ${
+            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
               activeTab === 'fonts'
                 ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-surface)] shadow-xs'
                 : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'
@@ -109,7 +141,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           </button>
           <button
             onClick={() => setActiveTab('schedule')}
-            className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-t-lg text-xs font-bold transition-all border-b-2 ${
+            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
               activeTab === 'schedule'
                 ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-surface)] shadow-xs'
                 : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'
@@ -158,6 +190,87 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     </button>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: ESPACEMENTS & MARGES */}
+          {activeTab === 'spacing' && (
+            <div className="space-y-6">
+              {/* Section Padding (Marge intérieure des cartes) */}
+              <div className="space-y-3">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-[var(--color-text-strong)]">
+                      Marge intérieure des sections & widgets
+                    </h3>
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-[var(--color-primary)]/15 text-[var(--color-primary)] font-bold">
+                      Niveau {PADDING_LEVELS.find(p => p.id === sectionPadding)?.level || 3}/5 : {PADDING_LEVELS.find(p => p.id === sectionPadding)?.label}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                    Contrôle l'espace intérieur entre la bordure de chaque carte et les liens ou éléments qu'elle contient.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-5 gap-2">
+                  {PADDING_LEVELS.map((item) => {
+                    const isSelected = sectionPadding === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setSectionPadding(item.id)}
+                        className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-between min-h-[78px] ${
+                          isSelected
+                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-2 ring-[var(--color-primary)] font-extrabold shadow-sm'
+                            : 'border-[var(--color-border)] bg-black/5 hover:bg-black/10 text-[var(--color-text)] font-semibold'
+                        }`}
+                      >
+                        <div className="text-xs font-black">Niv. {item.level}</div>
+                        <div className="text-[11px] font-bold truncate max-w-full">{item.label}</div>
+                        <div className="text-[9px] text-[var(--color-text-muted)] truncate max-w-full">{item.desc}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Link Spacing (Écartement entre les liens) */}
+              <div className="space-y-3 pt-4 border-t border-[var(--color-border)]">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-[var(--color-text-strong)]">
+                      Écartement entre les liens
+                    </h3>
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-[var(--color-primary)]/15 text-[var(--color-primary)] font-bold">
+                      Niveau {SPACING_LEVELS.find(s => s.id === linkSpacing)?.level || 3}/5 : {SPACING_LEVELS.find(s => s.id === linkSpacing)?.label}
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                    Contrôle l'espacement et la distance entre les différents boutons de liens au sein de vos sections.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-5 gap-2">
+                  {SPACING_LEVELS.map((item) => {
+                    const isSelected = linkSpacing === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setLinkSpacing(item.id)}
+                        className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-between min-h-[78px] ${
+                          isSelected
+                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-2 ring-[var(--color-primary)] font-extrabold shadow-sm'
+                            : 'border-[var(--color-border)] bg-black/5 hover:bg-black/10 text-[var(--color-text)] font-semibold'
+                        }`}
+                      >
+                        <div className="text-xs font-black">Niv. {item.level}</div>
+                        <div className="text-[11px] font-bold truncate max-w-full">{item.label}</div>
+                        <div className="text-[9px] text-[var(--color-text-muted)] truncate max-w-full">{item.desc}</div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}

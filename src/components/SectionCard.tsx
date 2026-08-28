@@ -45,7 +45,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
   onUpdateSpan,
   maxAllowedSpan = 8,
 }) => {
-  const { fontSizeSection } = usePreferences();
+  const { fontSizeSection, sectionPadding, linkSpacing } = usePreferences();
 
   // Sortable hook for the Section itself
   const {
@@ -90,6 +90,26 @@ export const SectionCard: React.FC<SectionCardProps> = ({
     }
   };
 
+  const getPaddingClass = () => {
+    switch (sectionPadding) {
+      case 'xs': return 'p-1.5 sm:p-2';
+      case 'sm': return 'p-2 sm:p-2.5';
+      case 'lg': return 'p-3.5 sm:p-4';
+      case 'xl': return 'p-4 sm:p-5';
+      default: return 'p-2.5 sm:p-3';
+    }
+  };
+
+  const getGapClass = () => {
+    switch (linkSpacing) {
+      case 'xs': return 'gap-1 sm:gap-1.5';
+      case 'sm': return 'gap-1.5 sm:gap-2';
+      case 'lg': return 'gap-2.5 sm:gap-3.5';
+      case 'xl': return 'gap-3.5 sm:gap-4.5';
+      default: return 'gap-2 sm:gap-2.5';
+    }
+  };
+
   const getInnerGridClass = () => {
     const span = section.col_span || 1;
     if (span === 1) return 'grid-cols-1';
@@ -99,7 +119,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={"glass-panel p-2.5 sm:p-3 w-full h-auto md:h-full min-w-0 flex flex-col " + (isDragging ? 'z-50 shadow-2xl ring-2 ring-[var(--color-primary)]' : '')}>
+    <div ref={setNodeRef} style={style} className={`glass-panel ${getPaddingClass()} w-full h-auto md:h-full min-w-0 flex flex-col ${isDragging ? 'z-50 shadow-2xl ring-2 ring-[var(--color-primary)]' : ''}`}>
       <div className="flex items-center justify-between mb-2 group gap-1.5 min-w-0">
         <div
           className={`flex items-center gap-1.5 min-w-0 flex-1 ${isEditMode ? 'cursor-grab active:cursor-grabbing select-none' : ''}`}
@@ -179,7 +199,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
         onDragEnd={handleDragEndItems}
       >
         <SortableContext items={section.items.map(i => i.id)} strategy={rectSortingStrategy}>
-          <div className={`grid ${getInnerGridClass()} gap-2.5 w-full min-w-0`}>
+          <div className={`grid ${getInnerGridClass()} ${getGapClass()} w-full min-w-0`}>
             {section.items.map((item) => (
               <ItemCard
                 key={item.id}

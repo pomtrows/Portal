@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabase';
 
 export type FontSize = 'compact' | 'normal' | 'large';
+export type SpacingLevel = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 export interface GridItemGeometry {
   grid_x?: number;
@@ -22,6 +23,8 @@ export interface UserPreferences {
   fontSizeSection?: FontSize;
   fontSizeLinks?: FontSize;
   fontSizeRss?: FontSize;
+  sectionPadding?: SpacingLevel;
+  linkSpacing?: SpacingLevel;
   schedule?: ProfileSchedule;
   pageColumns?: Record<string, number>;
   gridLayouts?: Record<string, GridItemGeometry>;
@@ -64,6 +67,18 @@ function getStoredFontSizeRss(): FontSize {
   return 'normal';
 }
 
+function getStoredSectionPadding(): SpacingLevel {
+  const saved = localStorage.getItem('portal-section-padding');
+  if (saved === 'xs' || saved === 'sm' || saved === 'md' || saved === 'lg' || saved === 'xl') return saved;
+  return 'md';
+}
+
+function getStoredLinkSpacing(): SpacingLevel {
+  const saved = localStorage.getItem('portal-link-spacing');
+  if (saved === 'xs' || saved === 'sm' || saved === 'md' || saved === 'lg' || saved === 'xl') return saved;
+  return 'md';
+}
+
 function getStoredSchedule(): ProfileSchedule {
   try {
     const saved = localStorage.getItem('portal-profile-schedule');
@@ -100,6 +115,8 @@ export function getAllStoredPageColumns(): Record<string, number> {
 let globalFontSizeSection: FontSize = getStoredFontSizeSection();
 let globalFontSizeLinks: FontSize = getStoredFontSizeLinks();
 let globalFontSizeRss: FontSize = getStoredFontSizeRss();
+let globalSectionPadding: SpacingLevel = getStoredSectionPadding();
+let globalLinkSpacing: SpacingLevel = getStoredLinkSpacing();
 let globalSchedule: ProfileSchedule = getStoredSchedule();
 
 // Debounce timer for saving to Supabase user_metadata
@@ -173,6 +190,18 @@ export function hydratePreferencesFromCloud(metadata: Record<string, unknown> | 
     hasChanged = true;
   }
 
+  if (prefs.sectionPadding && prefs.sectionPadding !== globalSectionPadding) {
+    globalSectionPadding = prefs.sectionPadding;
+    localStorage.setItem('portal-section-padding', prefs.sectionPadding);
+    hasChanged = true;
+  }
+
+  if (prefs.linkSpacing && prefs.linkSpacing !== globalLinkSpacing) {
+    globalLinkSpacing = prefs.linkSpacing;
+    localStorage.setItem('portal-link-spacing', prefs.linkSpacing);
+    hasChanged = true;
+  }
+
   if (prefs.schedule) {
     globalSchedule = prefs.schedule;
     localStorage.setItem('portal-profile-schedule', JSON.stringify(prefs.schedule));
@@ -232,6 +261,8 @@ export function usePreferences() {
   const [fontSizeSection, setFontSizeSectionState] = useState<FontSize>(globalFontSizeSection);
   const [fontSizeLinks, setFontSizeLinksState] = useState<FontSize>(globalFontSizeLinks);
   const [fontSizeRss, setFontSizeRssState] = useState<FontSize>(globalFontSizeRss);
+  const [sectionPadding, setSectionPaddingState] = useState<SpacingLevel>(globalSectionPadding);
+  const [linkSpacing, setLinkSpacingState] = useState<SpacingLevel>(globalLinkSpacing);
   const [schedule, setScheduleState] = useState<ProfileSchedule>(globalSchedule);
   const [gridLayouts, setGridLayoutsState] = useState<Record<string, GridItemGeometry>>(globalGridLayouts);
 
@@ -240,6 +271,8 @@ export function usePreferences() {
       setFontSizeSectionState(globalFontSizeSection);
       setFontSizeLinksState(globalFontSizeLinks);
       setFontSizeRssState(globalFontSizeRss);
+      setSectionPaddingState(globalSectionPadding);
+      setLinkSpacingState(globalLinkSpacing);
       setScheduleState(globalSchedule);
       setGridLayoutsState(globalGridLayouts);
     };
@@ -250,12 +283,16 @@ export function usePreferences() {
         e.key === 'portal-font-size-section' ||
         e.key === 'portal-font-size-links' ||
         e.key === 'portal-font-size-rss' ||
+        e.key === 'portal-section-padding' ||
+        e.key === 'portal-link-spacing' ||
         e.key === 'portal-profile-schedule' ||
         e.key === 'portal-grid-layouts'
       ) {
         globalFontSizeSection = getStoredFontSizeSection();
         globalFontSizeLinks = getStoredFontSizeLinks();
         globalFontSizeRss = getStoredFontSizeRss();
+        globalSectionPadding = getStoredSectionPadding();
+        globalLinkSpacing = getStoredLinkSpacing();
         globalSchedule = getStoredSchedule();
         globalGridLayouts = getStoredGridLayouts();
         LISTENERS.forEach((l) => l());
@@ -291,6 +328,22 @@ export function usePreferences() {
     setFontSizeRssState(size);
     LISTENERS.forEach((l) => l());
     syncPreferenceToCloud({ fontSizeRss: size });
+  };
+
+  const setSectionPadding = (padding: SpacingLevel) => {
+    globalSectionPadding = padding;
+    localStorage.setItem('portal-section-padding', padding);
+    setSectionPaddingState(padding);
+    LISTENERS.forEach((l) => l());
+    syncPreferenceToCloud({ sectionPadding: padding });
+  };
+
+  const setLinkSpacing = (spacing: SpacingLevel) => {
+    globalLinkSpacing = spacing;
+    localStorage.setItem('portal-link-spacing', spacing);
+    setLinkSpacingState(spacing);
+    LISTENERS.forEach((l) => l());
+    syncPreferenceToCloud({ linkSpacing: spacing });
   };
 
   const setSchedule = (newSchedule: ProfileSchedule) => {
@@ -330,6 +383,10 @@ export function usePreferences() {
     setFontSizeLinks,
     fontSizeRss,
     setFontSizeRss,
+    sectionPadding,
+    setSectionPadding,
+    linkSpacing,
+    setLinkSpacing,
     schedule,
     setSchedule,
     gridLayouts,

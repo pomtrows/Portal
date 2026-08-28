@@ -70,7 +70,7 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
   onUpdateHeight,
   maxAllowedSpan = 8,
 }) => {
-  const { fontSizeSection } = usePreferences();
+  const { fontSizeSection, sectionPadding } = usePreferences();
   const {
     attributes,
     listeners,
@@ -84,6 +84,16 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+  };
+
+  const getPaddingClass = () => {
+    switch (sectionPadding) {
+      case 'xs': return 'p-1.5 sm:p-2';
+      case 'sm': return 'p-2 sm:p-2.5';
+      case 'lg': return 'p-3.5 sm:p-4';
+      case 'xl': return 'p-4 sm:p-5';
+      default: return 'p-2.5 sm:p-3';
+    }
   };
 
   const getTitleClass = () => {
@@ -154,7 +164,7 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`glass-panel p-2.5 sm:p-3 w-full h-auto md:h-full flex flex-col ${
+      className={`glass-panel ${getPaddingClass()} w-full h-auto md:h-full flex flex-col ${
         isDragging ? 'z-50 shadow-2xl ring-2 ring-[var(--color-primary)]' : ''
       }`}
     >

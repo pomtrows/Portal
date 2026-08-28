@@ -7,7 +7,7 @@ import { TrafficWidgetCard } from './TrafficWidgetCard';
 import { SearchWidgetCard } from './SearchWidgetCard';
 import { Plus, Rss, CloudSun, Car, Search } from 'lucide-react';
 import { useLayout } from '../hooks/useLayout';
-import { usePreferences, type GridItemGeometry } from '../hooks/usePreferences';
+import { usePreferences, type GridItemGeometry, type SpacingLevel } from '../hooks/usePreferences';
 import {
   DndContext,
   pointerWithin,
@@ -106,7 +106,12 @@ interface DashboardProps {
   onUpdateAllGeometries?: (updates: Record<string, { grid_x: number; grid_y: number; col_span: number; row_span: number }>) => void;
 }
 
-function getSectionRowSpan(section: Section, colSpan: number = 1): number {
+function getSectionRowSpan(
+  section: Section,
+  colSpan: number = 1,
+  paddingLevel: SpacingLevel = 'md',
+  spacingLevel: SpacingLevel = 'md'
+): number {
   if (section.type === 'weather') return Math.max(7, section.row_span || 7); // ~310px
   if (section.type === 'traffic') return Math.max(4, section.row_span || 4); // ~180px
   if (section.type === 'search') return Math.max(6, section.row_span || 6); // ~265px
@@ -117,8 +122,11 @@ function getSectionRowSpan(section: Section, colSpan: number = 1): number {
   if (count === 0) return 2;
   const innerCols = Math.max(1, colSpan);
   const itemRows = Math.ceil(count / innerCols);
-  // Header (~44px) + card padding (~24px) + itemRows * (item ~58px + gap ~10px = 68px)
-  const totalPx = 70 + itemRows * 68;
+
+  const padOverhead = paddingLevel === 'xs' ? 56 : paddingLevel === 'sm' ? 62 : paddingLevel === 'lg' ? 76 : paddingLevel === 'xl' ? 84 : 70;
+  const itemGap = spacingLevel === 'xs' ? 58 : spacingLevel === 'sm' ? 62 : spacingLevel === 'lg' ? 72 : spacingLevel === 'xl' ? 76 : 68;
+
+  const totalPx = padOverhead + itemRows * itemGap;
   return Math.max(2, Math.ceil((totalPx + 10.4) / 50.4));
 }
 
@@ -128,7 +136,9 @@ function getSectionRowSpan(section: Section, colSpan: number = 1): number {
 function computeAutoLayout(
   sections: Section[],
   columnCount: number,
-  savedLayouts: Record<string, GridItemGeometry>
+  savedLayouts: Record<string, GridItemGeometry>,
+  paddingLevel: SpacingLevel = 'md',
+  spacingLevel: SpacingLevel = 'md'
 ): Record<string, GridItemGeometry> {
   const result: Record<string, GridItemGeometry> = {};
   const gridMap: boolean[][] = [];
@@ -161,7 +171,7 @@ function computeAutoLayout(
     let gx = saved?.grid_x ?? s.grid_x;
     let gy = saved?.grid_y ?? s.grid_y;
     let w = Math.min(saved?.col_span ?? s.col_span ?? 1, columnCount);
-    const minH = getSectionRowSpan(s, w);
+    const minH = getSectionRowSpan(s, w, paddingLevel, spacingLevel);
     let h = isLinks ? minH : Math.max(minH, saved?.row_span ?? s.row_span ?? minH);
 
     if (gx === undefined && s.position !== undefined && s.position >= 1000) {
@@ -182,7 +192,7 @@ function computeAutoLayout(
   unplaced.forEach((s) => {
     const isLinks = !s.type || s.type === 'links';
     const w = Math.min(s.col_span || 1, columnCount);
-    const minH = getSectionRowSpan(s, w);
+    const minH = getSectionRowSpan(s, w, paddingLevel, spacingLevel);
     const h = isLinks ? minH : Math.max(minH, s.row_span || minH);
     let placed = false;
     let y = 0;
@@ -225,7 +235,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const isMobile = useIsMobile();
   const { columnCount } = useLayout(activePageId);
-  const { gridLayouts } = usePreferences();
+  const { gridLayouts, sectionPadding, linkSpacing } = usePreferences();
   const [, setActiveId] = useState<string | null>(null);
 
   const filteredSections = useMemo(() => {
@@ -268,8 +278,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // Compute 2D grid matrix layout
   const layoutMap = useMemo(() => {
-    return computeAutoLayout(filteredSections, columnCount, gridLayouts);
-  }, [filteredSections, columnCount, gridLayouts]);
+    return computeAutoLayout(filteredSections, columnCount, gridLayouts, sectionPadding, linkSpacing);
+  }, [filteredSections, columnCount, gridLayouts, sectionPadding, linkSpacing]);
 
   // Sort sections on mobile according to vertical top-to-bottom grid position
   const orderedSections = useMemo(() => {
@@ -652,7 +662,7 @@ function resolveCascadeGeometries(
                 columnCount - (geo.grid_x ?? 0)
               );
               const clampedRowSpan = Math.max(
-                getSectionRowSpan(section, clampedColSpan),
+                getSectionRowSpan(section, clampedColSpan, sectionPadding, linkSpacing),
                 geo.row_span || 1
               );
 
