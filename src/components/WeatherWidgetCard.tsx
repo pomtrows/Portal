@@ -23,7 +23,8 @@ import {
   Clock,
   Calendar,
   Thermometer,
-  Umbrella
+  Umbrella,
+  ChevronDown
 } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -129,6 +130,7 @@ export const WeatherWidgetCard: React.FC<WeatherWidgetCardProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'hourly' | 'daily'>('hourly');
+  const [expandedDayDate, setExpandedDayDate] = useState<string | null>(null);
 
   const location = parseWeatherConfig(section.widget_url);
 
@@ -448,46 +450,118 @@ export const WeatherWidgetCard: React.FC<WeatherWidgetCardProps> = ({
               </div>
             )}
 
-            {/* 7-Day Forecast (LIST VIEW) */}
+            {/* 7-Day Forecast (LIST VIEW WITH HOURLY EXPANSION) */}
             {activeTab === 'daily' && (
               <div className="space-y-1">
-                <div className="text-[11px] font-bold text-slate-900 dark:text-slate-200 px-1">
-                  Prévisions sur 7 jours
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-900 dark:text-slate-200 px-1">
+                  <span>Prévisions sur 7 jours</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">
+                    Cliquez pour voir les heures
+                  </span>
                 </div>
-                <div className="space-y-1 max-h-[290px] overflow-y-auto pr-0.5 scrollbar-thin">
-                  {data.daily.map((day, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between gap-1.5 py-1.5 px-2 rounded-lg bg-slate-100/90 dark:bg-slate-800/50 hover:bg-slate-200/90 dark:hover:bg-slate-700/60 border border-slate-200/80 dark:border-slate-700/50 transition-colors text-xs"
-                    >
-                      {/* Day name */}
-                      <div className="font-bold text-slate-950 dark:text-white text-xs truncate min-w-[60px] max-w-[85px]">
-                        {day.dayName}
-                      </div>
+                <div className="space-y-1.5 max-h-[320px] overflow-y-auto pr-0.5 scrollbar-thin">
+                  {data.daily.map((day, idx) => {
+                    const isExpanded = expandedDayDate === day.date;
+                    return (
+                      <div
+                        key={day.date || idx}
+                        className={`rounded-lg transition-all border ${
+                          isExpanded
+                            ? 'bg-blue-50/70 dark:bg-slate-800/80 border-blue-300 dark:border-blue-700/60 shadow-sm'
+                            : 'bg-slate-100/90 dark:bg-slate-800/50 hover:bg-slate-200/90 dark:hover:bg-slate-700/60 border-slate-200/80 dark:border-slate-700/50'
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setExpandedDayDate(isExpanded ? null : day.date)}
+                          className="w-full flex items-center justify-between gap-1.5 py-1.5 px-2 cursor-pointer select-none text-left"
+                          title={isExpanded ? 'Masquer les heures' : 'Afficher le détail heure par heure'}
+                        >
+                          {/* Day name + expand indicator */}
+                          <div className="flex items-center gap-1 font-bold text-slate-950 dark:text-white text-xs truncate min-w-[75px] max-w-[105px]">
+                            <ChevronDown
+                              size={13}
+                              className={`text-slate-400 transition-transform duration-200 flex-shrink-0 ${
+                                isExpanded ? 'rotate-180 text-blue-600 dark:text-sky-400' : ''
+                              }`}
+                            />
+                            <span className="truncate">{day.dayName}</span>
+                          </div>
 
-                      {/* Icon + Rain % */}
-                      <div className="flex items-center gap-1.5 flex-1 justify-center min-w-0">
-                        <WeatherIcon code={day.weatherCode} isDay={true} size={16} />
-                        {day.precipitationProbMax > 20 && (
-                          <span className="flex items-center gap-0.5 text-[10px] font-bold text-blue-800 dark:text-sky-300 whitespace-nowrap">
-                            <Umbrella size={10} className="text-blue-700 dark:text-sky-400" />
-                            {day.precipitationProbMax}%
-                          </span>
+                          {/* Icon + Rain % */}
+                          <div className="flex items-center gap-1.5 flex-1 justify-center min-w-0">
+                            <WeatherIcon code={day.weatherCode} isDay={true} size={16} />
+                            {day.precipitationProbMax > 20 && (
+                              <span className="flex items-center gap-0.5 text-[10px] font-bold text-blue-800 dark:text-sky-300 whitespace-nowrap">
+                                <Umbrella size={10} className="text-blue-700 dark:text-sky-400" />
+                                {day.precipitationProbMax}%
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Min / Max Temperature */}
+                          <div className="flex items-center gap-1 justify-end font-bold text-xs whitespace-nowrap min-w-[50px]">
+                            <span className="text-slate-700 dark:text-slate-300 font-semibold">
+                              {day.tempMin}°
+                            </span>
+                            <span className="text-slate-400 dark:text-slate-500 font-normal">/</span>
+                            <span className="font-extrabold text-slate-950 dark:text-white">
+                              {day.tempMax}°
+                            </span>
+                          </div>
+                        </button>
+
+                        {/* Hourly breakdown for this specific day */}
+                        {isExpanded && (
+                          <div className="px-2 pb-2 pt-1 border-t border-blue-200/60 dark:border-slate-700/60 space-y-1">
+                            <div className="flex items-center justify-between text-[10px] font-bold text-blue-900 dark:text-sky-300 px-0.5 mb-1">
+                              <span className="flex items-center gap-1">
+                                <Clock size={10} />
+                                Prévisions heure par heure ({day.dayName})
+                              </span>
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">
+                                {day.hourly?.length || 0}h
+                              </span>
+                            </div>
+
+                            {day.hourly && day.hourly.length > 0 ? (
+                              <div className="space-y-1 max-h-[190px] overflow-y-auto pr-0.5 scrollbar-thin">
+                                {day.hourly.map((h, hIdx) => (
+                                  <div
+                                    key={hIdx}
+                                    className="flex items-center justify-between gap-1.5 py-1 px-1.5 rounded-md bg-white/80 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-700/40 text-xs"
+                                  >
+                                    <div className="font-semibold text-slate-800 dark:text-slate-200 text-[11px] flex items-center gap-1 min-w-[46px]">
+                                      <Clock size={10} className="text-slate-400" />
+                                      <span>{formatHour(h.time)}</span>
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5 flex-1 justify-center min-w-0">
+                                      <WeatherIcon code={h.weatherCode} isDay={h.isDay} size={14} />
+                                      {h.precipitationProb > 0 && (
+                                        <span className="flex items-center gap-0.5 text-[10px] font-semibold text-blue-700 dark:text-sky-300 whitespace-nowrap">
+                                          <Umbrella size={9} className="text-blue-600 dark:text-sky-400" />
+                                          {h.precipitationProb}%
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    <div className="text-right font-bold text-slate-900 dark:text-white text-xs min-w-[30px]">
+                                      {h.temp}°
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400 py-1 text-center italic">
+                                Données horaires non disponibles
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
-
-                      {/* Min / Max Temperature */}
-                      <div className="flex items-center gap-1 justify-end font-bold text-xs whitespace-nowrap min-w-[50px]">
-                        <span className="text-slate-700 dark:text-slate-300 font-semibold">
-                          {day.tempMin}°
-                        </span>
-                        <span className="text-slate-400 dark:text-slate-500 font-normal">/</span>
-                        <span className="font-extrabold text-slate-950 dark:text-white">
-                          {day.tempMax}°
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

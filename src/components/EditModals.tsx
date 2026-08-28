@@ -3,7 +3,8 @@ import type { Section, LinkItem } from '../types';
 import { searchCities, parseWeatherConfig, type WeatherLocation } from '../utils/weather';
 import { searchAddresses, parseTrafficConfig, calculateRoute, type TrafficLocation, type RouteResult } from '../utils/traffic';
 import { ALL_SEARCH_ENGINES, parseSearchConfig, type SearchWidgetConfig } from '../utils/searchEngines';
-import { Search, MapPin, Navigation, Loader2, Check, Car, Clock, Sparkles, Globe, ChevronLeft, ChevronRight } from 'lucide-react';
+import { POPULAR_STOCK_PRESETS, DEFAULT_STOCK_SYMBOLS, parseStockConfig, type StockItemConfig, type StockWidgetConfig } from '../utils/stocks';
+import { Search, MapPin, Navigation, Loader2, Check, Car, Clock, Sparkles, Globe, ChevronLeft, ChevronRight, TrendingUp, Plus, X, ChevronUp, ChevronDown } from 'lucide-react';
 
 export const ColumnSpanSelector: React.FC<{
   value: number;
@@ -1198,6 +1199,270 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 widget_url: JSON.stringify(conf),
                 col_span: colSpan,
                 type: 'search',
+              });
+              onClose();
+            }}
+            className="px-4 py-2 rounded-md bg-[var(--color-primary)] text-white hover:opacity-90 transition-opacity text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Sauvegarder
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface StockModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (section: Partial<Section>) => void;
+  initialData?: Section | null;
+}
+
+export const StockModal: React.FC<StockModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  initialData,
+}) => {
+  const [title, setTitle] = useState('');
+  const [symbols, setSymbols] = useState<StockItemConfig[]>(DEFAULT_STOCK_SYMBOLS);
+  const [customSymbol, setCustomSymbol] = useState('');
+  const [customName, setCustomName] = useState('');
+  const [customCategory, setCustomCategory] = useState<'stock' | 'index' | 'crypto' | 'forex' | 'commodity'>('stock');
+  const [colSpan, setColSpan] = useState<number>(1);
+
+  useEffect(() => {
+    if (initialData) {
+      setTitle(initialData.title || 'Bourse & Marchés');
+      const conf = parseStockConfig(initialData.widget_url);
+      setSymbols(conf.symbols || DEFAULT_STOCK_SYMBOLS);
+      setColSpan(initialData.col_span || 1);
+    } else {
+      setTitle('Bourse & Marchés');
+      setSymbols(DEFAULT_STOCK_SYMBOLS);
+      setColSpan(1);
+    }
+  }, [initialData, isOpen]);
+
+  const handleAddPreset = (preset: StockItemConfig) => {
+    if (!symbols.some((s) => s.symbol.toUpperCase() === preset.symbol.toUpperCase())) {
+      setSymbols([...symbols, preset]);
+    }
+  };
+
+  const handleAddCustom = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanSym = customSymbol.trim().toUpperCase();
+    if (!cleanSym) return;
+    if (symbols.some((s) => s.symbol.toUpperCase() === cleanSym)) return;
+
+    setSymbols([
+      ...symbols,
+      {
+        symbol: cleanSym,
+        name: customName.trim() || cleanSym,
+        category: customCategory,
+      },
+    ]);
+    setCustomSymbol('');
+    setCustomName('');
+  };
+
+  const handleRemoveSymbol = (symbolToRemove: string) => {
+    setSymbols(symbols.filter((s) => s.symbol !== symbolToRemove));
+  };
+
+  const moveSymbol = (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= symbols.length) return;
+    const newSymbols = [...symbols];
+    const [moved] = newSymbols.splice(index, 1);
+    newSymbols.splice(targetIndex, 0, moved);
+    setSymbols(newSymbols);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-lg bg-emerald-900/10 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300">
+            <TrendingUp size={20} />
+          </div>
+          <h2 className="text-xl font-bold text-[var(--color-text-strong)]">
+            {initialData ? 'Modifier le widget Bourse' : 'Nouveau widget Bourse & Marchés'}
+          </h2>
+        </div>
+
+        {/* Title */}
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1">
+            Titre du widget
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="ex: Bourse & Marchés, Mes Actions, Cryptos..."
+            className="w-full bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-3 py-2 focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)] text-sm"
+          />
+        </div>
+
+        {/* Popular Presets */}
+        <div>
+          <label className="block text-xs font-bold text-[var(--color-text-strong)] mb-1.5">
+            Ajouter des actifs populaires (1 clic)
+          </label>
+          <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 bg-black/5 dark:bg-white/5 rounded-lg border border-[var(--color-border)]">
+            {POPULAR_STOCK_PRESETS.map((preset) => {
+              const isAdded = symbols.some((s) => s.symbol.toUpperCase() === preset.symbol.toUpperCase());
+              return (
+                <button
+                  key={preset.symbol}
+                  type="button"
+                  disabled={isAdded}
+                  onClick={() => handleAddPreset(preset)}
+                  className={`px-2 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${
+                    isAdded
+                      ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 opacity-60 cursor-default'
+                      : 'bg-[var(--color-surface)] hover:bg-[var(--color-primary)] hover:text-white border border-[var(--color-border)] text-[var(--color-text-strong)] shadow-xs'
+                  }`}
+                >
+                  <span>{preset.name}</span>
+                  <span className="text-[10px] opacity-70">({preset.symbol})</span>
+                  {isAdded ? <Check size={12} /> : <Plus size={12} />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Add Custom Symbol */}
+        <form onSubmit={handleAddCustom} className="p-3 bg-black/5 dark:bg-white/5 rounded-lg border border-[var(--color-border)] space-y-2">
+          <label className="block text-xs font-bold text-[var(--color-text-strong)]">
+            Ajouter un symbole personnalisé (Yahoo Finance / Ticker)
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <input
+              type="text"
+              value={customSymbol}
+              onChange={(e) => setCustomSymbol(e.target.value)}
+              placeholder="Symbole (ex: TSLA, MC.PA)"
+              className="bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-2.5 py-1.5 text-xs text-[var(--color-text-strong)] focus:outline-none focus:border-[var(--color-primary)]"
+            />
+            <input
+              type="text"
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+              placeholder="Nom (ex: Tesla, LVMH)"
+              className="bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-2.5 py-1.5 text-xs text-[var(--color-text-strong)] focus:outline-none focus:border-[var(--color-primary)]"
+            />
+            <select
+              value={customCategory}
+              onChange={(e: any) => setCustomCategory(e.target.value)}
+              className="bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-2 py-1.5 text-xs text-[var(--color-text-strong)] focus:outline-none focus:border-[var(--color-primary)]"
+            >
+              <option value="stock">Action</option>
+              <option value="index">Indice</option>
+              <option value="crypto">Crypto</option>
+              <option value="forex">Devise</option>
+              <option value="commodity">Matière première</option>
+            </select>
+          </div>
+          <button
+            type="submit"
+            disabled={!customSymbol.trim()}
+            className="w-full py-1.5 rounded-md bg-[var(--color-primary)] text-white text-xs font-bold hover:opacity-90 transition-opacity disabled:opacity-40"
+          >
+            + Ajouter au widget
+          </button>
+        </form>
+
+        {/* Selected Symbols List */}
+        <div>
+          <label className="block text-xs font-bold text-[var(--color-text-strong)] mb-1.5">
+            Symboles suivis ({symbols.length})
+          </label>
+          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+            {symbols.map((item, idx) => (
+              <div
+                key={item.symbol}
+                className="flex items-center justify-between p-2 rounded-lg bg-[var(--color-background)] border border-[var(--color-border)] text-xs"
+              >
+                <div className="min-w-0 flex-1 flex items-center gap-2">
+                  <span className="font-bold text-[var(--color-text-strong)] truncate">
+                    {item.name || item.symbol}
+                  </span>
+                  <span className="text-[10px] font-mono text-[var(--color-text-muted)]">
+                    {item.symbol}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => moveSymbol(idx, -1)}
+                    disabled={idx === 0}
+                    className="p-1 text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-20"
+                    title="Monter"
+                  >
+                    <ChevronUp size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveSymbol(idx, 1)}
+                    disabled={idx === symbols.length - 1}
+                    className="p-1 text-slate-500 hover:text-slate-900 dark:hover:text-white disabled:opacity-20"
+                    title="Descendre"
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSymbol(item.symbol)}
+                    className="p-1 text-red-500 hover:bg-red-500/10 rounded transition-colors ml-1"
+                    title="Supprimer"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {symbols.length === 0 && (
+              <div className="py-4 text-center text-xs text-[var(--color-text-muted)]">
+                Veuillez ajouter au moins un symbole ci-dessus.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <ColumnSpanSelector value={colSpan} onChange={setColSpan} />
+
+        {/* Buttons */}
+        <div className="mt-6 flex justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-md bg-[var(--color-background)] text-[var(--color-text)] hover:bg-[var(--color-border)] transition-colors text-sm"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            disabled={symbols.length === 0}
+            onClick={() => {
+              const conf: StockWidgetConfig & { col_span?: number } = {
+                title: title.trim() || 'Bourse & Marchés',
+                symbols,
+                col_span: colSpan,
+              };
+              onSave({
+                title: conf.title,
+                widget_url: JSON.stringify(conf),
+                col_span: colSpan,
+                type: 'stocks',
               });
               onClose();
             }}

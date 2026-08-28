@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
-import { SectionModal, ItemModal, RssModal, WeatherModal, TrafficModal, SearchModal } from './components/EditModals';
+import { SectionModal, ItemModal, RssModal, WeatherModal, TrafficModal, SearchModal, StockModal } from './components/EditModals';
 import { AddElementModal } from './components/AddElementModal';
 import { SettingsModal } from './components/SettingsModal';
 import { MobileMenu } from './components/MobileMenu';
@@ -53,6 +53,9 @@ function App() {
 
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [editingSearchSection, setEditingSearchSection] = useState<Section | null>(null);
+
+  const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [editingStockSection, setEditingStockSection] = useState<Section | null>(null);
   
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<{ sectionId: string, item: LinkItem | null } | null>(null);
@@ -250,6 +253,11 @@ function App() {
     setIsSearchModalOpen(true);
   };
 
+  const handleAddStockWidget = () => {
+    setEditingStockSection(null);
+    setIsStockModalOpen(true);
+  };
+
   const handleEditSection = (section: Section) => {
     if (section.type === 'rss') {
       setEditingRssSection(section);
@@ -263,6 +271,9 @@ function App() {
     } else if (section.type === 'search') {
       setEditingSearchSection(section);
       setIsSearchModalOpen(true);
+    } else if (section.type === 'stocks') {
+      setEditingStockSection(section);
+      setIsStockModalOpen(true);
     } else {
       setEditingSection(section);
       setIsSectionModalOpen(true);
@@ -548,6 +559,58 @@ function App() {
         page_id: activePageId,
         title: newSection.title,
         type: 'search',
+        widget_url: newSection.widget_url,
+        position: newSection.position,
+        user_id: session.user.id
+      });
+    }
+  };
+
+  const handleSaveStockSection = async (sectionData: Partial<Section>) => {
+    if (!session?.user || !activePageId) return;
+
+    if (editingStockSection) {
+      // Update
+      const col_span = sectionData.col_span || editingStockSection.col_span || 1;
+      const updatedSection: Section = {
+        ...editingStockSection,
+        title: sectionData.title || editingStockSection.title,
+        widget_url: sectionData.widget_url || editingStockSection.widget_url,
+        col_span,
+        type: 'stocks'
+      };
+      setConfig(prev => ({
+        ...prev,
+        sections: prev.sections.map(s => s.id === editingStockSection.id ? updatedSection : s)
+      }));
+      await supabase.from('sections').update({
+        title: updatedSection.title,
+        widget_url: updatedSection.widget_url,
+        type: 'stocks'
+      }).eq('id', editingStockSection.id);
+    } else {
+      // Create
+      const newId = `stock-${Date.now()}`;
+      const col_span = sectionData.col_span || 1;
+      const newSection: Section = {
+        id: newId,
+        page_id: activePageId,
+        title: sectionData.title || 'Bourse & Marchés',
+        type: 'stocks',
+        widget_url: sectionData.widget_url,
+        col_span,
+        position: config.sections.length,
+        items: []
+      };
+      setConfig(prev => ({
+        ...prev,
+        sections: [...prev.sections, newSection]
+      }));
+      await supabase.from('sections').insert({
+        id: newId,
+        page_id: activePageId,
+        title: newSection.title,
+        type: 'stocks',
         widget_url: newSection.widget_url,
         position: newSection.position,
         user_id: session.user.id
@@ -918,6 +981,7 @@ function App() {
         onAddWeatherWidget={handleAddWeatherWidget}
         onAddTrafficWidget={handleAddTrafficWidget}
         onAddSearchWidget={handleAddSearchWidget}
+        onAddStockWidget={handleAddStockWidget}
       />
 
       <AccountModal
@@ -963,6 +1027,13 @@ function App() {
         onClose={() => setIsSearchModalOpen(false)}
         onSave={handleSaveSearchSection}
         initialData={editingSearchSection}
+      />
+
+      <StockModal
+        isOpen={isStockModalOpen}
+        onClose={() => setIsStockModalOpen(false)}
+        onSave={handleSaveStockSection}
+        initialData={editingStockSection}
       />
 
       <ItemModal

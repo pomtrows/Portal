@@ -22,6 +22,7 @@ export interface DailyForecast {
   tempMax: number;
   precipitationProbMax: number;
   uvIndexMax?: number;
+  hourly?: HourlyForecast[];
 }
 
 export interface CurrentWeather {
@@ -201,6 +202,20 @@ export async function fetchWeatherData(location: WeatherLocation): Promise<Weath
   for (let i = 0; i < daysCount; i++) {
     const dateObj = new Date(dailyDates[i] + 'T00:00:00');
     const dayName = dayNames[dateObj.getDay()];
+    const dateStr = dailyDates[i];
+
+    const dayHourly: HourlyForecast[] = [];
+    for (let h = 0; h < hourlyTimes.length; h++) {
+      if (hourlyTimes[h].startsWith(dateStr)) {
+        dayHourly.push({
+          time: hourlyTimes[h],
+          temp: Math.round(hourlyTemps[h]),
+          weatherCode: hourlyCodes[h],
+          precipitationProb: hourlyPrecip[h] ?? 0,
+          isDay: hourlyIsDay[h] === 1,
+        });
+      }
+    }
 
     daily.push({
       date: dailyDates[i],
@@ -210,6 +225,7 @@ export async function fetchWeatherData(location: WeatherLocation): Promise<Weath
       tempMax: Math.round(dailyTempMax[i]),
       precipitationProbMax: dailyPrecip[i] ?? 0,
       uvIndexMax: dailyUv[i],
+      hourly: dayHourly,
     });
   }
 

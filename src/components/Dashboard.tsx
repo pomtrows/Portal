@@ -5,6 +5,7 @@ import { RssWidgetCard } from './RssWidgetCard';
 import { WeatherWidgetCard } from './WeatherWidgetCard';
 import { TrafficWidgetCard } from './TrafficWidgetCard';
 import { SearchWidgetCard } from './SearchWidgetCard';
+import { StockWidgetCard } from './StockWidgetCard';
 
 import { useLayout } from '../hooks/useLayout';
 import { usePreferences, type GridItemGeometry, type SpacingLevel } from '../hooks/usePreferences';
@@ -117,6 +118,7 @@ function getSectionRowSpan(
   if (section.type === 'weather') return Math.max(7, section.row_span || 7); // ~310px
   if (section.type === 'traffic') return Math.max(4, section.row_span || 4); // ~180px
   if (section.type === 'search') return Math.max(6, section.row_span || 6); // ~265px
+  if (section.type === 'stocks') return Math.max(6, section.row_span || 6); // ~265px
   if (section.type === 'rss') return Math.max(8, section.row_span || 8); // ~360px
 
   // For links sections, compute strictly according to items count and column width
@@ -638,6 +640,8 @@ function resolveCascadeGeometries(
       cardContent = <TrafficWidgetCard key={section.id} {...cardProps} />;
     } else if (section.type === 'search') {
       cardContent = <SearchWidgetCard key={section.id} {...cardProps} />;
+    } else if (section.type === 'stocks') {
+      cardContent = <StockWidgetCard key={section.id} {...cardProps} />;
     } else {
       cardContent = (
         <SectionCard

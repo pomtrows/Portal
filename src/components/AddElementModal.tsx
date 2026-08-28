@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, X, Layers, Rss, CloudSun, Car, Search } from 'lucide-react';
+import { Plus, X, Layers, Rss, CloudSun, Car, Search, TrendingUp } from 'lucide-react';
 
 interface AddElementModalProps {
   isOpen: boolean;
@@ -9,6 +9,7 @@ interface AddElementModalProps {
   onAddWeatherWidget: () => void;
   onAddTrafficWidget: () => void;
   onAddSearchWidget: () => void;
+  onAddStockWidget: () => void;
 }
 
 export const AddElementModal: React.FC<AddElementModalProps> = ({
@@ -19,6 +20,7 @@ export const AddElementModal: React.FC<AddElementModalProps> = ({
   onAddWeatherWidget,
   onAddTrafficWidget,
   onAddSearchWidget,
+  onAddStockWidget,
 }) => {
   if (!isOpen) return null;
 
@@ -150,6 +152,27 @@ export const AddElementModal: React.FC<AddElementModalProps> = ({
               </div>
               <div className="text-xs text-[var(--color-text-muted)] truncate">
                 Barre rapide ChatGPT, Claude, Gemini, Web...
+              </div>
+            </div>
+          </button>
+
+          {/* Bourse & Marchés */}
+          <button
+            onClick={() => {
+              onClose();
+              onAddStockWidget();
+            }}
+            className="flex items-center gap-3.5 p-3 rounded-xl border border-[var(--color-border)] bg-black/5 hover:bg-teal-500/10 hover:border-teal-500 text-left transition-all group"
+          >
+            <div className="p-2.5 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 group-hover:scale-105 transition-transform flex-shrink-0">
+              <TrendingUp size={20} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-sm text-[var(--color-text-strong)] group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                Bourse & Marchés
+              </div>
+              <div className="text-xs text-[var(--color-text-muted)] truncate">
+                Suivi des indices (CAC 40), actions, cryptos et devises
               </div>
             </div>
           </button>
