@@ -10,14 +10,21 @@ export interface TrafficConfig {
   start: TrafficLocation;
   end: TrafficLocation;
   title?: string;
+  tomtomApiKey?: string;
 }
 
 export interface RouteResult {
   durationSeconds: number;
   durationMinutes: number;
   durationFormatted: string;
+  noTrafficDurationSeconds?: number;
+  noTrafficDurationFormatted?: string;
+  trafficDelaySeconds?: number;
+  trafficDelayMinutes?: number;
+  trafficStatus?: 'fluid' | 'moderate' | 'heavy';
   distanceKm: number;
   distanceFormatted: string;
+  provider: 'tomtom' | 'osrm';
   updatedAt: string;
 }
 
@@ -102,7 +109,93 @@ export function formatDuration(seconds: number): string {
   return `${hours}h ${minutes < 10 ? '0' : ''}${minutes} min`;
 }
 
-export async function calculateRoute(start: TrafficLocation, end: TrafficLocation): Promise<RouteResult> {
+export async function testTomTomApiKey(apiKey: string): Promise<{ ok: boolean; message: string }> {
+  const trimmed = apiKey.trim();
+  if (!trimmed) return { ok: false, message: 'Clé API vide' };
+
+  try {
+    // Quick test route between Paris and CDG
+    const url = `https://api.tomtom.com/routing/1/calculateRoute/48.8566,2.3522:49.0097,2.5479/json?key=${encodeURIComponent(trimmed)}&traffic=true`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.routes && data.routes.length > 0) {
+        return { ok: true, message: 'Clé API TomTom valide et opérationnelle !' };
+      }
+    }
+    if (res.status === 403 || res.status === 401) {
+      return { ok: false, message: 'Clé API TomTom invalide ou expirée.' };
+    }
+    return { ok: false, message: `Erreur TomTom (${res.status})` };
+  } catch (err: any) {
+    return { ok: false, message: err?.message || 'Erreur lors du test de connexion TomTom.' };
+  }
+}
+
+export async function calculateRouteWithTomTom(
+  start: TrafficLocation,
+  end: TrafficLocation,
+  apiKey: string
+): Promise<RouteResult> {
+  const url = `https://api.tomtom.com/routing/1/calculateRoute/${start.latitude},${start.longitude}:${end.latitude},${end.longitude}/json?key=${encodeURIComponent(apiKey.trim())}&traffic=true&travelMode=car`;
+
+  const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+  if (!res.ok) {
+    throw new Error(`Erreur TomTom (${res.status})`);
+  }
+
+  const data = await res.json();
+  if (!data.routes || data.routes.length === 0 || !data.routes[0].summary) {
+    throw new Error("Aucun itinéraire TomTom trouvé.");
+  }
+
+  const summary = data.routes[0].summary;
+  const durationSeconds = summary.travelTimeInSeconds; // live travel time with traffic
+  const trafficDelaySeconds = summary.trafficDelayInSeconds || 0;
+  const noTrafficDurationSeconds = Math.max(0, durationSeconds - trafficDelaySeconds);
+  const distanceKm = parseFloat((summary.lengthInMeters / 1000).toFixed(1));
+  const trafficDelayMinutes = Math.round(trafficDelaySeconds / 60);
+
+  let trafficStatus: 'fluid' | 'moderate' | 'heavy' = 'fluid';
+  if (trafficDelayMinutes >= 10) {
+    trafficStatus = 'heavy';
+  } else if (trafficDelayMinutes >= 3) {
+    trafficStatus = 'moderate';
+  }
+
+  return {
+    durationSeconds,
+    durationMinutes: Math.round(durationSeconds / 60),
+    durationFormatted: formatDuration(durationSeconds),
+    noTrafficDurationSeconds,
+    noTrafficDurationFormatted: formatDuration(noTrafficDurationSeconds),
+    trafficDelaySeconds,
+    trafficDelayMinutes,
+    trafficStatus,
+    distanceKm,
+    distanceFormatted: `${distanceKm} km`,
+    provider: 'tomtom',
+    updatedAt: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+  };
+}
+
+export async function calculateRoute(
+  start: TrafficLocation,
+  end: TrafficLocation,
+  customApiKey?: string
+): Promise<RouteResult> {
+  const apiKey = (customApiKey || localStorage.getItem('portal-tomtom-api-key') || '').trim();
+
+  // Try TomTom if key is present
+  if (apiKey) {
+    try {
+      return await calculateRouteWithTomTom(start, end, apiKey);
+    } catch (err) {
+      console.warn('TomTom routing failed, falling back to OSRM:', err);
+    }
+  }
+
+  // Fallback to OSRM (free OpenStreetMap routing)
   const url = `https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=false`;
   
   const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
@@ -119,14 +212,14 @@ export async function calculateRoute(start: TrafficLocation, end: TrafficLocatio
   const durationSeconds = route.duration; // in seconds
   const distanceMeters = route.distance; // in meters
   const distanceKm = parseFloat((distanceMeters / 1000).toFixed(1));
-  const durationMinutes = Math.round(durationSeconds / 60);
 
   return {
     durationSeconds,
-    durationMinutes,
+    durationMinutes: Math.round(durationSeconds / 60),
     durationFormatted: formatDuration(durationSeconds),
     distanceKm,
     distanceFormatted: `${distanceKm} km`,
+    provider: 'osrm',
     updatedAt: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
   };
 }

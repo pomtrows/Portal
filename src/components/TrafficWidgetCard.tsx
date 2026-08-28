@@ -44,7 +44,7 @@ export const TrafficWidgetCard: React.FC<TrafficWidgetCardProps> = ({
   onUpdateHeight,
   maxAllowedSpan = 8,
 }) => {
-  const { fontSizeSection, sectionPadding } = usePreferences();
+  const { fontSizeSection, sectionPadding, tomtomApiKey } = usePreferences();
   const {
     attributes,
     listeners,
@@ -96,7 +96,7 @@ export const TrafficWidgetCard: React.FC<TrafficWidgetCardProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const res = await calculateRoute(start, end);
+      const res = await calculateRoute(start, end, initialConfig.tomtomApiKey || tomtomApiKey);
       setRoute(res);
     } catch (err: any) {
       console.error('Error calculating traffic route:', err);
@@ -104,7 +104,7 @@ export const TrafficWidgetCard: React.FC<TrafficWidgetCardProps> = ({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [initialConfig.tomtomApiKey, tomtomApiKey]);
 
   useEffect(() => {
     if (startLoc && endLoc) {
@@ -290,12 +290,17 @@ export const TrafficWidgetCard: React.FC<TrafficWidgetCardProps> = ({
         {route && (
           <>
             {/* Travel Time & Distance Card */}
-            <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50/70 dark:from-slate-800/80 dark:to-slate-800/40 border border-emerald-200/80 dark:border-slate-700 shadow-sm">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50/70 dark:from-slate-800/80 dark:to-slate-800/40 border border-emerald-200/80 dark:border-slate-700 shadow-sm space-y-2">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1">
+                  <div className="text-xs font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5 flex-wrap">
                     <Clock size={13} className="text-emerald-700 dark:text-emerald-400" />
-                    <span>Temps de trajet estimé</span>
+                    <span>Temps de trajet</span>
+                    {route.provider === 'tomtom' && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-md font-bold bg-emerald-600/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 uppercase tracking-wider">
+                        Trafic Live
+                      </span>
+                    )}
                   </div>
                   <div className="text-2xl sm:text-3xl font-extrabold text-slate-950 dark:text-white tracking-tight mt-0.5">
                     {route.durationFormatted}
@@ -314,6 +319,35 @@ export const TrafficWidgetCard: React.FC<TrafficWidgetCardProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Live Traffic details for TomTom */}
+              {route.provider === 'tomtom' && (
+                <div className="pt-1.5 border-t border-emerald-200/60 dark:border-slate-700/60 flex items-center justify-between text-[11px] font-semibold">
+                  <div className="flex items-center gap-1.5">
+                    {route.trafficStatus === 'heavy' ? (
+                      <span className="flex items-center gap-1 text-red-600 dark:text-red-400 font-bold">
+                        <span className="w-2 h-2 rounded-full bg-red-500 inline-block animate-pulse"></span>
+                        Bouchons (+{route.trafficDelayMinutes} min)
+                      </span>
+                    ) : route.trafficStatus === 'moderate' ? (
+                      <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+                        Ralentissements (+{route.trafficDelayMinutes} min)
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-bold">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                        Trafic fluide (+0 min)
+                      </span>
+                    )}
+                  </div>
+                  {route.noTrafficDurationFormatted && (
+                    <span className="text-slate-500 dark:text-slate-400 text-[10px]">
+                      Fluide : {route.noTrafficDurationFormatted}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Departure and Destination itinerary */}

@@ -7,10 +7,17 @@ import {
   Check,
   Sliders,
   Sparkles,
-  LayoutGrid
+  LayoutGrid,
+  Car,
+  Key,
+  ExternalLink,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { useTheme, type Theme } from '../hooks/useTheme';
 import { usePreferences, type FontSize, type SpacingLevel } from '../hooks/usePreferences';
+import { testTomTomApiKey } from '../utils/traffic';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -68,7 +75,7 @@ const ICON_SIZE_LEVELS: { id: SpacingLevel; level: number; label: string; desc: 
 ];
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'theme' | 'spacing' | 'fonts' | 'schedule'>('theme');
+  const [activeTab, setActiveTab] = useState<'theme' | 'spacing' | 'fonts' | 'schedule' | 'traffic'>('theme');
   const { theme, setTheme } = useTheme();
   const {
     fontSizeSection,
@@ -87,8 +94,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     setIconSize,
     schedule,
     setSchedule,
+    tomtomApiKey,
+    setTomTomApiKey,
     getCurrentScheduledProfile,
   } = usePreferences();
+
+  const [apiKeyInput, setApiKeyInput] = useState<string>(() => tomtomApiKey || '');
+  const [isTestingKey, setIsTestingKey] = useState<boolean>(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   if (!isOpen) return null;
 
@@ -171,6 +184,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           >
             <Clock size={14} />
             <span>Planning Pro/Perso</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('traffic')}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
+              activeTab === 'traffic'
+                ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-surface)] shadow-xs'
+                : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'
+            }`}
+          >
+            <Car size={14} />
+            <span>Info Trafic (TomTom)</span>
           </button>
         </div>
 
@@ -572,6 +596,135 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TAB 5: INFO TRAFIC & CLÉ API */}
+          {activeTab === 'traffic' && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-[var(--color-text-strong)] mb-0.5 flex items-center gap-2">
+                  <Car size={16} className="text-emerald-700 dark:text-emerald-400" />
+                  <span>Calcul d'itinéraires & Trafic temps réel (TomTom)</span>
+                </h3>
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  Activez le calcul de trajet avec prise en compte des bouchons et des retards en direct.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl border border-[var(--color-border)] bg-black/5 dark:bg-white/5 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="text-xs font-bold text-[var(--color-text-strong)] flex items-center gap-1.5">
+                      <Key size={14} className="text-[var(--color-primary)]" />
+                      <span>Clé API TomTom Routing</span>
+                    </div>
+                    <p className="text-[11px] text-[var(--color-text-muted)]">
+                      TomTom offre <strong>2 500 requêtes gratuites par jour</strong> (sans carte bancaire requise).
+                    </p>
+                  </div>
+                  <a
+                    href="https://developer.tomtom.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 dark:text-emerald-300 hover:underline flex-shrink-0 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20"
+                  >
+                    <span>Créer une clé gratuite</span>
+                    <ExternalLink size={12} />
+                  </a>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={apiKeyInput}
+                      onChange={(e) => {
+                        setApiKeyInput(e.target.value);
+                        setTestResult(null);
+                      }}
+                      placeholder="Collez votre clé API TomTom ici..."
+                      className="w-full bg-[var(--color-background)] border border-[var(--color-border)] rounded-xl pl-3 pr-20 py-2 text-xs font-mono text-[var(--color-text-strong)] focus:outline-none focus:border-[var(--color-primary)] shadow-inner"
+                    />
+                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      {apiKeyInput && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setApiKeyInput('');
+                            setTomTomApiKey('');
+                            setTestResult(null);
+                          }}
+                          className="px-2 py-1 text-[11px] font-bold text-red-500 hover:bg-red-500/10 rounded-md transition-colors"
+                          title="Effacer la clé"
+                        >
+                          Effacer
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <button
+                      type="button"
+                      disabled={!apiKeyInput.trim() || isTestingKey}
+                      onClick={async () => {
+                        setIsTestingKey(true);
+                        setTestResult(null);
+                        const res = await testTomTomApiKey(apiKeyInput);
+                        setIsTestingKey(false);
+                        setTestResult(res);
+                        if (res.ok) {
+                          setTomTomApiKey(apiKeyInput);
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-primary)] text-white text-xs font-bold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed shadow-xs"
+                    >
+                      {isTestingKey ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                      <span>Tester & Enregistrer</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTomTomApiKey(apiKeyInput);
+                        setTestResult({ ok: true, message: 'Clé enregistrée !' });
+                      }}
+                      className="text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-black dark:hover:text-white px-2 py-1"
+                    >
+                      Enregistrer sans tester
+                    </button>
+                  </div>
+
+                  {testResult && (
+                    <div
+                      className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2 animate-in fade-in ${
+                        testResult.ok
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                          : 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300'
+                      }`}
+                    >
+                      {testResult.ok ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
+                      <span>{testResult.message}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Status banner */}
+              <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 text-xs space-y-1">
+                <div className="font-bold text-slate-950 dark:text-white">
+                  Moteur actuellement actif :{' '}
+                  <span className={tomtomApiKey ? 'text-emerald-700 dark:text-emerald-400 font-extrabold' : 'text-blue-700 dark:text-blue-400 font-extrabold'}>
+                    {tomtomApiKey ? 'TomTom Routing (Trafic live activé)' : 'OSRM (OpenStreetMap - Sans trafic live)'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-700 dark:text-slate-300">
+                  {tomtomApiKey
+                    ? 'Vos widgets de trajet calculent les temps de parcours en temps réel avec les bouchons et retards.'
+                    : 'Renseignez une clé API TomTom ci-dessus pour activer les retards de circulation en direct.'}
+                </p>
+              </div>
             </div>
           )}
         </div>

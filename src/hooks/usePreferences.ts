@@ -28,6 +28,7 @@ export interface UserPreferences {
   linkPadding?: SpacingLevel;
   iconSize?: SpacingLevel;
   schedule?: ProfileSchedule;
+  tomtomApiKey?: string;
   pageColumns?: Record<string, number>;
   gridLayouts?: Record<string, GridItemGeometry>;
 }
@@ -93,6 +94,10 @@ function getStoredIconSize(): SpacingLevel {
   return 'md';
 }
 
+function getStoredTomTomApiKey(): string {
+  return localStorage.getItem('portal-tomtom-api-key') || '';
+}
+
 function getStoredSchedule(): ProfileSchedule {
   try {
     const saved = localStorage.getItem('portal-profile-schedule');
@@ -134,6 +139,7 @@ let globalLinkSpacing: SpacingLevel = getStoredLinkSpacing();
 let globalLinkPadding: SpacingLevel = getStoredLinkPadding();
 let globalIconSize: SpacingLevel = getStoredIconSize();
 let globalSchedule: ProfileSchedule = getStoredSchedule();
+let globalTomTomApiKey: string = getStoredTomTomApiKey();
 
 // Debounce timer for saving to Supabase user_metadata
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -244,6 +250,12 @@ export function hydratePreferencesFromCloud(metadata: Record<string, unknown> | 
     }
   }
 
+  if (prefs.tomtomApiKey !== undefined && prefs.tomtomApiKey !== globalTomTomApiKey) {
+    globalTomTomApiKey = prefs.tomtomApiKey;
+    localStorage.setItem('portal-tomtom-api-key', prefs.tomtomApiKey);
+    hasChanged = true;
+  }
+
   if (prefs.gridLayouts && typeof prefs.gridLayouts === 'object') {
     globalGridLayouts = { ...globalGridLayouts, ...prefs.gridLayouts };
     localStorage.setItem('portal-grid-layouts', JSON.stringify(globalGridLayouts));
@@ -294,6 +306,7 @@ export function usePreferences() {
   const [linkPadding, setLinkPaddingState] = useState<SpacingLevel>(globalLinkPadding);
   const [iconSize, setIconSizeState] = useState<SpacingLevel>(globalIconSize);
   const [schedule, setScheduleState] = useState<ProfileSchedule>(globalSchedule);
+  const [tomtomApiKey, setTomTomApiKeyState] = useState<string>(globalTomTomApiKey);
   const [gridLayouts, setGridLayoutsState] = useState<Record<string, GridItemGeometry>>(globalGridLayouts);
 
   useEffect(() => {
@@ -306,6 +319,7 @@ export function usePreferences() {
       setLinkPaddingState(globalLinkPadding);
       setIconSizeState(globalIconSize);
       setScheduleState(globalSchedule);
+      setTomTomApiKeyState(globalTomTomApiKey);
       setGridLayoutsState(globalGridLayouts);
     };
     LISTENERS.add(listener);
@@ -320,6 +334,7 @@ export function usePreferences() {
         e.key === 'portal-link-padding' ||
         e.key === 'portal-icon-size' ||
         e.key === 'portal-profile-schedule' ||
+        e.key === 'portal-tomtom-api-key' ||
         e.key === 'portal-grid-layouts'
       ) {
         globalFontSizeSection = getStoredFontSizeSection();
@@ -330,6 +345,7 @@ export function usePreferences() {
         globalLinkPadding = getStoredLinkPadding();
         globalIconSize = getStoredIconSize();
         globalSchedule = getStoredSchedule();
+        globalTomTomApiKey = getStoredTomTomApiKey();
         globalGridLayouts = getStoredGridLayouts();
         LISTENERS.forEach((l) => l());
       }
@@ -406,6 +422,19 @@ export function usePreferences() {
     syncPreferenceToCloud({ schedule: newSchedule });
   };
 
+  const setTomTomApiKey = (key: string) => {
+    const trimmed = key.trim();
+    globalTomTomApiKey = trimmed;
+    if (trimmed) {
+      localStorage.setItem('portal-tomtom-api-key', trimmed);
+    } else {
+      localStorage.removeItem('portal-tomtom-api-key');
+    }
+    setTomTomApiKeyState(trimmed);
+    LISTENERS.forEach((l) => l());
+    syncPreferenceToCloud({ tomtomApiKey: trimmed });
+  };
+
   const updateSectionGeometry = (sectionId: string, geo: Partial<GridItemGeometry>) => {
     const current = globalGridLayouts[sectionId] || {};
     const updated = { ...current, ...geo };
@@ -445,6 +474,8 @@ export function usePreferences() {
     setIconSize,
     schedule,
     setSchedule,
+    tomtomApiKey,
+    setTomTomApiKey,
     gridLayouts,
     updateSectionGeometry,
     updateMultipleSectionGeometries,
