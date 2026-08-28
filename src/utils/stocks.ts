@@ -25,6 +25,10 @@ export interface StockQuote {
   dayHigh?: number;
   dayLow?: number;
   previousClose?: number;
+  fiftyTwoWeekHigh?: number;
+  fiftyTwoWeekLow?: number;
+  changeFrom52wHigh?: number;
+  changeFrom52wLow?: number;
   sparkline?: number[];
   history?: StockHistoryPoint[];
   updatedAt: string;
@@ -151,6 +155,17 @@ async function fetchFromYahooChart(symbol: string): Promise<StockQuote> {
         }
       }
 
+      const fiftyTwoWeekHigh = meta.fiftyTwoWeekHigh;
+      const fiftyTwoWeekLow = meta.fiftyTwoWeekLow;
+      const changeFrom52wHigh =
+        fiftyTwoWeekHigh && fiftyTwoWeekHigh > 0
+          ? ((price - fiftyTwoWeekHigh) / fiftyTwoWeekHigh) * 100
+          : undefined;
+      const changeFrom52wLow =
+        fiftyTwoWeekLow && fiftyTwoWeekLow > 0
+          ? ((price - fiftyTwoWeekLow) / fiftyTwoWeekLow) * 100
+          : undefined;
+
       const foundPreset = POPULAR_STOCK_PRESETS.find((p) => p.symbol.toUpperCase() === symbol.toUpperCase());
       const displayName = foundPreset?.name || meta.shortName || meta.symbol || symbol;
 
@@ -164,6 +179,10 @@ async function fetchFromYahooChart(symbol: string): Promise<StockQuote> {
         dayHigh: meta.regularMarketDayHigh,
         dayLow: meta.regularMarketDayLow,
         previousClose,
+        fiftyTwoWeekHigh,
+        fiftyTwoWeekLow,
+        changeFrom52wHigh,
+        changeFrom52wLow,
         sparkline,
         history,
         updatedAt: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),

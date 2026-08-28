@@ -282,6 +282,11 @@ const StockEvolutionChart: React.FC<{
       <div className="flex items-center justify-between text-[9px] text-slate-500 dark:text-slate-400 mt-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 font-medium">
         <span>
           Bas: {minP ? formatPrice(minP, quote?.currency) : '--'}
+          {quote?.changeFrom52wLow !== undefined && (
+            <span className="text-emerald-700 dark:text-emerald-400 font-semibold ml-1 hidden sm:inline">
+              (Min 52s: {quote.changeFrom52wLow >= 0 ? '+' : ''}{quote.changeFrom52wLow.toFixed(1)}%)
+            </span>
+          )}
         </span>
         <span>
           {selectedRange === '1d' ? 'Préc:' : 'Début:'}{' '}
@@ -293,6 +298,11 @@ const StockEvolutionChart: React.FC<{
         </span>
         <span>
           Haut: {maxP ? formatPrice(maxP, quote?.currency) : '--'}
+          {quote?.changeFrom52wHigh !== undefined && (
+            <span className="text-red-600 dark:text-red-400 font-semibold ml-1 hidden sm:inline">
+              (Max 52s: {quote.changeFrom52wHigh.toFixed(1)}%)
+            </span>
+          )}
         </span>
       </div>
     </div>
@@ -602,7 +612,7 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
                       : 'bg-slate-100/90 dark:bg-slate-800/50 hover:bg-black/5 dark:hover:bg-white/10 border-slate-200/80 dark:border-slate-700/50'
                   }`}
                 >
-                  {/* Asset Name */}
+                  {/* Asset Name & 52-week variations */}
                   <div className="min-w-0 flex-1 pr-2">
                     <span
                       className={`font-bold text-xs truncate block transition-colors ${
@@ -613,6 +623,26 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
                     >
                       {item.name || quote?.name || item.symbol}
                     </span>
+                    {(quote?.changeFrom52wLow !== undefined || quote?.changeFrom52wHigh !== undefined) && (
+                      <div className="text-[9px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
+                        {quote.changeFrom52wLow !== undefined && (
+                          <span
+                            title={`Plus bas 52 semaines : ${formatPrice(quote.fiftyTwoWeekLow || 0, quote.currency)}`}
+                            className="text-emerald-700 dark:text-emerald-400 font-semibold"
+                          >
+                            Min 52s: {quote.changeFrom52wLow >= 0 ? '+' : ''}{quote.changeFrom52wLow.toFixed(1)}%
+                          </span>
+                        )}
+                        {quote.changeFrom52wHigh !== undefined && (
+                          <span
+                            title={`Plus haut 52 semaines : ${formatPrice(quote.fiftyTwoWeekHigh || 0, quote.currency)}`}
+                            className="text-red-600 dark:text-red-400 font-semibold"
+                          >
+                            Max 52s: {quote.changeFrom52wHigh.toFixed(1)}%
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Price & Variation Badge */}
