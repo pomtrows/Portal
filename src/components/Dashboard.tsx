@@ -125,8 +125,8 @@ function getSectionRowSpan(
   const innerCols = Math.max(1, colSpan);
   const itemRows = Math.ceil(count / innerCols);
 
-  // Section container padding top+bottom + card header + breathing room margin
-  const padOverhead = paddingLevel === 'xs' ? 64 : paddingLevel === 'sm' ? 70 : paddingLevel === 'lg' ? 88 : paddingLevel === 'xl' ? 98 : 78;
+  // Section container padding top+bottom (xs:16px, sm:20px, md:24px, lg:32px, xl:40px) + card header & margin (~26px) + small border buffer
+  const padOverhead = paddingLevel === 'xs' ? 44 : paddingLevel === 'sm' ? 50 : paddingLevel === 'lg' ? 66 : paddingLevel === 'xl' ? 76 : 56;
 
   // Icon container height (xs: 28px, sm: 32px, md: 36px, lg: 40px, xl: 44px)
   const iconHeight = iconSizeLevel === 'xs' ? 28 : iconSizeLevel === 'sm' ? 32 : iconSizeLevel === 'lg' ? 40 : iconSizeLevel === 'xl' ? 44 : 36;
@@ -136,7 +136,7 @@ function getSectionRowSpan(
 
   // Average text height: check if items have descriptions
   const hasDesc = section.items?.some((it) => !!it.description);
-  const textHeight = hasDesc ? 36 : 22;
+  const textHeight = hasDesc ? 34 : 18;
 
   // Actual single item card height = max(icon, text) + inner padding + 2px border
   const singleItemHeight = Math.max(iconHeight, textHeight) + itemPad + 2;
@@ -684,10 +684,9 @@ function resolveCascadeGeometries(
                 geo.col_span || 1,
                 columnCount - (geo.grid_x ?? 0)
               );
-              const clampedRowSpan = Math.max(
-                getSectionRowSpan(section, clampedColSpan, sectionPadding, linkSpacing, linkPadding, iconSize),
-                geo.row_span || 1
-              );
+              const isLinks = !section.type || section.type === 'links';
+              const minRowSpan = getSectionRowSpan(section, clampedColSpan, sectionPadding, linkSpacing, linkPadding, iconSize);
+              const clampedRowSpan = isLinks ? minRowSpan : Math.max(minRowSpan, geo.row_span || 1);
 
               return (
                 <div
