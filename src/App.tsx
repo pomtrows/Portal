@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
-import { SectionModal, ItemModal, RssModal, WeatherModal, TrafficModal, SearchModal, StockModal } from './components/EditModals';
+import { SectionModal, ItemModal, RssModal, WeatherModal, TrafficModal, SearchModal, StockModal, BeszelModal } from './components/EditModals';
 import { AddElementModal } from './components/AddElementModal';
 import { SettingsModal } from './components/SettingsModal';
 import { MobileMenu } from './components/MobileMenu';
@@ -56,6 +56,9 @@ function App() {
 
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [editingStockSection, setEditingStockSection] = useState<Section | null>(null);
+
+  const [isBeszelModalOpen, setIsBeszelModalOpen] = useState(false);
+  const [editingBeszelSection, setEditingBeszelSection] = useState<Section | null>(null);
   
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<{ sectionId: string, item: LinkItem | null } | null>(null);
@@ -258,6 +261,11 @@ function App() {
     setIsStockModalOpen(true);
   };
 
+  const handleAddBeszelWidget = () => {
+    setEditingBeszelSection(null);
+    setIsBeszelModalOpen(true);
+  };
+
   const handleEditSection = (section: Section) => {
     if (section.type === 'rss') {
       setEditingRssSection(section);
@@ -274,6 +282,9 @@ function App() {
     } else if (section.type === 'stocks') {
       setEditingStockSection(section);
       setIsStockModalOpen(true);
+    } else if (section.type === 'beszel') {
+      setEditingBeszelSection(section);
+      setIsBeszelModalOpen(true);
     } else {
       setEditingSection(section);
       setIsSectionModalOpen(true);
@@ -611,6 +622,58 @@ function App() {
         page_id: activePageId,
         title: newSection.title,
         type: 'stocks',
+        widget_url: newSection.widget_url,
+        position: newSection.position,
+        user_id: session.user.id
+      });
+    }
+  };
+
+  const handleSaveBeszelSection = async (sectionData: Partial<Section>) => {
+    if (!session?.user || !activePageId) return;
+
+    if (editingBeszelSection) {
+      // Update
+      const col_span = sectionData.col_span || editingBeszelSection.col_span || 1;
+      const updatedSection: Section = {
+        ...editingBeszelSection,
+        title: sectionData.title || editingBeszelSection.title,
+        widget_url: sectionData.widget_url || editingBeszelSection.widget_url,
+        col_span,
+        type: 'beszel'
+      };
+      setConfig(prev => ({
+        ...prev,
+        sections: prev.sections.map(s => s.id === editingBeszelSection.id ? updatedSection : s)
+      }));
+      await supabase.from('sections').update({
+        title: updatedSection.title,
+        widget_url: updatedSection.widget_url,
+        type: 'beszel'
+      }).eq('id', editingBeszelSection.id);
+    } else {
+      // Create
+      const newId = `beszel-${Date.now()}`;
+      const col_span = sectionData.col_span || 1;
+      const newSection: Section = {
+        id: newId,
+        page_id: activePageId,
+        title: sectionData.title || 'Monitoring Serveurs',
+        type: 'beszel',
+        widget_url: sectionData.widget_url,
+        col_span,
+        position: config.sections.length,
+        items: []
+      };
+      setConfig(prev => ({
+        ...prev,
+        sections: [...prev.sections, newSection]
+      }));
+      await supabase.from('sections').insert({
+        id: newId,
+        page_id: activePageId,
+        title: newSection.title,
+        type: 'beszel',
         widget_url: newSection.widget_url,
         position: newSection.position,
         user_id: session.user.id
@@ -982,6 +1045,7 @@ function App() {
         onAddTrafficWidget={handleAddTrafficWidget}
         onAddSearchWidget={handleAddSearchWidget}
         onAddStockWidget={handleAddStockWidget}
+        onAddBeszelWidget={handleAddBeszelWidget}
       />
 
       <AccountModal
@@ -1034,6 +1098,16 @@ function App() {
         onClose={() => setIsStockModalOpen(false)}
         onSave={handleSaveStockSection}
         initialData={editingStockSection}
+      />
+
+      <BeszelModal
+        isOpen={isBeszelModalOpen}
+        onClose={() => {
+          setIsBeszelModalOpen(false);
+          setEditingBeszelSection(null);
+        }}
+        onSave={handleSaveBeszelSection}
+        initialData={editingBeszelSection}
       />
 
       <ItemModal

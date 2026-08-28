@@ -16,7 +16,36 @@ import {
   type StockItemConfig,
   type StockWidgetConfig,
 } from '../utils/stocks';
-import { Search, MapPin, Navigation, Loader2, Check, Car, Clock, Sparkles, Globe, ChevronLeft, ChevronRight, TrendingUp, Plus, X, ChevronUp, ChevronDown } from 'lucide-react';
+import {
+  parseBeszelConfig,
+  fetchBeszelSystems,
+  type BeszelConfig,
+  type BeszelSystem,
+} from '../utils/beszel';
+import {
+  Search,
+  MapPin,
+  Navigation,
+  Loader2,
+  Check,
+  Car,
+  Clock,
+  Sparkles,
+  Globe,
+  ChevronLeft,
+  ChevronRight,
+  TrendingUp,
+  Plus,
+  X,
+  ChevronUp,
+  ChevronDown,
+  Server,
+  Key,
+  Mail,
+  Lock,
+  CheckCircle2,
+  AlertCircle,
+} from 'lucide-react';
 
 export const ColumnSpanSelector: React.FC<{
   value: number;
@@ -1597,6 +1626,356 @@ export const StockModal: React.FC<StockModalProps> = ({
   );
 };
 
+export interface BeszelModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (section: Partial<Section>) => void;
+  initialData?: Section | null;
+}
 
+export const BeszelModal: React.FC<BeszelModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  initialData,
+}) => {
+  const [title, setTitle] = useState('');
+  const [url, setUrl] = useState('');
+  const [authType, setAuthType] = useState<'token' | 'password'>('token');
+  const [token, setToken] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [systemId, setSystemId] = useState('all');
+  const [colSpan, setColSpan] = useState(1);
 
+  const [isTesting, setIsTesting] = useState(false);
+  const [testSuccess, setTestSuccess] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
+  const [availableSystems, setAvailableSystems] = useState<BeszelSystem[]>([]);
 
+  useEffect(() => {
+    if (initialData) {
+      setTitle(initialData.title || '');
+      setColSpan(initialData.col_span || 1);
+      const conf = parseBeszelConfig(initialData.widget_url);
+      setUrl(conf.url || '');
+      setAuthType(conf.authType || (conf.token ? 'token' : 'password'));
+      setToken(conf.token || '');
+      setEmail(conf.email || '');
+      setPassword(conf.password || '');
+      setSystemId(conf.systemId || 'all');
+    } else {
+      setTitle('Monitoring Serveurs');
+      setUrl('');
+      setAuthType('token');
+      setToken('');
+      setEmail('');
+      setPassword('');
+      setSystemId('all');
+      setColSpan(1);
+    }
+    setTestSuccess(false);
+    setTestError(null);
+    setAvailableSystems([]);
+  }, [initialData, isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleTestConnection = async () => {
+    if (!url.trim()) {
+      setTestError("Veuillez renseigner l'URL de votre instance Beszel.");
+      return;
+    }
+
+    setIsTesting(true);
+    setTestError(null);
+    setTestSuccess(false);
+
+    try {
+      const config: BeszelConfig = {
+        url: url.trim(),
+        authType,
+        token: token.trim(),
+        email: email.trim(),
+        password: password.trim(),
+        systemId,
+      };
+
+      const systems = await fetchBeszelSystems(config);
+      setAvailableSystems(systems);
+      setTestSuccess(true);
+      if (systems.length > 0 && systemId !== 'all' && !systems.some((s) => s.id === systemId)) {
+        setSystemId(systems[0].id);
+      }
+    } catch (err: any) {
+      setTestError(err.message || 'Échec de connexion au serveur Beszel.');
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleSave = () => {
+    if (!url.trim()) return;
+
+    const selectedSys = availableSystems.find((s) => s.id === systemId);
+    const finalConfig: BeszelConfig = {
+      url: url.trim(),
+      authType,
+      token: token.trim(),
+      email: email.trim(),
+      password: password.trim(),
+      systemId,
+      systemName: selectedSys ? selectedSys.name : systemId === 'all' ? 'Tous les serveurs' : '',
+      title: title.trim() || 'Monitoring Beszel',
+      col_span: colSpan,
+    };
+
+    onSave({
+      title: finalConfig.title,
+      widget_url: JSON.stringify(finalConfig),
+      col_span: colSpan,
+      type: 'beszel',
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
+              <Server size={20} className="stroke-[2.5]" />
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-[var(--color-text-strong)]">
+                {initialData ? 'Modifier le widget Beszel' : 'Ajouter un widget Beszel'}
+              </h2>
+              <p className="text-xs text-[var(--color-text-muted)]">
+                Monitoring de vos serveurs (CPU, RAM, Disque, Docker, Uptime)
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] hover:bg-black/10 transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Form Body */}
+        <div className="space-y-4">
+          {/* Titre */}
+          <div>
+            <label className="block text-xs font-bold text-[var(--color-text-strong)] mb-1">
+              Titre du widget
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="ex: Serveurs Production, VPS OVH..."
+              className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+
+          {/* URL Instance Beszel */}
+          <div>
+            <label className="block text-xs font-bold text-[var(--color-text-strong)] mb-1">
+              URL de votre Hub Beszel <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://beszel.votre-domaine.com"
+              className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+            <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
+              L'adresse web où est hébergé votre serveur Beszel Hub.
+            </p>
+          </div>
+
+          {/* Méthode d'authentification */}
+          <div>
+            <label className="block text-xs font-bold text-[var(--color-text-strong)] mb-1.5">
+              Méthode d'authentification
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setAuthType('token')}
+                className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border text-xs font-bold transition-all ${
+                  authType === 'token'
+                    ? 'border-teal-500 bg-teal-500/10 text-teal-600 dark:text-teal-400 ring-2 ring-teal-500/20'
+                    : 'border-[var(--color-border)] bg-black/5 hover:bg-black/10 text-[var(--color-text-muted)]'
+                }`}
+              >
+                <Key size={14} />
+                <span>Token API / PocketBase</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthType('password')}
+                className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border text-xs font-bold transition-all ${
+                  authType === 'password'
+                    ? 'border-teal-500 bg-teal-500/10 text-teal-600 dark:text-teal-400 ring-2 ring-teal-500/20'
+                    : 'border-[var(--color-border)] bg-black/5 hover:bg-black/10 text-[var(--color-text-muted)]'
+                }`}
+              >
+                <Mail size={14} />
+                <span>Email & Mot de passe</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Token input */}
+          {authType === 'token' && (
+            <div>
+              <label className="block text-xs font-bold text-[var(--color-text-strong)] mb-1">
+                Token API ou Token d'accès
+              </label>
+              <input
+                type="password"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+              <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
+                Token généré depuis votre compte ou les paramètres Beszel/PocketBase.
+              </p>
+            </div>
+          )}
+
+          {/* Email & Password inputs */}
+          {authType === 'password' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-[var(--color-text-strong)] mb-1">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail
+                    size={14}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
+                  />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="admin@domaine.com"
+                    className="w-full pl-9 pr-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-[var(--color-text-strong)] mb-1">
+                  Mot de passe
+                </label>
+                <div className="relative">
+                  <Lock
+                    size={14}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
+                  />
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full pl-9 pr-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tester la connexion button */}
+          <div>
+            <button
+              type="button"
+              onClick={handleTestConnection}
+              disabled={isTesting || !url.trim()}
+              className="w-full py-2 px-3 rounded-xl border border-teal-500/40 bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 text-xs font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isTesting ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>Connexion en cours...</span>
+                </>
+              ) : (
+                <>
+                  <Server size={14} />
+                  <span>Tester la connexion & Charger les serveurs</span>
+                </>
+              )}
+            </button>
+
+            {testSuccess && (
+              <div className="mt-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs flex items-center gap-2">
+                <CheckCircle2 size={15} />
+                <span>
+                  Connexion réussie ! {availableSystems.length} serveur(s) détecté(s).
+                </span>
+              </div>
+            )}
+
+            {testError && (
+              <div className="mt-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+                <AlertCircle size={15} />
+                <span>{testError}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Choix du serveur à afficher */}
+          <div>
+            <label className="block text-xs font-bold text-[var(--color-text-strong)] mb-1">
+              Serveur à afficher dans le widget
+            </label>
+            <select
+              value={systemId}
+              onChange={(e) => setSystemId(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+            >
+              <option value="all">📊 Tous les serveurs (Vue synthétique globale)</option>
+              {availableSystems.map((sys) => (
+                <option key={sys.id} value={sys.id}>
+                  🖥️ {sys.name} {sys.host ? `(${sys.host})` : ''} -{' '}
+                  {sys.status === 'up' ? '🟢 En ligne' : '🔴 Hors ligne'}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
+              Vous pouvez afficher un serveur spécifique avec ses jauges détaillées ou l'ensemble de votre flotte.
+            </p>
+          </div>
+
+          {/* Largeur en colonnes */}
+          <ColumnSpanSelector value={colSpan} onChange={setColSpan} />
+        </div>
+
+        {/* Footer Buttons */}
+        <div className="mt-6 flex justify-end gap-3 pt-2 border-t border-[var(--color-border)]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-md bg-[var(--color-background)] text-[var(--color-text)] hover:bg-[var(--color-border)] transition-colors text-sm"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            disabled={!url.trim()}
+            onClick={handleSave}
+            className="px-4 py-2 rounded-md bg-teal-600 text-white hover:bg-teal-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Sauvegarder
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

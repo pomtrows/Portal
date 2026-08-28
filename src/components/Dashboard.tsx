@@ -6,6 +6,7 @@ import { WeatherWidgetCard } from './WeatherWidgetCard';
 import { TrafficWidgetCard } from './TrafficWidgetCard';
 import { SearchWidgetCard } from './SearchWidgetCard';
 import { StockWidgetCard } from './StockWidgetCard';
+import { BeszelWidgetCard } from './BeszelWidgetCard';
 
 import { useLayout } from '../hooks/useLayout';
 import { usePreferences, type GridItemGeometry, type SpacingLevel } from '../hooks/usePreferences';
@@ -119,6 +120,7 @@ function getSectionRowSpan(
   if (section.type === 'traffic') return Math.max(4, section.row_span || 4); // ~180px
   if (section.type === 'search') return Math.max(6, section.row_span || 6); // ~265px
   if (section.type === 'stocks') return Math.max(6, section.row_span || 6); // ~265px
+  if (section.type === 'beszel') return Math.max(5, section.row_span || 5); // ~220px
   if (section.type === 'rss') return Math.max(8, section.row_span || 8); // ~360px
 
   // For links sections, compute strictly according to items count and column width
@@ -272,7 +274,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
           section.type === 'weather' ||
           section.type === 'traffic' ||
           section.type === 'search' ||
-          section.type === 'stocks'
+          section.type === 'stocks' ||
+          section.type === 'beszel'
         ) {
           const matches =
             section.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -298,6 +301,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             section.type === 'traffic' ||
             section.type === 'search' ||
             section.type === 'stocks' ||
+            section.type === 'beszel' ||
             section.items.length > 0 ||
             isEditMode)
       );
@@ -644,6 +648,8 @@ function resolveCascadeGeometries(
       cardContent = <SearchWidgetCard key={section.id} {...cardProps} />;
     } else if (section.type === 'stocks') {
       cardContent = <StockWidgetCard key={section.id} {...cardProps} />;
+    } else if (section.type === 'beszel') {
+      cardContent = <BeszelWidgetCard key={section.id} {...cardProps} />;
     } else {
       cardContent = (
         <SectionCard
