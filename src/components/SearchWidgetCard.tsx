@@ -182,9 +182,11 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
               <GripVertical size={18} />
             </div>
           )}
-          <div className="p-1 rounded-lg bg-indigo-900/10 dark:bg-indigo-500/15 text-indigo-800 dark:text-indigo-300 flex-shrink-0">
-            <Search size={17} />
-          </div>
+          {!isEditMode && (
+            <div className="p-1 rounded-lg bg-indigo-900/10 dark:bg-indigo-500/15 text-indigo-800 dark:text-indigo-300 flex-shrink-0">
+              <Search size={17} />
+            </div>
+          )}
           <h2 className={`${getTitleClass()} text-slate-950 dark:text-white truncate`} title={section.title || config.title}>
             {section.title || config.title}
           </h2>

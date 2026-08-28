@@ -159,9 +159,11 @@ export const TrafficWidgetCard: React.FC<TrafficWidgetCardProps> = ({
               <GripVertical size={18} />
             </div>
           )}
-          <div className="p-1 rounded-lg bg-emerald-900/10 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 flex-shrink-0">
-            <Car size={17} />
-          </div>
+          {!isEditMode && (
+            <div className="p-1 rounded-lg bg-emerald-900/10 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 flex-shrink-0">
+              <Car size={17} />
+            </div>
+          )}
           <h2 className={`${getTitleClass()} text-slate-950 dark:text-white truncate`} title={section.title || `${startLoc.name} ➔ ${endLoc.name}`}>
             {section.title || `${startLoc.name} ➔ ${endLoc.name}`}
           </h2>

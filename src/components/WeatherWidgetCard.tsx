@@ -200,9 +200,11 @@ export const WeatherWidgetCard: React.FC<WeatherWidgetCardProps> = ({
               <GripVertical size={18} />
             </div>
           )}
-          <div className="p-1 rounded-lg bg-blue-900/10 dark:bg-sky-500/15 text-blue-800 dark:text-sky-300 flex-shrink-0">
-            <CloudSun size={17} />
-          </div>
+          {!isEditMode && (
+            <div className="p-1 rounded-lg bg-blue-900/10 dark:bg-sky-500/15 text-blue-800 dark:text-sky-300 flex-shrink-0">
+              <CloudSun size={17} />
+            </div>
+          )}
           <h2 className={`${getTitleClass()} text-slate-950 dark:text-white truncate`} title={section.title || location.name}>
             {section.title || location.name}
           </h2>

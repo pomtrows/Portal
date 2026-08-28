@@ -230,9 +230,11 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
               <GripVertical size={16} />
             </div>
           )}
-          <div className="p-1 rounded-lg bg-orange-500/10 text-orange-400 flex-shrink-0">
-            <Rss size={16} />
-          </div>
+          {!isEditMode && (
+            <div className="p-1 rounded-lg bg-orange-500/10 text-orange-400 flex-shrink-0">
+              <Rss size={16} />
+            </div>
+          )}
           <h2 className={`${getSectionTitleClass()} text-[var(--color-text-strong)] truncate min-w-0`} title={section.title}>
             {section.title}
           </h2>
