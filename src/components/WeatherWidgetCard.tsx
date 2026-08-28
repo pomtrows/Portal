@@ -169,7 +169,7 @@ export const WeatherWidgetCard: React.FC<WeatherWidgetCardProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`glass-panel p-2.5 sm:p-3 w-full h-full flex flex-col ${
+      className={`glass-panel p-2.5 sm:p-3 w-full h-auto md:h-full flex flex-col ${
         isDragging ? 'z-50 shadow-2xl ring-2 ring-[var(--color-primary)]' : ''
       }`}
     >

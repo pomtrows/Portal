@@ -99,7 +99,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={"glass-panel p-2.5 sm:p-3 w-full h-full min-w-0 flex flex-col " + (isDragging ? 'z-50 shadow-2xl ring-2 ring-[var(--color-primary)]' : '')}>
+    <div ref={setNodeRef} style={style} className={"glass-panel p-2.5 sm:p-3 w-full h-auto md:h-full min-w-0 flex flex-col " + (isDragging ? 'z-50 shadow-2xl ring-2 ring-[var(--color-primary)]' : '')}>
       <div className="flex items-center justify-between mb-2 group gap-1.5 min-w-0">
         <div
           className={`flex items-center gap-1.5 min-w-0 flex-1 ${isEditMode ? 'cursor-grab active:cursor-grabbing select-none' : ''}`}

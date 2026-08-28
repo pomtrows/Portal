@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { Section, LinkItem } from '../types';
 import { SectionCard } from './SectionCard';
 import { RssWidgetCard } from './RssWidgetCard';
@@ -25,6 +25,22 @@ import {
   SortableContext,
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return isMobile;
+}
 
 const pointerFirstCollisionDetection: CollisionDetection = (args) => {
   const pointerCollisions = pointerWithin(args);
@@ -207,6 +223,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onUpdateSectionGeometry,
   onUpdateAllGeometries,
 }) => {
+  const isMobile = useIsMobile();
   const { columnCount } = useLayout(activePageId);
   const { gridLayouts } = usePreferences();
   const [, setActiveId] = useState<string | null>(null);
@@ -253,6 +270,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const layoutMap = useMemo(() => {
     return computeAutoLayout(filteredSections, columnCount, gridLayouts);
   }, [filteredSections, columnCount, gridLayouts]);
+
+  // Sort sections on mobile according to vertical top-to-bottom grid position
+  const orderedSections = useMemo(() => {
+    if (!isMobile) return filteredSections;
+    return [...filteredSections].sort((a, b) => {
+      const geoA = layoutMap[a.id];
+      const geoB = layoutMap[b.id];
+      if (geoA && geoB) {
+        if (geoA.grid_y !== geoB.grid_y) {
+          return (geoA.grid_y ?? 0) - (geoB.grid_y ?? 0);
+        }
+        return (geoA.grid_x ?? 0) - (geoB.grid_x ?? 0);
+      }
+      return (a.position ?? 0) - (b.position ?? 0);
+    });
+  }, [filteredSections, isMobile, layoutMap]);
 
   // Determine total rows on the grid
   const maxRow = useMemo(() => {
@@ -571,16 +604,25 @@ function resolveCascadeGeometries(
         >
           <div
             id="dashboard-grid-container"
-            className="w-full relative transition-all duration-200"
-            style={{
-              display: 'grid',
-              gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
-              gridAutoRows: '40px',
-              gap: '0.65rem',
-            }}
+            className={
+              isMobile
+                ? 'w-full flex flex-col gap-3.5'
+                : 'w-full relative transition-all duration-200'
+            }
+            style={
+              isMobile
+                ? undefined
+                : {
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+                    gridAutoRows: '40px',
+                    gap: '0.65rem',
+                  }
+            }
           >
-            {/* Background Droppable Grid Cells in Edit Mode for easy visual placement */}
-            {isEditMode &&
+            {/* Background Droppable Grid Cells in Edit Mode for easy visual placement (Desktop only) */}
+            {!isMobile &&
+              isEditMode &&
               Array.from({ length: maxRow * columnCount }).map((_, idx) => {
                 const cellX = idx % columnCount;
                 const cellY = Math.floor(idx / columnCount);
@@ -594,8 +636,8 @@ function resolveCascadeGeometries(
                 );
               })}
 
-            {/* Placed 2D Grid Sections */}
-            {filteredSections.map((section) => {
+            {/* Placed 2D Grid Sections on Desktop, or Full-Width Stack on Mobile */}
+            {orderedSections.map((section) => {
               const geo = layoutMap[section.id] || {
                 grid_x: 0,
                 grid_y: 0,
@@ -614,15 +656,28 @@ function resolveCascadeGeometries(
               return (
                 <div
                   key={section.id}
-                  className="w-full h-full min-w-0 flex flex-col transition-all duration-150 relative z-10"
-                  style={{
-                    gridColumnStart: (geo.grid_x ?? 0) + 1,
-                    gridColumnEnd: `span ${clampedColSpan}`,
-                    gridRowStart: (geo.grid_y ?? 0) + 1,
-                    gridRowEnd: `span ${clampedRowSpan}`,
-                  }}
+                  className={
+                    isMobile
+                      ? 'w-full h-auto min-w-0'
+                      : 'w-full h-full min-w-0 flex flex-col transition-all duration-150 relative z-10'
+                  }
+                  style={
+                    isMobile
+                      ? undefined
+                      : {
+                          gridColumnStart: (geo.grid_x ?? 0) + 1,
+                          gridColumnEnd: `span ${clampedColSpan}`,
+                          gridRowStart: (geo.grid_y ?? 0) + 1,
+                          gridRowEnd: `span ${clampedRowSpan}`,
+                        }
+                  }
                 >
-                  {renderSection(section, geo)}
+                  {renderSection(
+                    section,
+                    isMobile
+                      ? { grid_x: 0, grid_y: 0, col_span: 1, row_span: 1 }
+                      : geo
+                  )}
                 </div>
               );
             })}
