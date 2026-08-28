@@ -111,7 +111,8 @@ function getSectionRowSpan(
   colSpan: number = 1,
   paddingLevel: SpacingLevel = 'md',
   spacingLevel: SpacingLevel = 'md',
-  itemPadLevel: SpacingLevel = 'md'
+  itemPadLevel: SpacingLevel = 'md',
+  iconSizeLevel: SpacingLevel = 'md'
 ): number {
   if (section.type === 'weather') return Math.max(7, section.row_span || 7); // ~310px
   if (section.type === 'traffic') return Math.max(4, section.row_span || 4); // ~180px
@@ -124,12 +125,29 @@ function getSectionRowSpan(
   const innerCols = Math.max(1, colSpan);
   const itemRows = Math.ceil(count / innerCols);
 
-  const padOverhead = paddingLevel === 'xs' ? 56 : paddingLevel === 'sm' ? 62 : paddingLevel === 'lg' ? 76 : paddingLevel === 'xl' ? 84 : 70;
-  const itemBase = itemPadLevel === 'xs' ? 50 : itemPadLevel === 'sm' ? 54 : itemPadLevel === 'lg' ? 64 : itemPadLevel === 'xl' ? 70 : 58;
-  const gap = spacingLevel === 'xs' ? 6 : spacingLevel === 'sm' ? 8 : spacingLevel === 'lg' ? 12 : spacingLevel === 'xl' ? 14 : 10;
-  const itemGap = itemBase + gap;
+  // Section container padding top+bottom + card header & border
+  const padOverhead = paddingLevel === 'xs' ? 52 : paddingLevel === 'sm' ? 58 : paddingLevel === 'lg' ? 72 : paddingLevel === 'xl' ? 82 : 64;
 
-  const totalPx = padOverhead + itemRows * itemGap;
+  // Icon container height (xs: 28px, sm: 32px, md: 36px, lg: 40px, xl: 44px)
+  const iconHeight = iconSizeLevel === 'xs' ? 28 : iconSizeLevel === 'sm' ? 32 : iconSizeLevel === 'lg' ? 40 : iconSizeLevel === 'xl' ? 44 : 36;
+
+  // Item inner padding top+bottom (xs: 10px, sm: 14px, md: 18px, lg: 24px, xl: 30px)
+  const itemPad = itemPadLevel === 'xs' ? 10 : itemPadLevel === 'sm' ? 14 : itemPadLevel === 'lg' ? 24 : itemPadLevel === 'xl' ? 30 : 18;
+
+  // Average text height: check if items have descriptions
+  const hasDesc = section.items?.some((it) => !!it.description);
+  const textHeight = hasDesc ? 34 : 20;
+
+  // Actual single item card height = max(icon, text) + inner padding + 2px border
+  const singleItemHeight = Math.max(iconHeight, textHeight) + itemPad + 2;
+
+  // Gap between items (xs: 6px, sm: 8px, md: 10px, lg: 13px, xl: 16px)
+  const gap = spacingLevel === 'xs' ? 6 : spacingLevel === 'sm' ? 8 : spacingLevel === 'lg' ? 13 : spacingLevel === 'xl' ? 16 : 10;
+
+  // Total required height in pixels: overhead + all rows of items + gaps between them
+  const totalPx = padOverhead + itemRows * singleItemHeight + Math.max(0, itemRows - 1) * gap;
+
+  // Grid cell height is 40px + 10.4px row-gap = 50.4px.
   return Math.max(2, Math.ceil((totalPx + 10.4) / 50.4));
 }
 
@@ -142,7 +160,8 @@ function computeAutoLayout(
   savedLayouts: Record<string, GridItemGeometry>,
   paddingLevel: SpacingLevel = 'md',
   spacingLevel: SpacingLevel = 'md',
-  itemPadLevel: SpacingLevel = 'md'
+  itemPadLevel: SpacingLevel = 'md',
+  iconSizeLevel: SpacingLevel = 'md'
 ): Record<string, GridItemGeometry> {
   const result: Record<string, GridItemGeometry> = {};
   const gridMap: boolean[][] = [];
@@ -175,7 +194,7 @@ function computeAutoLayout(
     let gx = saved?.grid_x ?? s.grid_x;
     let gy = saved?.grid_y ?? s.grid_y;
     let w = Math.min(saved?.col_span ?? s.col_span ?? 1, columnCount);
-    const minH = getSectionRowSpan(s, w, paddingLevel, spacingLevel, itemPadLevel);
+    const minH = getSectionRowSpan(s, w, paddingLevel, spacingLevel, itemPadLevel, iconSizeLevel);
     let h = isLinks ? minH : Math.max(minH, saved?.row_span ?? s.row_span ?? minH);
 
     if (gx === undefined && s.position !== undefined && s.position >= 1000) {
@@ -196,7 +215,7 @@ function computeAutoLayout(
   unplaced.forEach((s) => {
     const isLinks = !s.type || s.type === 'links';
     const w = Math.min(s.col_span || 1, columnCount);
-    const minH = getSectionRowSpan(s, w, paddingLevel, spacingLevel, itemPadLevel);
+    const minH = getSectionRowSpan(s, w, paddingLevel, spacingLevel, itemPadLevel, iconSizeLevel);
     const h = isLinks ? minH : Math.max(minH, s.row_span || minH);
     let placed = false;
     let y = 0;
@@ -239,7 +258,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const isMobile = useIsMobile();
   const { columnCount } = useLayout(activePageId);
-  const { gridLayouts, sectionPadding, linkSpacing, linkPadding } = usePreferences();
+  const { gridLayouts, sectionPadding, linkSpacing, linkPadding, iconSize } = usePreferences();
   const [, setActiveId] = useState<string | null>(null);
 
   const filteredSections = useMemo(() => {
@@ -282,8 +301,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // Compute 2D grid matrix layout
   const layoutMap = useMemo(() => {
-    return computeAutoLayout(filteredSections, columnCount, gridLayouts, sectionPadding, linkSpacing, linkPadding);
-  }, [filteredSections, columnCount, gridLayouts, sectionPadding, linkSpacing, linkPadding]);
+    return computeAutoLayout(filteredSections, columnCount, gridLayouts, sectionPadding, linkSpacing, linkPadding, iconSize);
+  }, [filteredSections, columnCount, gridLayouts, sectionPadding, linkSpacing, linkPadding, iconSize]);
 
   // Sort sections on mobile according to vertical top-to-bottom grid position
   const orderedSections = useMemo(() => {
@@ -666,7 +685,7 @@ function resolveCascadeGeometries(
                 columnCount - (geo.grid_x ?? 0)
               );
               const clampedRowSpan = Math.max(
-                getSectionRowSpan(section, clampedColSpan, sectionPadding, linkSpacing, linkPadding),
+                getSectionRowSpan(section, clampedColSpan, sectionPadding, linkSpacing, linkPadding, iconSize),
                 geo.row_span || 1
               );
 
