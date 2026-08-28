@@ -120,7 +120,7 @@ function getSectionRowSpan(
   if (section.type === 'traffic') return Math.max(4, section.row_span || 4); // ~180px
   if (section.type === 'search') return Math.max(6, section.row_span || 6); // ~265px
   if (section.type === 'stocks') return Math.max(6, section.row_span || 6); // ~265px
-  if (section.type === 'beszel') return Math.max(5, section.row_span || 5); // ~220px
+  if (section.type === 'beszel') return Math.max(6, section.row_span || 6); // ~290px
   if (section.type === 'rss') return Math.max(8, section.row_span || 8); // ~360px
 
   // For links sections, compute strictly according to items count and column width
@@ -197,7 +197,7 @@ function computeAutoLayout(
     const saved = savedLayouts[s.id];
     let gx = saved?.grid_x ?? s.grid_x;
     let gy = saved?.grid_y ?? s.grid_y;
-    let w = Math.min(saved?.col_span ?? s.col_span ?? 1, columnCount);
+    let w = Math.min(saved?.col_span ?? s.col_span ?? (s.type === 'search' ? 2 : 1), columnCount);
     const minH = getSectionRowSpan(s, w, paddingLevel, spacingLevel, itemPadLevel, iconSizeLevel);
     let h = isLinks ? minH : Math.max(minH, saved?.row_span ?? s.row_span ?? minH);
 
@@ -218,7 +218,7 @@ function computeAutoLayout(
   // 2. Auto-place remaining items
   unplaced.forEach((s) => {
     const isLinks = !s.type || s.type === 'links';
-    const w = Math.min(s.col_span || 1, columnCount);
+    const w = Math.min(s.col_span || (s.type === 'search' ? 2 : 1), columnCount);
     const minH = getSectionRowSpan(s, w, paddingLevel, spacingLevel, itemPadLevel, iconSizeLevel);
     const h = isLinks ? minH : Math.max(minH, s.row_span || minH);
     let placed = false;

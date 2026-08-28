@@ -1647,6 +1647,7 @@ export const BeszelModal: React.FC<BeszelModalProps> = ({
   const [password, setPassword] = useState('');
   const [systemId, setSystemId] = useState('all');
   const [colSpan, setColSpan] = useState(1);
+  const [rowSpan, setRowSpan] = useState(6);
 
   const [isTesting, setIsTesting] = useState(false);
   const [testSuccess, setTestSuccess] = useState(false);
@@ -1657,6 +1658,7 @@ export const BeszelModal: React.FC<BeszelModalProps> = ({
     if (initialData) {
       setTitle(initialData.title || '');
       setColSpan(initialData.col_span || 1);
+      setRowSpan(initialData.row_span || 6);
       const conf = parseBeszelConfig(initialData.widget_url);
       setUrl(conf.url || '');
       setAuthType(conf.authType || (conf.token ? 'token' : 'password'));
@@ -1664,6 +1666,7 @@ export const BeszelModal: React.FC<BeszelModalProps> = ({
       setEmail(conf.email || '');
       setPassword(conf.password || '');
       setSystemId(conf.systemId || 'all');
+      if (conf.row_span) setRowSpan(conf.row_span);
     } else {
       setTitle('Monitoring Serveurs');
       setUrl('');
@@ -1673,6 +1676,7 @@ export const BeszelModal: React.FC<BeszelModalProps> = ({
       setPassword('');
       setSystemId('all');
       setColSpan(1);
+      setRowSpan(6);
     }
     setTestSuccess(false);
     setTestError(null);
@@ -1728,12 +1732,14 @@ export const BeszelModal: React.FC<BeszelModalProps> = ({
       systemName: selectedSys ? selectedSys.name : systemId === 'all' ? 'Tous les serveurs' : '',
       title: title.trim() || 'Monitoring Beszel',
       col_span: colSpan,
+      row_span: rowSpan,
     };
 
     onSave({
       title: finalConfig.title,
       widget_url: JSON.stringify(finalConfig),
       col_span: colSpan,
+      row_span: rowSpan,
       type: 'beszel',
     });
     onClose();
@@ -1958,6 +1964,32 @@ export const BeszelModal: React.FC<BeszelModalProps> = ({
 
           {/* Largeur en colonnes */}
           <ColumnSpanSelector value={colSpan} onChange={setColSpan} />
+
+          {/* Hauteur du widget */}
+          <div>
+            <label className="block text-xs font-bold text-[var(--color-text-strong)] mb-1.5">
+              Hauteur du widget (Lignes de grille)
+            </label>
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+              {[4, 5, 6, 7, 8, 9, 10].map((h) => (
+                <button
+                  key={h}
+                  type="button"
+                  onClick={() => setRowSpan(h)}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-bold border transition-all ${
+                    rowSpan === h
+                      ? 'border-teal-500 bg-teal-500 text-white shadow-sm ring-2 ring-teal-500/20'
+                      : 'border-[var(--color-border)] bg-black/5 hover:bg-black/10 text-[var(--color-text)]'
+                  }`}
+                >
+                  {h} lig{h > 1 ? 's' : ''}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
+              Recommandé : 6 lignes pour 1 serveur détaillé, 7+ lignes pour multi-serveurs.
+            </p>
+          </div>
         </div>
 
         {/* Footer Buttons */}
