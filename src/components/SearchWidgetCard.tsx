@@ -128,12 +128,13 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
   });
 
   const selectedEngine = enabledEngines.find((e) => e.id === selectedEngineId) || enabledEngines[0] || ALL_SEARCH_ENGINES[0];
+  const [clipboardToast, setClipboardToast] = useState<string | null>(null);
 
-  const handleSearch = (engine: SearchEngine) => {
-    const trimmed = query.trim();
-    if (trimmed) {
+  const handleSearch = (engine: SearchEngine, customQuery?: string) => {
+    const term = (customQuery !== undefined ? customQuery : query).trim();
+    if (term) {
       // Save to recent searches
-      const updated = [trimmed, ...recentSearches.filter((s) => s.toLowerCase() !== trimmed.toLowerCase())].slice(0, 5);
+      const updated = [term, ...recentSearches.filter((s) => s.toLowerCase() !== term.toLowerCase())].slice(0, 8);
       setRecentSearches(updated);
       try {
         localStorage.setItem('portal_search_history', JSON.stringify(updated));
@@ -141,7 +142,13 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
         // ignore
       }
     }
-    executeSearch(engine, trimmed);
+    const { copiedToClipboard } = executeSearch(engine, term);
+    if (copiedToClipboard && !engine.supportsDirectQuery && term) {
+      setClipboardToast(`Texte copié ! Collez-le (Ctrl+V) dans ${engine.name}`);
+      setTimeout(() => {
+        setClipboardToast(null);
+      }, 4000);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -346,6 +353,20 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
               <span>Web</span>
             </button>
           </div>
+
+          {/* Clipboard Notification Banner for Assistants without URL param support */}
+          {clipboardToast && (
+            <div className="flex items-center justify-between gap-1.5 py-1 px-2.5 bg-blue-600 text-white rounded-lg text-[11px] font-bold shadow-md animate-fade-in">
+              <span className="truncate">{clipboardToast}</span>
+              <button
+                type="button"
+                onClick={() => setClipboardToast(null)}
+                className="hover:opacity-75 p-0.5 flex-shrink-0"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Engine Pills Grid */}
@@ -402,7 +423,7 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
                   type="button"
                   onClick={() => {
                     setQuery(term);
-                    handleSearch(selectedEngine);
+                    handleSearch(selectedEngine, term);
                   }}
                   className="py-0.5 px-2 rounded-md bg-slate-200/80 dark:bg-slate-800/50 hover:bg-blue-100 dark:hover:bg-slate-700 border border-slate-300/60 dark:border-slate-700/60 text-[11px] font-semibold text-slate-800 dark:text-slate-300 transition-colors whitespace-nowrap flex-shrink-0"
                   title={`Rechercher "${term}"`}

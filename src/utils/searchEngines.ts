@@ -20,15 +20,15 @@ export interface SearchWidgetConfig {
 export const ALL_SEARCH_ENGINES: SearchEngine[] = [
   // AI Assistants
   {
-    id: 'gemini',
-    name: 'Gemini',
+    id: 'chatgpt',
+    name: 'ChatGPT',
     category: 'ai',
-    searchUrl: 'https://gemini.google.com/app',
-    homeUrl: 'https://gemini.google.com/app',
-    icon: 'Sparkles',
-    badgeColor: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30 hover:bg-blue-500/20',
-    description: 'IA Google Gemini',
-    supportsDirectQuery: false,
+    searchUrl: 'https://chatgpt.com/?q=%s',
+    homeUrl: 'https://chatgpt.com',
+    icon: 'MessageSquare',
+    badgeColor: 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20',
+    description: 'OpenAI ChatGPT',
+    supportsDirectQuery: true,
   },
   {
     id: 'claude',
@@ -53,28 +53,6 @@ export const ALL_SEARCH_ENGINES: SearchEngine[] = [
     supportsDirectQuery: true,
   },
   {
-    id: 'kimi',
-    name: 'Kimi.ai',
-    category: 'ai',
-    searchUrl: 'https://kimi.ai/?q=%s',
-    homeUrl: 'https://kimi.ai',
-    icon: 'Moon',
-    badgeColor: 'bg-teal-500/10 text-teal-800 dark:text-teal-300 border-teal-500/30 hover:bg-teal-500/20',
-    description: 'Kimi AI Assistant',
-    supportsDirectQuery: true,
-  },
-  {
-    id: 'qwen',
-    name: 'Qwen.ai',
-    category: 'ai',
-    searchUrl: 'https://chat.qwen.ai/?q=%s',
-    homeUrl: 'https://chat.qwen.ai',
-    icon: 'Bot',
-    badgeColor: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30 hover:bg-purple-500/20',
-    description: 'Alibaba Qwen AI',
-    supportsDirectQuery: true,
-  },
-  {
     id: 'perplexity',
     name: 'Perplexity',
     category: 'ai',
@@ -84,6 +62,39 @@ export const ALL_SEARCH_ENGINES: SearchEngine[] = [
     badgeColor: 'bg-cyan-500/10 text-cyan-800 dark:text-cyan-300 border-cyan-500/30 hover:bg-cyan-500/20',
     description: 'Moteur de recherche IA',
     supportsDirectQuery: true,
+  },
+  {
+    id: 'gemini',
+    name: 'Gemini',
+    category: 'ai',
+    searchUrl: 'https://gemini.google.com/app',
+    homeUrl: 'https://gemini.google.com/app',
+    icon: 'Sparkles',
+    badgeColor: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30 hover:bg-blue-500/20',
+    description: 'IA Google Gemini (Ctrl+V)',
+    supportsDirectQuery: false,
+  },
+  {
+    id: 'kimi',
+    name: 'Kimi.ai',
+    category: 'ai',
+    searchUrl: 'https://kimi.ai/?q=%s',
+    homeUrl: 'https://kimi.ai',
+    icon: 'Moon',
+    badgeColor: 'bg-teal-500/10 text-teal-800 dark:text-teal-300 border-teal-500/30 hover:bg-teal-500/20',
+    description: 'Kimi AI Assistant (Ctrl+V)',
+    supportsDirectQuery: false,
+  },
+  {
+    id: 'qwen',
+    name: 'Qwen.ai',
+    category: 'ai',
+    searchUrl: 'https://chat.qwen.ai/?q=%s',
+    homeUrl: 'https://chat.qwen.ai',
+    icon: 'Bot',
+    badgeColor: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30 hover:bg-purple-500/20',
+    description: 'Alibaba Qwen AI (Ctrl+V)',
+    supportsDirectQuery: false,
   },
 
   // Web Engines
@@ -171,12 +182,13 @@ export const DEFAULT_SEARCH_CONFIG: SearchWidgetConfig = {
   defaultEngineId: 'google',
   enabledEngineIds: [
     'google',
-    'gemini',
+    'chatgpt',
     'claude',
     'deepseek',
+    'perplexity',
+    'gemini',
     'kimi',
     'qwen',
-    'perplexity',
     'youtube',
     'wikipedia',
     'github',
@@ -204,17 +216,19 @@ export function parseSearchConfig(widgetUrl?: string): SearchWidgetConfig {
   }
 }
 
-export function executeSearch(engine: SearchEngine, query: string) {
+export function executeSearch(engine: SearchEngine, query: string): { copiedToClipboard: boolean } {
   const trimmed = query.trim();
   
   if (!trimmed) {
     window.open(engine.homeUrl, '_blank', 'noopener,noreferrer');
-    return;
+    return { copiedToClipboard: false };
   }
 
-  // Copy query to clipboard for convenience (e.g. if the AI assistant needs paste)
+  let copied = false;
+  // Always copy query to clipboard for all AI assistants (vital for ones without native URL query pre-fill)
   if (navigator.clipboard && engine.category === 'ai') {
     navigator.clipboard.writeText(trimmed).catch(() => {});
+    copied = true;
   }
 
   let finalUrl = engine.searchUrl;
@@ -225,4 +239,5 @@ export function executeSearch(engine: SearchEngine, query: string) {
   }
 
   window.open(finalUrl, '_blank', 'noopener,noreferrer');
+  return { copiedToClipboard: copied };
 }
