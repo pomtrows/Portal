@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Section, LinkItem } from '../types';
 import { searchCities, parseWeatherConfig, type WeatherLocation } from '../utils/weather';
 import { searchAddresses, parseTrafficConfig, calculateRoute, type TrafficLocation, type RouteResult } from '../utils/traffic';
+import { ALL_SEARCH_ENGINES, parseSearchConfig, type SearchWidgetConfig } from '../utils/searchEngines';
 import {
   DEFAULT_STOCK_SYMBOLS,
   MAJOR_INDICES,
@@ -13,6 +14,7 @@ import {
   ALL_STOCK_PRESETS,
   parseStockConfig,
   type StockItemConfig,
+  type StockWidgetConfig,
 } from '../utils/stocks';
 import { Search, MapPin, Navigation, Loader2, Check, Car, Clock, Sparkles, Globe, ChevronLeft, ChevronRight, TrendingUp, Plus, X, ChevronUp, ChevronDown } from 'lucide-react';
 
@@ -1282,7 +1284,8 @@ export const StockModal: React.FC<StockModalProps> = ({
   const displayedPresets = currentGroupPresets.filter((p) => {
     if (!presetSearch.trim()) return true;
     const q = presetSearch.toLowerCase();
-    return p.name.toLowerCase().includes(q) || p.symbol.toLowerCase().includes(q);
+    const name = p.name || '';
+    return name.toLowerCase().includes(q) || p.symbol.toLowerCase().includes(q);
   });
 
   const handleAddAllGroup = (groupPresets: StockItemConfig[]) => {
