@@ -1,7 +1,32 @@
+import {
+  ALL_STOCK_PRESETS,
+  MAJOR_INDICES,
+  TOP_20_CRYPTO,
+  CAC40_CONSTITUENTS,
+  SBF120_EXTRA_CONSTITUENTS,
+  SP500_CONSTITUENTS,
+  NASDAQ_CONSTITUENTS,
+  resolvePresetInfo,
+  type StockMarket,
+} from './stockPresets';
+
+export type { StockMarket };
+export {
+  ALL_STOCK_PRESETS,
+  MAJOR_INDICES,
+  TOP_20_CRYPTO,
+  CAC40_CONSTITUENTS,
+  SBF120_EXTRA_CONSTITUENTS,
+  SP500_CONSTITUENTS,
+  NASDAQ_CONSTITUENTS,
+  resolvePresetInfo,
+};
+
 export interface StockItemConfig {
   symbol: string;
   name?: string;
   category?: 'index' | 'stock' | 'crypto' | 'forex' | 'commodity';
+  market?: StockMarket;
 }
 
 export interface StockWidgetConfig {
@@ -34,46 +59,34 @@ export interface StockQuote {
   updatedAt: string;
 }
 
-export const POPULAR_STOCK_PRESETS: StockItemConfig[] = [
-  // Indices
-  { symbol: '^FCHI', name: 'CAC 40', category: 'index' },
-  { symbol: '^GSPC', name: 'S&P 500', category: 'index' },
-  { symbol: '^IXIC', name: 'Nasdaq', category: 'index' },
-  { symbol: '^GDAXI', name: 'DAX 40', category: 'index' },
-  // Actions FR / EU
-  { symbol: 'TTE.PA', name: 'TotalEnergies', category: 'stock' },
-  { symbol: 'MC.PA', name: 'LVMH', category: 'stock' },
-  { symbol: 'AIR.PA', name: 'Airbus', category: 'stock' },
-  { symbol: 'OR.PA', name: "L'Oréal", category: 'stock' },
-  { symbol: 'BNP.PA', name: 'BNP Paribas', category: 'stock' },
-  { symbol: 'RMS.PA', name: 'Hermès', category: 'stock' },
-  // Actions US
-  { symbol: 'AAPL', name: 'Apple', category: 'stock' },
-  { symbol: 'NVDA', name: 'NVIDIA', category: 'stock' },
-  { symbol: 'MSFT', name: 'Microsoft', category: 'stock' },
-  { symbol: 'GOOGL', name: 'Google', category: 'stock' },
-  { symbol: 'TSLA', name: 'Tesla', category: 'stock' },
-  // Crypto & Devises
-  { symbol: 'BTC-USD', name: 'Bitcoin', category: 'crypto' },
-  { symbol: 'ETH-USD', name: 'Ethereum', category: 'crypto' },
-  { symbol: 'SOL-USD', name: 'Solana', category: 'crypto' },
-  { symbol: 'EURUSD=X', name: 'EUR / USD', category: 'forex' },
-  { symbol: 'GC=F', name: 'Or (Gold)', category: 'commodity' },
-];
+export const POPULAR_STOCK_PRESETS: StockItemConfig[] = ALL_STOCK_PRESETS;
 
 export const DEFAULT_STOCK_SYMBOLS: StockItemConfig[] = [
-  { symbol: '^FCHI', name: 'CAC 40', category: 'index' },
-  { symbol: '^GSPC', name: 'S&P 500', category: 'index' },
-  { symbol: 'AAPL', name: 'Apple', category: 'stock' },
-  { symbol: 'NVDA', name: 'NVIDIA', category: 'stock' },
+  { symbol: '^FCHI', name: 'CAC 40', category: 'index', market: 'cac40' },
+  { symbol: '^GSPC', name: 'S&P 500', category: 'index', market: 'sp500' },
+  { symbol: 'AAPL', name: 'Apple', category: 'stock', market: 'sp500' },
+  { symbol: 'NVDA', name: 'NVIDIA', category: 'stock', market: 'sp500' },
   { symbol: 'BTC-USD', name: 'Bitcoin', category: 'crypto' },
 ];
+
+export function enrichStockItem(item: StockItemConfig): StockItemConfig {
+  const info = resolvePresetInfo(item.symbol);
+  return {
+    symbol: item.symbol,
+    name: item.name || info?.name || item.symbol,
+    category:
+      item.category ||
+      info?.category ||
+      (item.symbol.startsWith('^') ? 'index' : item.symbol.includes('-USD') ? 'crypto' : 'stock'),
+    market: item.market || info?.market,
+  };
+}
 
 export function parseStockConfig(widgetUrl?: string): StockWidgetConfig {
   if (!widgetUrl) {
     return {
       title: 'Bourse & Marchés',
-      symbols: DEFAULT_STOCK_SYMBOLS,
+      symbols: DEFAULT_STOCK_SYMBOLS.map(enrichStockItem),
       viewMode: 'compact',
     };
   }
@@ -81,7 +94,10 @@ export function parseStockConfig(widgetUrl?: string): StockWidgetConfig {
   try {
     const parsed = JSON.parse(widgetUrl);
     if (parsed.symbols && Array.isArray(parsed.symbols) && parsed.symbols.length > 0) {
-      return parsed;
+      return {
+        ...parsed,
+        symbols: parsed.symbols.map(enrichStockItem),
+      };
     }
   } catch {
     // fallback
@@ -89,7 +105,7 @@ export function parseStockConfig(widgetUrl?: string): StockWidgetConfig {
 
   return {
     title: 'Bourse & Marchés',
-    symbols: DEFAULT_STOCK_SYMBOLS,
+    symbols: DEFAULT_STOCK_SYMBOLS.map(enrichStockItem),
     viewMode: 'compact',
   };
 }
@@ -248,20 +264,24 @@ async function fetchFromYahooChart(symbol: string): Promise<StockQuote> {
 
 export async function fetchStockQuotes(symbols: StockItemConfig[]): Promise<Record<string, StockQuote>> {
   const results: Record<string, StockQuote> = {};
+  const BATCH_SIZE = 15;
 
-  const promises = symbols.map(async (item) => {
-    try {
-      const quote = await fetchFromYahooChart(item.symbol);
-      if (item.name) {
-        quote.name = item.name;
+  for (let i = 0; i < symbols.length; i += BATCH_SIZE) {
+    const chunk = symbols.slice(i, i + BATCH_SIZE);
+    const promises = chunk.map(async (item) => {
+      try {
+        const quote = await fetchFromYahooChart(item.symbol);
+        if (item.name) {
+          quote.name = item.name;
+        }
+        results[item.symbol] = quote;
+      } catch (err) {
+        console.warn(`Failed to fetch stock for ${item.symbol}:`, err);
       }
-      results[item.symbol] = quote;
-    } catch (err) {
-      console.warn(`Failed to fetch stock for ${item.symbol}:`, err);
-    }
-  });
+    });
+    await Promise.allSettled(promises);
+  }
 
-  await Promise.allSettled(promises);
   return results;
 }
 

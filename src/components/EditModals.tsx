@@ -2,8 +2,18 @@ import { useState, useEffect } from 'react';
 import type { Section, LinkItem } from '../types';
 import { searchCities, parseWeatherConfig, type WeatherLocation } from '../utils/weather';
 import { searchAddresses, parseTrafficConfig, calculateRoute, type TrafficLocation, type RouteResult } from '../utils/traffic';
-import { ALL_SEARCH_ENGINES, parseSearchConfig, type SearchWidgetConfig } from '../utils/searchEngines';
-import { POPULAR_STOCK_PRESETS, DEFAULT_STOCK_SYMBOLS, parseStockConfig, type StockItemConfig, type StockWidgetConfig } from '../utils/stocks';
+import {
+  DEFAULT_STOCK_SYMBOLS,
+  MAJOR_INDICES,
+  TOP_20_CRYPTO,
+  CAC40_CONSTITUENTS,
+  SBF120_EXTRA_CONSTITUENTS,
+  SP500_CONSTITUENTS,
+  NASDAQ_CONSTITUENTS,
+  ALL_STOCK_PRESETS,
+  parseStockConfig,
+  type StockItemConfig,
+} from '../utils/stocks';
 import { Search, MapPin, Navigation, Loader2, Check, Car, Clock, Sparkles, Globe, ChevronLeft, ChevronRight, TrendingUp, Plus, X, ChevronUp, ChevronDown } from 'lucide-react';
 
 export const ColumnSpanSelector: React.FC<{
@@ -1231,6 +1241,8 @@ export const StockModal: React.FC<StockModalProps> = ({
   const [customName, setCustomName] = useState('');
   const [customCategory, setCustomCategory] = useState<'stock' | 'index' | 'crypto' | 'forex' | 'commodity'>('stock');
   const [colSpan, setColSpan] = useState<number>(1);
+  const [presetGroup, setPresetGroup] = useState<'all' | 'cac40' | 'sbf120' | 'sp500' | 'nasdaq' | 'crypto' | 'index'>('cac40');
+  const [presetSearch, setPresetSearch] = useState('');
 
   useEffect(() => {
     if (initialData) {
@@ -1245,10 +1257,43 @@ export const StockModal: React.FC<StockModalProps> = ({
     }
   }, [initialData, isOpen]);
 
-  const handleAddPreset = (preset: StockItemConfig) => {
-    if (!symbols.some((s) => s.symbol.toUpperCase() === preset.symbol.toUpperCase())) {
+  const handleTogglePreset = (preset: StockItemConfig) => {
+    const isAdded = symbols.some((s) => s.symbol.toUpperCase() === preset.symbol.toUpperCase());
+    if (isAdded) {
+      setSymbols(symbols.filter((s) => s.symbol.toUpperCase() !== preset.symbol.toUpperCase()));
+    } else {
       setSymbols([...symbols, preset]);
     }
+  };
+
+  const getGroupPresets = (group: typeof presetGroup): StockItemConfig[] => {
+    switch (group) {
+      case 'index': return MAJOR_INDICES;
+      case 'cac40': return CAC40_CONSTITUENTS;
+      case 'sbf120': return [...CAC40_CONSTITUENTS, ...SBF120_EXTRA_CONSTITUENTS];
+      case 'sp500': return SP500_CONSTITUENTS;
+      case 'nasdaq': return NASDAQ_CONSTITUENTS;
+      case 'crypto': return TOP_20_CRYPTO;
+      case 'all': return ALL_STOCK_PRESETS;
+    }
+  };
+
+  const currentGroupPresets = getGroupPresets(presetGroup);
+  const displayedPresets = currentGroupPresets.filter((p) => {
+    if (!presetSearch.trim()) return true;
+    const q = presetSearch.toLowerCase();
+    return p.name.toLowerCase().includes(q) || p.symbol.toLowerCase().includes(q);
+  });
+
+  const handleAddAllGroup = (groupPresets: StockItemConfig[]) => {
+    const existing = new Set(symbols.map((s) => s.symbol.toUpperCase()));
+    const toAdd = groupPresets.filter((p) => !existing.has(p.symbol.toUpperCase()));
+    setSymbols([...symbols, ...toAdd]);
+  };
+
+  const handleRemoveAllGroup = (groupPresets: StockItemConfig[]) => {
+    const toRemove = new Set(groupPresets.map((p) => p.symbol.toUpperCase()));
+    setSymbols(symbols.filter((s) => !toRemove.has(s.symbol.toUpperCase())));
   };
 
   const handleAddCustom = (e: React.FormEvent) => {
@@ -1286,14 +1331,19 @@ export const StockModal: React.FC<StockModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-emerald-900/10 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300">
-            <TrendingUp size={20} />
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl w-full max-w-xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-emerald-900/10 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300">
+              <TrendingUp size={20} />
+            </div>
+            <h2 className="text-xl font-bold text-[var(--color-text-strong)]">
+              {initialData ? 'Modifier le widget Bourse' : 'Nouveau widget Bourse & Marchés'}
+            </h2>
           </div>
-          <h2 className="text-xl font-bold text-[var(--color-text-strong)]">
-            {initialData ? 'Modifier le widget Bourse' : 'Nouveau widget Bourse & Marchés'}
-          </h2>
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-200">
+            <X size={18} />
+          </button>
         </div>
 
         {/* Title */}
@@ -1310,32 +1360,100 @@ export const StockModal: React.FC<StockModalProps> = ({
           />
         </div>
 
-        {/* Popular Presets */}
-        <div>
-          <label className="block text-xs font-bold text-[var(--color-text-strong)] mb-1.5">
-            Ajouter des actifs populaires (1 clic)
-          </label>
-          <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 bg-black/5 dark:bg-white/5 rounded-lg border border-[var(--color-border)]">
-            {POPULAR_STOCK_PRESETS.map((preset) => {
+        {/* Categorized Popular Presets */}
+        <div className="space-y-2 p-3 bg-black/5 dark:bg-white/5 rounded-xl border border-[var(--color-border)]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <label className="text-xs font-bold text-[var(--color-text-strong)] flex items-center gap-1.5">
+              <span>Bibliothèque de symboles & indices</span>
+              <span className="text-[10px] font-normal text-slate-500">
+                ({displayedPresets.length} disponibles)
+              </span>
+            </label>
+
+            {/* Quick Bulk Add / Remove Buttons */}
+            <div className="flex items-center gap-1 text-[11px]">
+              <button
+                type="button"
+                onClick={() => handleAddAllGroup(displayedPresets)}
+                className="px-2 py-0.5 rounded bg-[var(--color-primary)] text-white font-bold hover:opacity-90 transition-opacity"
+              >
+                + Tout ajouter ({displayedPresets.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRemoveAllGroup(displayedPresets)}
+                className="px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 text-slate-600 dark:text-slate-300 font-semibold hover:bg-black/20 transition-colors"
+              >
+                Retirer
+              </button>
+            </div>
+          </div>
+
+          {/* Preset Group Tabs */}
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-0.5 text-xs">
+            {[
+              { key: 'cac40', label: 'CAC 40 (40)' },
+              { key: 'sbf120', label: 'SBF 120 (120)' },
+              { key: 'sp500', label: 'S&P 500' },
+              { key: 'nasdaq', label: 'Nasdaq' },
+              { key: 'crypto', label: 'Crypto (Top 20)' },
+              { key: 'index', label: 'Indices' },
+              { key: 'all', label: 'Tous' },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setPresetGroup(tab.key as any)}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  presetGroup === tab.key
+                    ? 'bg-[var(--color-primary)] text-white shadow-xs'
+                    : 'bg-black/5 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-black/10'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Preset search input */}
+          <div className="relative">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={presetSearch}
+              onChange={(e) => setPresetSearch(e.target.value)}
+              placeholder="Rechercher par nom ou symbole (ex: Total, Apple, BTC)..."
+              className="w-full pl-8 pr-3 py-1 bg-[var(--color-background)] border border-[var(--color-border)] rounded-md text-xs text-[var(--color-text-strong)] focus:outline-none focus:border-[var(--color-primary)]"
+            />
+          </div>
+
+          {/* Presets Chips List */}
+          <div className="flex flex-wrap gap-1 max-h-40 overflow-y-auto p-1.5 bg-[var(--color-background)] rounded-lg border border-[var(--color-border)]">
+            {displayedPresets.map((preset) => {
               const isAdded = symbols.some((s) => s.symbol.toUpperCase() === preset.symbol.toUpperCase());
               return (
                 <button
                   key={preset.symbol}
                   type="button"
-                  disabled={isAdded}
-                  onClick={() => handleAddPreset(preset)}
-                  className={`px-2 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${
+                  onClick={() => handleTogglePreset(preset)}
+                  className={`px-2 py-1 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
                     isAdded
-                      ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 opacity-60 cursor-default'
-                      : 'bg-[var(--color-surface)] hover:bg-[var(--color-primary)] hover:text-white border border-[var(--color-border)] text-[var(--color-text-strong)] shadow-xs'
+                      ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/40 shadow-xs'
+                      : 'bg-black/5 dark:bg-white/5 hover:bg-[var(--color-primary)] hover:text-white border border-[var(--color-border)] text-slate-800 dark:text-slate-200'
                   }`}
+                  title={isAdded ? 'Cliquer pour retirer du widget' : 'Cliquer pour ajouter au widget'}
                 >
-                  <span>{preset.name}</span>
-                  <span className="text-[10px] opacity-70">({preset.symbol})</span>
-                  {isAdded ? <Check size={12} /> : <Plus size={12} />}
+                  <span className="truncate max-w-[120px]">{preset.name}</span>
+                  <span className="text-[9px] opacity-70">({preset.symbol})</span>
+                  {isAdded ? <Check size={11} className="text-emerald-700 dark:text-emerald-300 flex-shrink-0" /> : <Plus size={11} className="opacity-60 flex-shrink-0" />}
                 </button>
               );
             })}
+            {displayedPresets.length === 0 && (
+              <div className="w-full py-4 text-center text-xs text-slate-400 italic">
+                Aucun symbole trouvé pour &quot;{presetSearch}&quot;.
+              </div>
+            )}
           </div>
         </div>
 

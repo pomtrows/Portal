@@ -356,7 +356,8 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
   const [quotes, setQuotes] = useState<Record<string, StockQuote>>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'index' | 'stock' | 'crypto'>('all');
+  const [marketFilter, setMarketFilter] = useState<'all' | 'cac40' | 'sbf120' | 'sp500' | 'nasdaq'>('all');
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -396,16 +397,35 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
     };
   }, [loadData]);
 
-  // Categories available in the configured symbols
-  const categories = useMemo(() => [
-    'all',
-    ...Array.from(new Set(config.symbols.map((s) => s.category).filter(Boolean)))
-  ], [config.symbols]);
+  // Counts of available types
+  const hasIndices = useMemo(() => config.symbols.some((s) => s.category === 'index'), [config.symbols]);
+  const hasStocks = useMemo(() => config.symbols.some((s) => s.category === 'stock'), [config.symbols]);
+  const hasCrypto = useMemo(() => config.symbols.some((s) => s.category === 'crypto'), [config.symbols]);
 
-  const filteredSymbols = useMemo(() => config.symbols.filter((s) => {
-    if (activeCategory === 'all') return true;
-    return s.category === activeCategory;
-  }), [config.symbols, activeCategory]);
+  // Counts of stock markets
+  const hasCac40 = useMemo(() => config.symbols.some((s) => s.category === 'stock' && s.market === 'cac40'), [config.symbols]);
+  const hasSbf120 = useMemo(() => config.symbols.some((s) => s.category === 'stock' && (s.market === 'sbf120' || s.market === 'cac40')), [config.symbols]);
+  const hasSp500 = useMemo(() => config.symbols.some((s) => s.category === 'stock' && s.market === 'sp500'), [config.symbols]);
+  const hasNasdaq = useMemo(() => config.symbols.some((s) => s.category === 'stock' && s.market === 'nasdaq'), [config.symbols]);
+
+  const filteredSymbols = useMemo(() => {
+    return config.symbols.filter((s) => {
+      // 1. Filter by main type
+      if (typeFilter === 'index' && s.category !== 'index') return false;
+      if (typeFilter === 'crypto' && s.category !== 'crypto') return false;
+      if (typeFilter === 'stock' && s.category !== 'stock') return false;
+
+      // 2. Filter actions by index/market
+      if (s.category === 'stock' && marketFilter !== 'all') {
+        if (marketFilter === 'cac40' && s.market !== 'cac40') return false;
+        if (marketFilter === 'sbf120' && s.market !== 'sbf120' && s.market !== 'cac40') return false;
+        if (marketFilter === 'sp500' && s.market !== 'sp500') return false;
+        if (marketFilter === 'nasdaq' && s.market !== 'nasdaq') return false;
+      }
+
+      return true;
+    });
+  }, [config.symbols, typeFilter, marketFilter]);
 
   // Active selected item for the top chart (defaults to the first item)
   const activeSelectedSymbol = selectedSymbol && config.symbols.some((s) => s.symbol === selectedSymbol)
@@ -414,18 +434,6 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
 
   const activeSelectedQuote = quotes[activeSelectedSymbol];
   const activeSelectedItem = config.symbols.find((s) => s.symbol === activeSelectedSymbol);
-
-  const getCategoryLabel = (cat: string) => {
-    switch (cat) {
-      case 'all': return 'Tous';
-      case 'index': return 'Indices';
-      case 'stock': return 'Actions';
-      case 'crypto': return 'Crypto';
-      case 'forex': return 'Devises';
-      case 'commodity': return 'Matières';
-      default: return cat;
-    }
-  };
 
   return (
     <div
@@ -436,7 +444,7 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
       }`}
     >
       {/* Widget Header */}
-      <div className="flex items-center justify-between mb-2 pb-1 border-b border-[var(--color-border)]">
+      <div className="flex items-center justify-between mb-1.5 pb-1 border-b border-[var(--color-border)]">
         <div
           className={`flex items-center gap-1.5 min-w-0 flex-1 ${isEditMode ? 'cursor-grab active:cursor-grabbing select-none' : ''}`}
           {...(isEditMode ? { ...attributes, ...listeners } : {})}
@@ -553,22 +561,148 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
         <StockEvolutionChart quote={activeSelectedQuote} item={activeSelectedItem} />
       )}
 
-      {/* Category Pills Filter (if multiple categories) */}
-      {categories.length > 2 && (
-        <div className="flex items-center gap-1 mb-2 overflow-x-auto scrollbar-none pb-0.5">
-          {categories.map((cat) => (
+      {/* Filter Row 1: Type (Indices, Actions, Crypto) */}
+      {(hasIndices || hasStocks || hasCrypto) && (
+        <div className="space-y-1 mb-1.5">
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-0.5">
             <button
-              key={cat}
-              onClick={() => setActiveCategory(cat || 'all')}
-              className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeCategory === cat
+              onClick={() => {
+                setTypeFilter('all');
+                setMarketFilter('all');
+              }}
+              className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all whitespace-nowrap cursor-pointer ${
+                typeFilter === 'all' && marketFilter === 'all'
                   ? 'bg-[var(--color-primary)] text-white shadow-xs'
                   : 'bg-black/5 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-black/10'
               }`}
             >
-              {getCategoryLabel(cat || 'all')}
+              Tous ({config.symbols.length})
             </button>
-          ))}
+            {hasIndices && (
+              <button
+                onClick={() => {
+                  setTypeFilter('index');
+                  setMarketFilter('all');
+                }}
+                className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  typeFilter === 'index'
+                    ? 'bg-[var(--color-primary)] text-white shadow-xs'
+                    : 'bg-black/5 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-black/10'
+                }`}
+              >
+                Indices
+              </button>
+            )}
+            {hasStocks && (
+              <button
+                onClick={() => setTypeFilter('stock')}
+                className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  typeFilter === 'stock'
+                    ? 'bg-[var(--color-primary)] text-white shadow-xs'
+                    : 'bg-black/5 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-black/10'
+                }`}
+              >
+                Actions
+              </button>
+            )}
+            {hasCrypto && (
+              <button
+                onClick={() => {
+                  setTypeFilter('crypto');
+                  setMarketFilter('all');
+                }}
+                className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  typeFilter === 'crypto'
+                    ? 'bg-[var(--color-primary)] text-white shadow-xs'
+                    : 'bg-black/5 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-black/10'
+                }`}
+              >
+                Crypto
+              </button>
+            )}
+          </div>
+
+          {/* Filter Row 2: Sub-filter by Index (CAC 40, SBF 120, S&P 500, Nasdaq) when actions are present */}
+          {hasStocks && (typeFilter === 'stock' || typeFilter === 'all') && (hasCac40 || hasSbf120 || hasSp500 || hasNasdaq) && (
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none pb-0.5 pl-0.5 text-[9.5px]">
+              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mr-0.5 select-none">
+                Indice :
+              </span>
+              <button
+                onClick={() => {
+                  setTypeFilter('stock');
+                  setMarketFilter('all');
+                }}
+                className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  typeFilter === 'stock' && marketFilter === 'all'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-black/5 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:bg-black/10'
+                }`}
+              >
+                Toutes
+              </button>
+              {hasCac40 && (
+                <button
+                  onClick={() => {
+                    setTypeFilter('stock');
+                    setMarketFilter('cac40');
+                  }}
+                  className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold transition-all whitespace-nowrap cursor-pointer ${
+                    marketFilter === 'cac40'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-black/5 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:bg-black/10'
+                  }`}
+                >
+                  CAC 40
+                </button>
+              )}
+              {hasSbf120 && (
+                <button
+                  onClick={() => {
+                    setTypeFilter('stock');
+                    setMarketFilter('sbf120');
+                  }}
+                  className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold transition-all whitespace-nowrap cursor-pointer ${
+                    marketFilter === 'sbf120'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-black/5 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:bg-black/10'
+                  }`}
+                >
+                  SBF 120
+                </button>
+              )}
+              {hasSp500 && (
+                <button
+                  onClick={() => {
+                    setTypeFilter('stock');
+                    setMarketFilter('sp500');
+                  }}
+                  className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold transition-all whitespace-nowrap cursor-pointer ${
+                    marketFilter === 'sp500'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-black/5 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:bg-black/10'
+                  }`}
+                >
+                  S&P 500
+                </button>
+              )}
+              {hasNasdaq && (
+                <button
+                  onClick={() => {
+                    setTypeFilter('stock');
+                    setMarketFilter('nasdaq');
+                  }}
+                  className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold transition-all whitespace-nowrap cursor-pointer ${
+                    marketFilter === 'nasdaq'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-black/5 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:bg-black/10'
+                  }`}
+                >
+                  Nasdaq
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
