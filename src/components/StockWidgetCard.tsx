@@ -279,15 +279,16 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
 
       {/* Widget Body */}
       <div className="space-y-1.5 flex-1 overflow-y-auto pr-0.5">
-        {loading && Object.keys(quotes).length === 0 && (
+        {loading && Object.keys(quotes).length === 0 ? (
           <div className="space-y-1.5 py-1 animate-pulse">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-12 bg-slate-200 dark:bg-slate-800 rounded-xl"></div>
+            {filteredSymbols.map((item) => (
+              <div
+                key={item.symbol}
+                className="h-12 bg-slate-200/80 dark:bg-slate-800/80 rounded-xl border border-slate-200/40 dark:border-slate-700/40"
+              ></div>
             ))}
           </div>
-        )}
-
-        {error && Object.keys(quotes).length === 0 && (
+        ) : error && Object.keys(quotes).length === 0 ? (
           <div className="py-4 px-3 text-center text-xs text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800/50 rounded-xl flex flex-col items-center gap-1.5">
             <AlertCircle size={18} className="text-red-600 dark:text-red-400" />
             <span className="font-medium">{error}</span>
@@ -298,88 +299,90 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
               Réessayer
             </button>
           </div>
-        )}
+        ) : (
+          <>
+            {filteredSymbols.map((item) => {
+              const quote = quotes[item.symbol];
+              const isPositive = quote ? quote.changePercent > 0 : false;
+              const isNegative = quote ? quote.changePercent < 0 : false;
 
-        {filteredSymbols.map((item) => {
-          const quote = quotes[item.symbol];
-          const isPositive = quote ? quote.changePercent > 0 : false;
-          const isNegative = quote ? quote.changePercent < 0 : false;
-
-          return (
-            <a
-              key={item.symbol}
-              href={getStockDetailsUrl(item.symbol)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-between p-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/50 hover:bg-black/5 dark:hover:bg-white/10 border border-slate-200/80 dark:border-slate-700/50 transition-all group"
-            >
-              {/* Asset Name & Ticker */}
-              <div className="min-w-0 flex-1 pr-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-xs text-slate-950 dark:text-white truncate group-hover:text-[var(--color-primary)] transition-colors">
-                    {item.name || quote?.name || item.symbol}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase">
-                    {item.symbol}
-                  </span>
-                </div>
-                {item.category && (
-                  <div className="text-[9px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                    {getCategoryLabel(item.category)}
-                  </div>
-                )}
-              </div>
-
-              {/* Price & Variation Badge */}
-              <div className="text-right flex items-center gap-2 flex-shrink-0">
-                <div>
-                  <div className="text-xs font-black text-slate-950 dark:text-white tracking-tight">
-                    {quote ? formatPrice(quote.price, quote.currency) : '--'}
-                  </div>
-                  {quote?.previousClose !== undefined && (
-                    <div className="text-[9px] text-slate-600 dark:text-slate-400">
-                      Préc: {formatPrice(quote.previousClose, quote.currency)}
-                    </div>
-                  )}
-                </div>
-
-                {/* Change % Badge */}
-                <div
-                  className={`min-w-[62px] px-1.5 py-1 rounded-lg text-right font-extrabold text-[11px] flex items-center justify-end gap-0.5 ${
-                    isPositive
-                      ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30'
-                      : isNegative
-                      ? 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30'
-                      : 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border border-slate-500/30'
-                  }`}
+              return (
+                <a
+                  key={item.symbol}
+                  href={getStockDetailsUrl(item.symbol)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between p-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/50 hover:bg-black/5 dark:hover:bg-white/10 border border-slate-200/80 dark:border-slate-700/50 transition-all group"
                 >
-                  {isPositive ? (
-                    <TrendingUp size={11} className="text-emerald-700 dark:text-emerald-400" />
-                  ) : isNegative ? (
-                    <TrendingDown size={11} className="text-red-600 dark:text-red-400" />
-                  ) : (
-                    <Minus size={11} className="text-slate-500" />
-                  )}
-                  <span>
-                    {quote
-                      ? `${quote.changePercent >= 0 ? '+' : ''}${quote.changePercent.toFixed(2)}%`
-                      : '0.00%'}
-                  </span>
-                </div>
+                  {/* Asset Name & Ticker */}
+                  <div className="min-w-0 flex-1 pr-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-extrabold text-xs text-slate-950 dark:text-white truncate group-hover:text-[var(--color-primary)] transition-colors">
+                        {item.name || quote?.name || item.symbol}
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase">
+                        {item.symbol}
+                      </span>
+                    </div>
+                    {item.category && (
+                      <div className="text-[9px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                        {getCategoryLabel(item.category)}
+                      </div>
+                    )}
+                  </div>
 
-                <ExternalLink
-                  size={12}
-                  className="text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 -mr-0.5"
-                />
+                  {/* Price & Variation Badge */}
+                  <div className="text-right flex items-center gap-2 flex-shrink-0">
+                    <div>
+                      <div className="text-xs font-black text-slate-950 dark:text-white tracking-tight">
+                        {quote ? formatPrice(quote.price, quote.currency) : '--'}
+                      </div>
+                      {quote?.previousClose !== undefined && (
+                        <div className="text-[9px] text-slate-600 dark:text-slate-400">
+                          Préc: {formatPrice(quote.previousClose, quote.currency)}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Change % Badge */}
+                    <div
+                      className={`min-w-[62px] px-1.5 py-1 rounded-lg text-right font-extrabold text-[11px] flex items-center justify-end gap-0.5 ${
+                        isPositive
+                          ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30'
+                          : isNegative
+                          ? 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30'
+                          : 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border border-slate-500/30'
+                      }`}
+                    >
+                      {isPositive ? (
+                        <TrendingUp size={11} className="text-emerald-700 dark:text-emerald-400" />
+                      ) : isNegative ? (
+                        <TrendingDown size={11} className="text-red-600 dark:text-red-400" />
+                      ) : (
+                        <Minus size={11} className="text-slate-500" />
+                      )}
+                      <span>
+                        {quote
+                          ? `${quote.changePercent >= 0 ? '+' : ''}${quote.changePercent.toFixed(2)}%`
+                          : '0.00%'}
+                      </span>
+                    </div>
+
+                    <ExternalLink
+                      size={12}
+                      className="text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 -mr-0.5"
+                    />
+                  </div>
+                </a>
+              );
+            })}
+
+            {filteredSymbols.length === 0 && (
+              <div className="py-6 text-center text-xs text-slate-500">
+                Aucun symbole dans cette catégorie.
               </div>
-            </a>
-          );
-        })}
-
-        {filteredSymbols.length === 0 && (
-          <div className="py-6 text-center text-xs text-slate-500">
-            Aucun symbole dans cette catégorie.
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>

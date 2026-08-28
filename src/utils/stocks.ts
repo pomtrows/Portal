@@ -106,18 +106,16 @@ export function formatPrice(price: number, currency: string = 'USD'): string {
 async function fetchFromYahooChart(symbol: string): Promise<StockQuote> {
   const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=15m&range=1d`;
   
-  // Try direct fetch and proxies
+  // Fast CORS proxies and direct fetch
   const fetchUrls = [
+    `https://cors-get-proxy.sirjosh.workers.dev/?url=${encodeURIComponent(targetUrl)}`,
+    `https://proxy.cors.sh/${targetUrl}`,
     targetUrl,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`,
-    `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`,
   ];
-
-  let lastError: Error | null = null;
 
   for (const url of fetchUrls) {
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(4500) });
+      const res = await fetch(url, { signal: AbortSignal.timeout(3500) });
       if (!res.ok) continue;
       const data = await res.json();
       const result = data?.chart?.result?.[0];
@@ -151,12 +149,40 @@ async function fetchFromYahooChart(symbol: string): Promise<StockQuote> {
         sparkline,
         updatedAt: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
       };
-    } catch (err: any) {
-      lastError = err;
+    } catch {
+      // try next proxy
     }
   }
 
-  throw lastError || new Error(`Impossible de récupérer les données pour ${symbol}`);
+  // Fallback for crypto (e.g. BTC-USD -> BTCUSDT on Binance public API)
+  if (symbol.endsWith('-USD')) {
+    try {
+      const binanceSym = symbol.replace('-USD', 'USDT').toUpperCase();
+      const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${binanceSym}`, {
+        signal: AbortSignal.timeout(2500),
+      });
+      if (res.ok) {
+        const bData = await res.json();
+        const price = parseFloat(bData.lastPrice);
+        const changePercent = parseFloat(bData.priceChangePercent);
+        const change = parseFloat(bData.priceChange);
+        const foundPreset = POPULAR_STOCK_PRESETS.find((p) => p.symbol.toUpperCase() === symbol.toUpperCase());
+        return {
+          symbol,
+          name: foundPreset?.name || symbol,
+          price,
+          currency: 'USD',
+          change,
+          changePercent,
+          updatedAt: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+        };
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  throw new Error(`Impossible de récupérer les cours pour ${symbol}`);
 }
 
 export async function fetchStockQuotes(symbols: StockItemConfig[]): Promise<Record<string, StockQuote>> {

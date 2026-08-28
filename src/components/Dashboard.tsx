@@ -271,7 +271,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
           section.type === 'rss' ||
           section.type === 'weather' ||
           section.type === 'traffic' ||
-          section.type === 'search'
+          section.type === 'search' ||
+          section.type === 'stocks'
         ) {
           const matches =
             section.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -296,6 +297,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             section.type === 'weather' ||
             section.type === 'traffic' ||
             section.type === 'search' ||
+            section.type === 'stocks' ||
             section.items.length > 0 ||
             isEditMode)
       );
