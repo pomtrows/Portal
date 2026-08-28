@@ -26,6 +26,7 @@ export interface UserPreferences {
   sectionPadding?: SpacingLevel;
   linkSpacing?: SpacingLevel;
   linkPadding?: SpacingLevel;
+  iconSize?: SpacingLevel;
   schedule?: ProfileSchedule;
   pageColumns?: Record<string, number>;
   gridLayouts?: Record<string, GridItemGeometry>;
@@ -86,6 +87,12 @@ function getStoredLinkPadding(): SpacingLevel {
   return 'md';
 }
 
+function getStoredIconSize(): SpacingLevel {
+  const saved = localStorage.getItem('portal-icon-size');
+  if (saved === 'xs' || saved === 'sm' || saved === 'md' || saved === 'lg' || saved === 'xl') return saved;
+  return 'md';
+}
+
 function getStoredSchedule(): ProfileSchedule {
   try {
     const saved = localStorage.getItem('portal-profile-schedule');
@@ -125,6 +132,7 @@ let globalFontSizeRss: FontSize = getStoredFontSizeRss();
 let globalSectionPadding: SpacingLevel = getStoredSectionPadding();
 let globalLinkSpacing: SpacingLevel = getStoredLinkSpacing();
 let globalLinkPadding: SpacingLevel = getStoredLinkPadding();
+let globalIconSize: SpacingLevel = getStoredIconSize();
 let globalSchedule: ProfileSchedule = getStoredSchedule();
 
 // Debounce timer for saving to Supabase user_metadata
@@ -216,6 +224,12 @@ export function hydratePreferencesFromCloud(metadata: Record<string, unknown> | 
     hasChanged = true;
   }
 
+  if (prefs.iconSize && prefs.iconSize !== globalIconSize) {
+    globalIconSize = prefs.iconSize;
+    localStorage.setItem('portal-icon-size', prefs.iconSize);
+    hasChanged = true;
+  }
+
   if (prefs.schedule) {
     globalSchedule = prefs.schedule;
     localStorage.setItem('portal-profile-schedule', JSON.stringify(prefs.schedule));
@@ -278,6 +292,7 @@ export function usePreferences() {
   const [sectionPadding, setSectionPaddingState] = useState<SpacingLevel>(globalSectionPadding);
   const [linkSpacing, setLinkSpacingState] = useState<SpacingLevel>(globalLinkSpacing);
   const [linkPadding, setLinkPaddingState] = useState<SpacingLevel>(globalLinkPadding);
+  const [iconSize, setIconSizeState] = useState<SpacingLevel>(globalIconSize);
   const [schedule, setScheduleState] = useState<ProfileSchedule>(globalSchedule);
   const [gridLayouts, setGridLayoutsState] = useState<Record<string, GridItemGeometry>>(globalGridLayouts);
 
@@ -289,6 +304,7 @@ export function usePreferences() {
       setSectionPaddingState(globalSectionPadding);
       setLinkSpacingState(globalLinkSpacing);
       setLinkPaddingState(globalLinkPadding);
+      setIconSizeState(globalIconSize);
       setScheduleState(globalSchedule);
       setGridLayoutsState(globalGridLayouts);
     };
@@ -302,6 +318,7 @@ export function usePreferences() {
         e.key === 'portal-section-padding' ||
         e.key === 'portal-link-spacing' ||
         e.key === 'portal-link-padding' ||
+        e.key === 'portal-icon-size' ||
         e.key === 'portal-profile-schedule' ||
         e.key === 'portal-grid-layouts'
       ) {
@@ -311,6 +328,7 @@ export function usePreferences() {
         globalSectionPadding = getStoredSectionPadding();
         globalLinkSpacing = getStoredLinkSpacing();
         globalLinkPadding = getStoredLinkPadding();
+        globalIconSize = getStoredIconSize();
         globalSchedule = getStoredSchedule();
         globalGridLayouts = getStoredGridLayouts();
         LISTENERS.forEach((l) => l());
@@ -372,6 +390,14 @@ export function usePreferences() {
     syncPreferenceToCloud({ linkPadding: padding });
   };
 
+  const setIconSize = (size: SpacingLevel) => {
+    globalIconSize = size;
+    localStorage.setItem('portal-icon-size', size);
+    setIconSizeState(size);
+    LISTENERS.forEach((l) => l());
+    syncPreferenceToCloud({ iconSize: size });
+  };
+
   const setSchedule = (newSchedule: ProfileSchedule) => {
     globalSchedule = newSchedule;
     localStorage.setItem('portal-profile-schedule', JSON.stringify(newSchedule));
@@ -415,6 +441,8 @@ export function usePreferences() {
     setLinkSpacing,
     linkPadding,
     setLinkPadding,
+    iconSize,
+    setIconSize,
     schedule,
     setSchedule,
     gridLayouts,

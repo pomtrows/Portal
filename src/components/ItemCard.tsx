@@ -15,7 +15,7 @@ interface ItemCardProps {
 }
 
 export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, onDelete }) => {
-  const { fontSizeLinks, linkPadding } = usePreferences();
+  const { fontSizeLinks, linkPadding, iconSize } = usePreferences();
   const {
     attributes,
     listeners,
@@ -57,6 +57,26 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, on
     }
   };
 
+  const getIconContainerClass = () => {
+    switch (iconSize) {
+      case 'xs': return 'w-6 h-6 sm:w-7 sm:h-7 rounded-md';
+      case 'sm': return 'w-7 h-7 sm:w-8 sm:h-8 rounded-md';
+      case 'lg': return 'w-9 h-9 sm:w-10 sm:h-10 rounded-xl';
+      case 'xl': return 'w-10 h-10 sm:w-11 sm:h-11 rounded-xl';
+      default: return 'w-8 h-8 sm:w-9 sm:h-9 rounded-lg';
+    }
+  };
+
+  const getIconInnerClass = () => {
+    switch (iconSize) {
+      case 'xs': return 'w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-sm';
+      case 'sm': return 'w-4 h-4 sm:w-5 sm:h-5 rounded';
+      case 'lg': return 'w-6 h-6 sm:w-7 sm:h-7 rounded-md';
+      case 'xl': return 'w-7 h-7 sm:w-8 sm:h-8 rounded-lg';
+      default: return 'w-5 h-5 sm:w-6 sm:h-6 rounded-md';
+    }
+  };
+
   return (
     <div ref={setNodeRef} style={style} className={"group relative w-full min-w-0 " + (isDragging ? 'z-50' : '')}>
       <a
@@ -79,9 +99,9 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, on
               <GripVertical size={15} />
             </div>
           )}
-          <div className="w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0 flex items-center justify-center rounded-lg bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-primary)] overflow-hidden">
+          <div className={`${getIconContainerClass()} flex-shrink-0 flex items-center justify-center bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-primary)] overflow-hidden`}>
             <Suspense fallback={<div className="w-4 h-4 animate-pulse bg-white/20 rounded-full" />}>
-              <LazyDynamicIcon name={item.icon} className="w-5 h-5 sm:w-6 sm:h-6 rounded-md" />
+              <LazyDynamicIcon name={item.icon} className={getIconInnerClass()} />
             </Suspense>
           </div>
           <div className="flex-1 min-w-0">
