@@ -4,6 +4,7 @@ import { Dashboard } from './components/Dashboard';
 import { SectionModal, ItemModal, RssModal, WeatherModal, TrafficModal, SearchModal, StockModal, BeszelModal } from './components/EditModals';
 import { AddElementModal } from './components/AddElementModal';
 import { SettingsModal } from './components/SettingsModal';
+import { PwaInstallPrompt } from './components/PwaInstallPrompt';
 import { MobileMenu } from './components/MobileMenu';
 import { Auth } from './components/Auth';
 import { AccountModal } from './components/AccountModal';
@@ -530,7 +531,7 @@ function App() {
 
     if (editingSearchSection) {
       // Update
-      const col_span = sectionData.col_span || editingSearchSection.col_span || 1;
+      const col_span = sectionData.col_span || editingSearchSection.col_span || 2;
       const updatedSection: Section = {
         ...editingSearchSection,
         title: sectionData.title || editingSearchSection.title,
@@ -550,7 +551,7 @@ function App() {
     } else {
       // Create
       const newId = `search-${Date.now()}`;
-      const col_span = sectionData.col_span || 1;
+      const col_span = sectionData.col_span || 2;
       const newSection: Section = {
         id: newId,
         page_id: activePageId,
@@ -1116,6 +1117,8 @@ function App() {
         onSave={handleSaveItem}
         initialData={editingItem?.item}
       />
+
+      <PwaInstallPrompt />
     </div>
   );
 }

@@ -215,20 +215,20 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
                 >
                   <button
                     type="button"
-                    onClick={() => onUpdateSpan(section.id, Math.max(1, (section.col_span || 1) - 1))}
-                    disabled={(section.col_span || 1) <= 1}
+                    onClick={() => onUpdateSpan(section.id, Math.max(1, (section.col_span || 2) - 1))}
+                    disabled={(section.col_span || 2) <= 1}
                     className="px-1 hover:text-[var(--color-primary)] disabled:opacity-25 transition-colors"
                     title="Réduire d'une colonne"
                   >
                     -
                   </button>
                   <span className="text-[11px] select-none font-semibold px-0.5">
-                    {section.col_span || 1} col{(section.col_span || 1) > 1 ? 's' : ''}
+                    {section.col_span || 2} col{(section.col_span || 2) > 1 ? 's' : ''}
                   </span>
                   <button
                     type="button"
-                    onClick={() => onUpdateSpan(section.id, Math.min(maxAllowedSpan, (section.col_span || 1) + 1))}
-                    disabled={(section.col_span || 1) >= maxAllowedSpan}
+                    onClick={() => onUpdateSpan(section.id, Math.min(maxAllowedSpan, (section.col_span || 2) + 1))}
+                    disabled={(section.col_span || 2) >= maxAllowedSpan}
                     className="px-1 hover:text-[var(--color-primary)] disabled:opacity-25 transition-colors"
                     title="Étendre d'une colonne"
                   >
@@ -407,13 +407,13 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
         </div>
 
         {/* Recent Searches (Horizontal Scrollable Strip) */}
-        {recentSearches.length > 0 && (
-          <div className="pt-1.5 border-t border-slate-200 dark:border-slate-700/60 flex-shrink-0 space-y-0.5">
-            <div className="flex items-center justify-between text-[10px] font-bold text-slate-700 dark:text-slate-400 px-0.5">
-              <span className="flex items-center gap-1">
-                <History size={11} />
-                <span>Recherches récentes</span>
-              </span>
+        <div className="pt-1.5 border-t border-slate-200 dark:border-slate-700/60 flex-shrink-0 space-y-0.5">
+          <div className="flex items-center justify-between text-[10px] font-bold text-slate-700 dark:text-slate-400 px-0.5">
+            <span className="flex items-center gap-1">
+              <History size={11} />
+              <span>Recherches récentes</span>
+            </span>
+            {recentSearches.length > 0 && (
               <button
                 type="button"
                 onClick={handleClearHistory}
@@ -421,9 +421,11 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
               >
                 Effacer
               </button>
-            </div>
-            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 pr-0.5">
-              {recentSearches.map((term, idx) => (
+            )}
+          </div>
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 pr-0.5 min-h-[26px]">
+            {recentSearches.length > 0 ? (
+              recentSearches.map((term, idx) => (
                 <button
                   key={idx}
                   type="button"
@@ -436,10 +438,14 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
                 >
                   {term}
                 </button>
-              ))}
-            </div>
+              ))
+            ) : (
+              <span className="text-[11px] italic text-slate-400 dark:text-slate-500 py-0.5 px-0.5 select-none">
+                Aucune recherche récente
+              </span>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
