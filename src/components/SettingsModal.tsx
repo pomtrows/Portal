@@ -106,109 +106,109 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Completely transparent backdrop to allow instant live preview without dimming or blur */}
       <div className="fixed inset-0 -z-10" onClick={onClose} />
-      <div className="w-full max-w-2xl bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] relative z-10">
+      <div className="w-full max-w-2xl bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] relative z-10">
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface)]">
+        <div className="px-5 py-3 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface)]">
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-blue-500/10 text-[var(--color-primary)]">
-              <Sliders size={20} />
+            <div className="p-1.5 rounded-lg bg-blue-500/10 text-[var(--color-primary)]">
+              <Sliders size={18} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-[var(--color-text-strong)]">Paramètres du Portail</h2>
-              <p className="text-xs text-[var(--color-text-muted)]">Personnalisez votre affichage et vos automatismes</p>
+              <h2 className="text-base font-bold text-[var(--color-text-strong)] leading-tight">Paramètres du Portail</h2>
+              <p className="text-[11px] text-[var(--color-text-muted)] leading-tight">Personnalisez votre affichage et vos automatismes</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] hover:bg-black/10 rounded-lg transition-colors"
+            className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] hover:bg-black/10 rounded-lg transition-colors"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-[var(--color-border)] bg-black/5 dark:bg-black/20 px-4 pt-2 gap-1 overflow-x-auto scrollbar-none">
+        <div className="flex border-b border-[var(--color-border)] bg-black/5 dark:bg-black/20 px-4 pt-1.5 gap-1 overflow-x-auto scrollbar-none">
           <button
             onClick={() => setActiveTab('theme')}
-            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
               activeTab === 'theme'
                 ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-surface)] shadow-xs'
                 : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'
             }`}
           >
-            <Palette size={15} />
+            <Palette size={14} />
             <span>Style & Thème</span>
           </button>
           <button
             onClick={() => setActiveTab('spacing')}
-            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
               activeTab === 'spacing'
                 ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-surface)] shadow-xs'
                 : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'
             }`}
           >
-            <LayoutGrid size={15} />
+            <LayoutGrid size={14} />
             <span>Espacements & Marges</span>
           </button>
           <button
             onClick={() => setActiveTab('fonts')}
-            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
               activeTab === 'fonts'
                 ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-surface)] shadow-xs'
                 : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'
             }`}
           >
-            <Type size={15} />
+            <Type size={14} />
             <span>Polices</span>
           </button>
           <button
             onClick={() => setActiveTab('schedule')}
-            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
               activeTab === 'schedule'
                 ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-surface)] shadow-xs'
                 : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'
             }`}
           >
-            <Clock size={15} />
+            <Clock size={14} />
             <span>Planning Pro/Perso</span>
           </button>
         </div>
 
         {/* Tab Content */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+        <div className="p-4 sm:p-4.5 overflow-y-auto space-y-4 flex-1">
 
-          {/* TAB 2: THÈMES */}
+          {/* TAB 1: THÈMES */}
           {activeTab === 'theme' && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <h3 className="text-sm font-bold text-[var(--color-text-strong)] mb-1">Thème visuel</h3>
+                <h3 className="text-sm font-bold text-[var(--color-text-strong)] mb-0.5">Thème visuel</h3>
                 <p className="text-xs text-[var(--color-text-muted)]">
                   Choisissez l'apparence générale et les contrastes de votre portail.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {THEMES.map((t) => {
                   const isSelected = theme === t.id;
                   return (
                     <button
                       key={t.id}
                       onClick={() => setTheme(t.id)}
-                      className={`flex items-center justify-between p-3.5 rounded-xl border text-left transition-all ${
+                      className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
                         isSelected
                           ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)] bg-black/10 shadow-md'
                           : 'border-[var(--color-border)] hover:bg-black/5'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg border ${t.bg} ${t.border} flex items-center justify-center shadow-inner`}>
-                          <div className={`w-3.5 h-3.5 rounded-full ${t.primary}`} />
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-7 h-7 rounded-lg border ${t.bg} ${t.border} flex items-center justify-center shadow-inner`}>
+                          <div className={`w-3 h-3 rounded-full ${t.primary}`} />
                         </div>
-                        <span className="font-bold text-sm text-[var(--color-text-strong)]">
+                        <span className="font-bold text-xs sm:text-sm text-[var(--color-text-strong)]">
                           {t.name}
                         </span>
                       </div>
-                      {isSelected && <Check size={18} className="text-[var(--color-primary)]" />}
+                      {isSelected && <Check size={16} className="text-[var(--color-primary)]" />}
                     </button>
                   );
                 })}
@@ -216,155 +216,131 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             </div>
           )}
 
-          {/* TAB 2: ESPACEMENTS & MARGES */}
+          {/* TAB 2: ESPACEMENTS & MARGES (Ultra-compact sans scroll) */}
           {activeTab === 'spacing' && (
-            <div className="space-y-6">
-              {/* Section Padding (Marge intérieure des cartes) */}
-              <div className="space-y-3">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-[var(--color-text-strong)]">
-                      Marge intérieure des sections & widgets
-                    </h3>
-                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-[var(--color-primary)]/15 text-[var(--color-primary)] font-bold">
-                      Niveau {PADDING_LEVELS.find(p => p.id === sectionPadding)?.level || 3}/5 : {PADDING_LEVELS.find(p => p.id === sectionPadding)?.label}
-                    </span>
-                  </div>
-                  <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                    Contrôle l'espace intérieur entre la bordure de chaque carte et les liens ou éléments qu'elle contient.
-                  </p>
+            <div className="space-y-3">
+              {/* Section 1: Section Padding */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <h3 className="text-xs sm:text-sm font-bold text-[var(--color-text-strong)]">
+                    Marge intérieure des sections & widgets
+                  </h3>
+                  <span className="text-[11px] px-2 py-0.5 rounded-md bg-[var(--color-primary)]/15 text-[var(--color-primary)] font-bold">
+                    Niveau {PADDING_LEVELS.find(p => p.id === sectionPadding)?.level || 3}/5 : {PADDING_LEVELS.find(p => p.id === sectionPadding)?.label}
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 gap-1.5">
                   {PADDING_LEVELS.map((item) => {
                     const isSelected = sectionPadding === item.id;
                     return (
                       <button
                         key={item.id}
                         onClick={() => setSectionPadding(item.id)}
-                        className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-between min-h-[78px] ${
+                        className={`py-1.5 px-1 rounded-lg border text-center transition-all flex flex-col items-center justify-center min-h-[46px] ${
                           isSelected
-                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-2 ring-[var(--color-primary)] font-extrabold shadow-sm'
+                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-2 ring-[var(--color-primary)] font-extrabold shadow-xs'
                             : 'border-[var(--color-border)] bg-black/5 hover:bg-black/10 text-[var(--color-text)] font-semibold'
                         }`}
                       >
-                        <div className="text-xs font-black">Niv. {item.level}</div>
-                        <div className="text-[11px] font-bold truncate max-w-full">{item.label}</div>
-                        <div className="text-[9px] text-[var(--color-text-muted)] truncate max-w-full">{item.desc}</div>
+                        <div className="text-[11px] font-black leading-tight">Niv. {item.level}</div>
+                        <div className="text-[10px] font-bold truncate max-w-full leading-tight opacity-90">{item.label}</div>
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Link Spacing (Écartement entre les liens) */}
-              <div className="space-y-3 pt-4 border-t border-[var(--color-border)]">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-[var(--color-text-strong)]">
-                      Écartement entre les liens
-                    </h3>
-                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-[var(--color-primary)]/15 text-[var(--color-primary)] font-bold">
-                      Niveau {SPACING_LEVELS.find(s => s.id === linkSpacing)?.level || 3}/5 : {SPACING_LEVELS.find(s => s.id === linkSpacing)?.label}
-                    </span>
-                  </div>
-                  <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                    Contrôle l'espacement et la distance entre les différents boutons de liens au sein de vos sections.
-                  </p>
+              {/* Section 2: Link Spacing */}
+              <div className="pt-2.5 border-t border-[var(--color-border)]/60">
+                <div className="flex items-center justify-between mb-1.5">
+                  <h3 className="text-xs sm:text-sm font-bold text-[var(--color-text-strong)]">
+                    Écartement entre les liens
+                  </h3>
+                  <span className="text-[11px] px-2 py-0.5 rounded-md bg-[var(--color-primary)]/15 text-[var(--color-primary)] font-bold">
+                    Niveau {SPACING_LEVELS.find(s => s.id === linkSpacing)?.level || 3}/5 : {SPACING_LEVELS.find(s => s.id === linkSpacing)?.label}
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 gap-1.5">
                   {SPACING_LEVELS.map((item) => {
                     const isSelected = linkSpacing === item.id;
                     return (
                       <button
                         key={item.id}
                         onClick={() => setLinkSpacing(item.id)}
-                        className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-between min-h-[78px] ${
+                        className={`py-1.5 px-1 rounded-lg border text-center transition-all flex flex-col items-center justify-center min-h-[46px] ${
                           isSelected
-                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-2 ring-[var(--color-primary)] font-extrabold shadow-sm'
+                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-2 ring-[var(--color-primary)] font-extrabold shadow-xs'
                             : 'border-[var(--color-border)] bg-black/5 hover:bg-black/10 text-[var(--color-text)] font-semibold'
                         }`}
                       >
-                        <div className="text-xs font-black">Niv. {item.level}</div>
-                        <div className="text-[11px] font-bold truncate max-w-full">{item.label}</div>
-                        <div className="text-[9px] text-[var(--color-text-muted)] truncate max-w-full">{item.desc}</div>
+                        <div className="text-[11px] font-black leading-tight">Niv. {item.level}</div>
+                        <div className="text-[10px] font-bold truncate max-w-full leading-tight opacity-90">{item.label}</div>
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Link Item Padding (Marge intérieure des liens) */}
-              <div className="space-y-3 pt-4 border-t border-[var(--color-border)]">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-[var(--color-text-strong)]">
-                      Marge intérieure des liens (Épaisseur des boutons)
-                    </h3>
-                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-[var(--color-primary)]/15 text-[var(--color-primary)] font-bold">
-                      Niveau {LINK_PADDING_LEVELS.find(l => l.id === linkPadding)?.level || 3}/5 : {LINK_PADDING_LEVELS.find(l => l.id === linkPadding)?.label}
-                    </span>
-                  </div>
-                  <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                    Contrôle le rembourrage intérieur (padding) à l'intérieur de chaque bouton de lien.
-                  </p>
+              {/* Section 3: Link Padding (Épaisseur des boutons) */}
+              <div className="pt-2.5 border-t border-[var(--color-border)]/60">
+                <div className="flex items-center justify-between mb-1.5">
+                  <h3 className="text-xs sm:text-sm font-bold text-[var(--color-text-strong)]">
+                    Marge intérieure des liens (Épaisseur des boutons)
+                  </h3>
+                  <span className="text-[11px] px-2 py-0.5 rounded-md bg-[var(--color-primary)]/15 text-[var(--color-primary)] font-bold">
+                    Niveau {LINK_PADDING_LEVELS.find(l => l.id === linkPadding)?.level || 3}/5 : {LINK_PADDING_LEVELS.find(l => l.id === linkPadding)?.label}
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 gap-1.5">
                   {LINK_PADDING_LEVELS.map((item) => {
                     const isSelected = linkPadding === item.id;
                     return (
                       <button
                         key={item.id}
                         onClick={() => setLinkPadding(item.id)}
-                        className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-between min-h-[78px] ${
+                        className={`py-1.5 px-1 rounded-lg border text-center transition-all flex flex-col items-center justify-center min-h-[46px] ${
                           isSelected
-                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-2 ring-[var(--color-primary)] font-extrabold shadow-sm'
+                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-2 ring-[var(--color-primary)] font-extrabold shadow-xs'
                             : 'border-[var(--color-border)] bg-black/5 hover:bg-black/10 text-[var(--color-text)] font-semibold'
                         }`}
                       >
-                        <div className="text-xs font-black">Niv. {item.level}</div>
-                        <div className="text-[11px] font-bold truncate max-w-full">{item.label}</div>
-                        <div className="text-[9px] text-[var(--color-text-muted)] truncate max-w-full">{item.desc}</div>
+                        <div className="text-[11px] font-black leading-tight">Niv. {item.level}</div>
+                        <div className="text-[10px] font-bold truncate max-w-full leading-tight opacity-90">{item.label}</div>
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Link Icon Size (Taille des icônes des liens) */}
-              <div className="space-y-3 pt-4 border-t border-[var(--color-border)]">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-[var(--color-text-strong)]">
-                      Taille des icônes des liens
-                    </h3>
-                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-[var(--color-primary)]/15 text-[var(--color-primary)] font-bold">
-                      Niveau {ICON_SIZE_LEVELS.find(i => i.id === iconSize)?.level || 3}/5 : {ICON_SIZE_LEVELS.find(i => i.id === iconSize)?.label}
-                    </span>
-                  </div>
-                  <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                    Contrôle la taille du conteneur et du symbole de chaque icône de lien.
-                  </p>
+              {/* Section 4: Link Icon Size */}
+              <div className="pt-2.5 border-t border-[var(--color-border)]/60">
+                <div className="flex items-center justify-between mb-1.5">
+                  <h3 className="text-xs sm:text-sm font-bold text-[var(--color-text-strong)]">
+                    Taille des icônes des liens
+                  </h3>
+                  <span className="text-[11px] px-2 py-0.5 rounded-md bg-[var(--color-primary)]/15 text-[var(--color-primary)] font-bold">
+                    Niveau {ICON_SIZE_LEVELS.find(i => i.id === iconSize)?.level || 3}/5 : {ICON_SIZE_LEVELS.find(i => i.id === iconSize)?.label}
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 gap-1.5">
                   {ICON_SIZE_LEVELS.map((item) => {
                     const isSelected = iconSize === item.id;
                     return (
                       <button
                         key={item.id}
                         onClick={() => setIconSize(item.id)}
-                        className={`p-2.5 rounded-xl border text-center transition-all flex flex-col items-center justify-between min-h-[78px] ${
+                        className={`py-1.5 px-1 rounded-lg border text-center transition-all flex flex-col items-center justify-center min-h-[46px] ${
                           isSelected
-                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-2 ring-[var(--color-primary)] font-extrabold shadow-sm'
+                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)] ring-2 ring-[var(--color-primary)] font-extrabold shadow-xs'
                             : 'border-[var(--color-border)] bg-black/5 hover:bg-black/10 text-[var(--color-text)] font-semibold'
                         }`}
                       >
-                        <div className="text-xs font-black">Niv. {item.level}</div>
-                        <div className="text-[11px] font-bold truncate max-w-full">{item.label}</div>
-                        <div className="text-[9px] text-[var(--color-text-muted)] truncate max-w-full">{item.desc}</div>
+                        <div className="text-[11px] font-black leading-tight">Niv. {item.level}</div>
+                        <div className="text-[10px] font-bold truncate max-w-full leading-tight opacity-90">{item.label}</div>
                       </button>
                     );
                   })}
@@ -601,10 +577,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3.5 border-t border-[var(--color-border)] flex items-center justify-end bg-black/5 dark:bg-black/20">
+        <div className="px-5 py-2.5 border-t border-[var(--color-border)] flex items-center justify-end bg-black/5 dark:bg-black/20">
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-[var(--color-primary)] text-white font-bold text-xs sm:text-sm hover:opacity-90 transition-opacity shadow-sm"
+            className="px-4 py-1.5 rounded-lg bg-[var(--color-primary)] text-white font-bold text-xs hover:opacity-90 transition-opacity shadow-xs"
           >
             Fermer
           </button>
