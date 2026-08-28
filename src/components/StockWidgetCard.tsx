@@ -18,7 +18,8 @@ import {
   fetchStockQuotes,
   formatPrice,
   getStockDetailsUrl,
-  type StockQuote
+  type StockQuote,
+  type StockItemConfig
 } from '../utils/stocks';
 import { usePreferences } from '../hooks/usePreferences';
 
