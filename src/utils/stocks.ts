@@ -129,7 +129,15 @@ export function formatPrice(price: number, currency: string = 'USD'): string {
   }
 }
 
+const stockCache = new Map<string, { quote: StockQuote; timestamp: number }>();
+const STOCK_CACHE_TTL = 45 * 1000; // 45s
+
 async function fetchFromYahooChart(symbol: string): Promise<StockQuote> {
+  const cached = stockCache.get(symbol.toUpperCase());
+  if (cached && Date.now() - cached.timestamp < STOCK_CACHE_TTL) {
+    return cached.quote;
+  }
+
   const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=15m&range=1d`;
   
   // Fast CORS proxies and direct fetch
@@ -185,7 +193,7 @@ async function fetchFromYahooChart(symbol: string): Promise<StockQuote> {
       const foundPreset = POPULAR_STOCK_PRESETS.find((p) => p.symbol.toUpperCase() === symbol.toUpperCase());
       const displayName = foundPreset?.name || meta.shortName || meta.symbol || symbol;
 
-      return {
+      const quote: StockQuote = {
         symbol: meta.symbol || symbol,
         name: displayName,
         price,
@@ -203,6 +211,9 @@ async function fetchFromYahooChart(symbol: string): Promise<StockQuote> {
         history,
         updatedAt: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
       };
+
+      stockCache.set(symbol.toUpperCase(), { quote, timestamp: Date.now() });
+      return quote;
     } catch {
       // try next proxy
     }

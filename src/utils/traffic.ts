@@ -179,23 +179,7 @@ export async function calculateRouteWithTomTom(
   };
 }
 
-export async function calculateRoute(
-  start: TrafficLocation,
-  end: TrafficLocation,
-  customApiKey?: string
-): Promise<RouteResult> {
-  const apiKey = (customApiKey || localStorage.getItem('portal-tomtom-api-key') || '').trim();
-
-  // Try TomTom if key is present
-  if (apiKey) {
-    try {
-      return await calculateRouteWithTomTom(start, end, apiKey);
-    } catch (err) {
-      console.warn('TomTom routing failed, falling back to OSRM:', err);
-    }
-  }
-
-  // Fallback to OSRM (free OpenStreetMap routing)
+async function calculateRouteWithOSRM(start: TrafficLocation, end: TrafficLocation): Promise<RouteResult> {
   const url = `https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=false`;
   
   const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
@@ -222,6 +206,39 @@ export async function calculateRoute(
     provider: 'osrm',
     updatedAt: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
   };
+}
+
+const routeCache = new Map<string, { route: RouteResult; timestamp: number }>();
+const ROUTE_CACHE_TTL = 3 * 60 * 1000; // 3 minutes
+
+export async function calculateRoute(
+  start: TrafficLocation,
+  end: TrafficLocation,
+  customApiKey?: string
+): Promise<RouteResult> {
+  const cacheKey = `${start.latitude.toFixed(4)},${start.longitude.toFixed(4)}:${end.latitude.toFixed(4)},${end.longitude.toFixed(4)}`;
+  const cached = routeCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < ROUTE_CACHE_TTL) {
+    return cached.route;
+  }
+
+  const apiKey = (customApiKey || localStorage.getItem('portal-tomtom-api-key') || '').trim();
+
+  // Try TomTom if key is present
+  if (apiKey) {
+    try {
+      const res = await calculateRouteWithTomTom(start, end, apiKey);
+      routeCache.set(cacheKey, { route: res, timestamp: Date.now() });
+      return res;
+    } catch (err) {
+      console.warn('TomTom routing failed, falling back to OSRM:', err);
+    }
+  }
+
+  // Fallback to OSRM (free public routing engine)
+  const res = await calculateRouteWithOSRM(start, end);
+  routeCache.set(cacheKey, { route: res, timestamp: Date.now() });
+  return res;
 }
 
 export function parseTrafficConfig(widgetUrl?: string): TrafficConfig {
