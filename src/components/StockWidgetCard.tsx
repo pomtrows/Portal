@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Section } from '../types';
 import {
   TrendingUp,
@@ -75,18 +75,19 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
     }
   };
 
-  const config = parseStockConfig(section.widget_url);
+  const config = useMemo(() => parseStockConfig(section.widget_url), [section.widget_url]);
   const [quotes, setQuotes] = useState<Record<string, StockQuote>>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('all');
 
   const loadData = useCallback(async () => {
-    if (!config.symbols || config.symbols.length === 0) return;
+    const conf = parseStockConfig(section.widget_url);
+    if (!conf.symbols || conf.symbols.length === 0) return;
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchStockQuotes(config.symbols);
+      const data = await fetchStockQuotes(conf.symbols);
       setQuotes(data);
     } catch (err: any) {
       console.error('Error fetching stock quotes:', err);
@@ -94,7 +95,7 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [config.symbols]);
+  }, [section.widget_url]);
 
   useEffect(() => {
     loadData();
@@ -118,12 +119,15 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
   }, [loadData]);
 
   // Categories available in the configured symbols
-  const categories = ['all', ...Array.from(new Set(config.symbols.map((s) => s.category).filter(Boolean)))];
+  const categories = useMemo(() => [
+    'all',
+    ...Array.from(new Set(config.symbols.map((s) => s.category).filter(Boolean)))
+  ], [config.symbols]);
 
-  const filteredSymbols = config.symbols.filter((s) => {
+  const filteredSymbols = useMemo(() => config.symbols.filter((s) => {
     if (activeCategory === 'all') return true;
     return s.category === activeCategory;
-  });
+  }), [config.symbols, activeCategory]);
 
   const getCategoryLabel = (cat: string) => {
     switch (cat) {
