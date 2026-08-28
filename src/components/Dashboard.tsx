@@ -560,6 +560,9 @@ function resolveCascadeGeometries(
       onUpdateSpan: (id: string, col_span: number) => {
         handleUpdateSpan(id, col_span);
       },
+      onUpdateHeight: (id: string, newRowSpan: number) => {
+        handleResize(id, 0, newRowSpan - (geo.row_span || 1));
+      },
       onResize: handleResize,
       maxAllowedSpan: columnCount - (geo.grid_x ?? 0),
     };

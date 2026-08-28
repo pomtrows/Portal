@@ -19,6 +19,7 @@ interface RssWidgetCardProps {
   onEditSection: (section: Section) => void;
   onDeleteSection: (id: string) => void;
   onUpdateSpan?: (sectionId: string, col_span: number) => void;
+  onUpdateHeight?: (sectionId: string, row_span: number) => void;
   maxAllowedSpan?: number;
 }
 
@@ -70,6 +71,7 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
   onEditSection,
   onDeleteSection,
   onUpdateSpan,
+  onUpdateHeight,
   maxAllowedSpan = 8,
 }) => {
   const { fontSizeRss, fontSizeSection } = usePreferences();
@@ -261,6 +263,34 @@ export const RssWidgetCard: React.FC<RssWidgetCardProps> = ({
                     disabled={(section.col_span || 1) >= maxAllowedSpan}
                     className="px-1 hover:text-[var(--color-primary)] disabled:opacity-25 transition-colors"
                     title="Étendre d'une colonne"
+                  >
+                    +
+                  </button>
+                </div>
+              )}
+              {onUpdateHeight && (
+                <div
+                  className="flex items-center bg-black/10 dark:bg-white/10 rounded-md px-1 py-0.5 text-xs font-bold gap-1 text-[var(--color-text-strong)] mr-0.5"
+                  title="Hauteur du widget (nombre de lignes de grille)"
+                >
+                  <button
+                    type="button"
+                    onClick={() => onUpdateHeight(section.id, Math.max(3, (section.row_span || 8) - 1))}
+                    disabled={(section.row_span || 8) <= 3}
+                    className="px-1 hover:text-[var(--color-primary)] disabled:opacity-25 transition-colors"
+                    title="Diminuer la hauteur"
+                  >
+                    -
+                  </button>
+                  <span className="text-[11px] select-none font-semibold px-0.5">
+                    H: {section.row_span || 8}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onUpdateHeight(section.id, Math.min(25, (section.row_span || 8) + 1))}
+                    disabled={(section.row_span || 8) >= 25}
+                    className="px-1 hover:text-[var(--color-primary)] disabled:opacity-25 transition-colors"
+                    title="Augmenter la hauteur"
                   >
                     +
                   </button>
