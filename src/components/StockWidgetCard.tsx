@@ -16,10 +16,14 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   parseStockConfig,
   fetchStockQuotes,
+  fetchStockChartHistory,
   formatPrice,
   getStockDetailsUrl,
+  STOCK_CHART_RANGES,
   type StockQuote,
-  type StockItemConfig
+  type StockItemConfig,
+  type StockChartRange,
+  type ChartHistoryResult,
 } from '../utils/stocks';
 import { usePreferences } from '../hooks/usePreferences';
 
@@ -37,51 +41,104 @@ const StockEvolutionChart: React.FC<{
   quote?: StockQuote;
   item?: StockItemConfig;
 }> = ({ quote, item }) => {
+  const [selectedRange, setSelectedRange] = useState<StockChartRange>('1d');
+  const [rangeData, setRangeData] = useState<ChartHistoryResult | null>(null);
+  const [loadingRange, setLoadingRange] = useState<boolean>(false);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-
-  if (!quote && !item) return null;
+  const cacheRef = React.useRef<Record<string, ChartHistoryResult>>({});
 
   const symbol = item?.symbol || quote?.symbol || '';
   const displayName = item?.name || quote?.name || symbol;
-  const isPositive = (quote?.changePercent ?? 0) >= 0;
 
-  const history = quote?.history && quote.history.length > 1
-    ? quote.history
-    : quote?.sparkline && quote.sparkline.length > 1
-    ? quote.sparkline.map((p, i) => ({ time: `${i}`, price: p }))
-    : quote?.previousClose !== undefined && quote?.price !== undefined
-    ? [
-        { time: 'Précédent', price: quote.previousClose },
-        { time: 'Actuel', price: quote.price }
-      ]
-    : [];
+  // Load chart history whenever symbol or selectedRange changes
+  useEffect(() => {
+    if (!symbol) return;
+    const cacheKey = `${symbol}_${selectedRange}`;
+
+    if (cacheRef.current[cacheKey]) {
+      setRangeData(cacheRef.current[cacheKey]);
+      return;
+    }
+
+    let isMounted = true;
+    setLoadingRange(true);
+
+    fetchStockChartHistory(symbol, selectedRange)
+      .then((data) => {
+        if (!isMounted) return;
+        cacheRef.current[cacheKey] = data;
+        setRangeData(data);
+      })
+      .catch((err) => {
+        console.warn(`Chart history failed for ${symbol} (${selectedRange}):`, err);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingRange(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [symbol, selectedRange]);
+
+  if (!quote && !item) return null;
+
+  // Determine current active history points
+  const history =
+    rangeData?.history && rangeData.history.length > 1
+      ? rangeData.history
+      : selectedRange === '1d' && quote?.history && quote.history.length > 1
+      ? quote.history
+      : quote?.sparkline && quote.sparkline.length > 1
+      ? quote.sparkline.map((p, i) => ({ time: `${i}`, price: p }))
+      : quote?.previousClose !== undefined && quote?.price !== undefined
+      ? [
+          { time: 'Précédent', price: quote.previousClose },
+          { time: 'Actuel', price: quote.price },
+        ]
+      : [];
 
   const prices = history.map((h) => h.price);
-  const minP = prices.length > 0 ? Math.min(...prices) : 0;
-  const maxP = prices.length > 0 ? Math.max(...prices) : 1;
+  const minP = rangeData?.low ?? (prices.length > 0 ? Math.min(...prices) : 0);
+  const maxP = rangeData?.high ?? (prices.length > 0 ? Math.max(...prices) : 1);
   const range = maxP - minP || 1;
+
+  // Change & Percentage for selected period
+  const changePercent =
+    rangeData?.changePercent !== undefined
+      ? rangeData.changePercent
+      : (quote?.changePercent ?? 0);
+
+  const isPositive = changePercent >= 0;
 
   const width = 320;
   const height = 75;
   const padX = 8;
   const padY = 8;
 
-  // Build SVG path
+  // Build SVG path coordinates
   const pointsCoords = history.map((h, i) => {
     const x = padX + (i / Math.max(1, history.length - 1)) * (width - 2 * padX);
-    const y = (height - padY) - ((h.price - minP) / range) * (height - 2 * padY);
+    const y = height - padY - ((h.price - minP) / range) * (height - 2 * padY);
     return { x, y, ...h };
   });
 
-  const pathD = pointsCoords.length > 0
-    ? `M ${pointsCoords[0].x} ${pointsCoords[0].y} ` + pointsCoords.slice(1).map(p => `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
-    : '';
+  const pathD =
+    pointsCoords.length > 0
+      ? `M ${pointsCoords[0].x} ${pointsCoords[0].y} ` +
+        pointsCoords
+          .slice(1)
+          .map((p) => `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+          .join(' ')
+      : '';
 
-  const areaD = pointsCoords.length > 0
-    ? `${pathD} L ${pointsCoords[pointsCoords.length - 1].x.toFixed(1)} ${height} L ${pointsCoords[0].x.toFixed(1)} ${height} Z`
-    : '';
+  const areaD =
+    pointsCoords.length > 0
+      ? `${pathD} L ${pointsCoords[pointsCoords.length - 1].x.toFixed(1)} ${height} L ${pointsCoords[0].x.toFixed(1)} ${height} Z`
+      : '';
 
-  const activePoint = hoverIndex !== null && pointsCoords[hoverIndex] ? pointsCoords[hoverIndex] : null;
+  const activePoint =
+    hoverIndex !== null && pointsCoords[hoverIndex] ? pointsCoords[hoverIndex] : null;
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     if (pointsCoords.length < 2) return;
@@ -93,7 +150,9 @@ const StockEvolutionChart: React.FC<{
   };
 
   const strokeColor = isPositive ? '#10b981' : '#f43f5e';
-  const gradientId = `stock-grad-${symbol.replace(/[^a-zA-Z0-9]/g, '')}`;
+  const gradientId = `stock-grad-${symbol.replace(/[^a-zA-Z0-9]/g, '')}-${selectedRange}`;
+
+  const currentRangeConfig = STOCK_CHART_RANGES.find((r) => r.key === selectedRange);
 
   return (
     <div className="p-2.5 rounded-xl bg-slate-50/90 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 shadow-xs mb-2">
@@ -109,7 +168,7 @@ const StockEvolutionChart: React.FC<{
             </span>
           </div>
           <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-2">
-            <span>Évolution du jour</span>
+            <span>{currentRangeConfig?.fullLabel || 'Évolution'}</span>
             {activePoint && (
               <span className="text-blue-600 dark:text-sky-400 font-bold">
                 {activePoint.time} : {formatPrice(activePoint.price, quote?.currency)}
@@ -122,7 +181,7 @@ const StockEvolutionChart: React.FC<{
           <div className="text-sm sm:text-base font-black text-slate-950 dark:text-white tracking-tight">
             {quote ? formatPrice(quote.price, quote.currency) : '--'}
           </div>
-          {quote && (
+          {(quote || rangeData) && (
             <div
               className={`px-1.5 py-0.5 rounded-md text-[10px] font-extrabold flex items-center gap-0.5 ${
                 isPositive
@@ -132,10 +191,32 @@ const StockEvolutionChart: React.FC<{
             >
               {isPositive ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
               <span>
-                {quote.changePercent >= 0 ? '+' : ''}{quote.changePercent.toFixed(2)}%
+                {changePercent >= 0 ? '+' : ''}
+                {changePercent.toFixed(2)}%
               </span>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Range Selection Pills (1J, 1M, 6M, 1A, 5A) */}
+      <div className="flex items-center justify-between gap-1 my-1.5">
+        <div className="flex items-center gap-1 p-0.5 bg-black/5 dark:bg-white/5 rounded-lg w-full">
+          {STOCK_CHART_RANGES.map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              onClick={() => setSelectedRange(r.key)}
+              className={`flex-1 py-0.5 px-1 rounded-md text-[10px] font-bold transition-all text-center cursor-pointer select-none ${
+                selectedRange === r.key
+                  ? 'bg-[var(--color-primary)] text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+              }`}
+              title={r.fullLabel}
+            >
+              {r.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -144,7 +225,9 @@ const StockEvolutionChart: React.FC<{
         {pointsCoords.length > 1 ? (
           <svg
             viewBox={`0 0 ${width} ${height}`}
-            className="w-full h-full overflow-visible select-none cursor-crosshair"
+            className={`w-full h-full overflow-visible select-none cursor-crosshair transition-opacity duration-150 ${
+              loadingRange ? 'opacity-50' : 'opacity-100'
+            }`}
             preserveAspectRatio="none"
             onMouseMove={handleMouseMove}
             onMouseLeave={() => setHoverIndex(null)}
@@ -195,25 +278,28 @@ const StockEvolutionChart: React.FC<{
           </svg>
         ) : (
           <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400 italic">
-            Données graphiques en cours de chargement...
+            {loadingRange ? 'Chargement du graphique...' : 'Données graphiques en cours de chargement...'}
           </div>
         )}
       </div>
 
-      {/* Day Low / High footer */}
-      {quote && (
-        <div className="flex items-center justify-between text-[9px] text-slate-500 dark:text-slate-400 mt-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 font-medium">
-          <span>
-            Bas: {quote.dayLow ? formatPrice(quote.dayLow, quote.currency) : (minP ? formatPrice(minP, quote.currency) : '--')}
-          </span>
-          <span>
-            Préc: {quote.previousClose ? formatPrice(quote.previousClose, quote.currency) : '--'}
-          </span>
-          <span>
-            Haut: {quote.dayHigh ? formatPrice(quote.dayHigh, quote.currency) : (maxP ? formatPrice(maxP, quote.currency) : '--')}
-          </span>
-        </div>
-      )}
+      {/* Low / Start / High footer */}
+      <div className="flex items-center justify-between text-[9px] text-slate-500 dark:text-slate-400 mt-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 font-medium">
+        <span>
+          Bas: {minP ? formatPrice(minP, quote?.currency) : '--'}
+        </span>
+        <span>
+          {selectedRange === '1d' ? 'Préc:' : 'Début:'}{' '}
+          {rangeData?.firstPrice
+            ? formatPrice(rangeData.firstPrice, quote?.currency)
+            : quote?.previousClose
+            ? formatPrice(quote.previousClose, quote?.currency)
+            : '--'}
+        </span>
+        <span>
+          Haut: {maxP ? formatPrice(maxP, quote?.currency) : '--'}
+        </span>
+      </div>
     </div>
   );
 };

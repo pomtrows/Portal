@@ -255,3 +255,151 @@ export function getStockDetailsUrl(symbol: string): string {
   }
   return `https://fr.finance.yahoo.com/quote/${encodeURIComponent(symbol)}`;
 }
+
+export type StockChartRange = '1d' | '1mo' | '6mo' | '1y' | '5y';
+
+export interface StockRangeConfig {
+  key: StockChartRange;
+  label: string;
+  fullLabel: string;
+  interval: string;
+}
+
+export const STOCK_CHART_RANGES: StockRangeConfig[] = [
+  { key: '1d', label: '1J', fullLabel: "1 Jour", interval: '15m' },
+  { key: '1mo', label: '1M', fullLabel: '1 Mois', interval: '1d' },
+  { key: '6mo', label: '6M', fullLabel: '6 Mois', interval: '1d' },
+  { key: '1y', label: '1A', fullLabel: '1 An', interval: '1wk' },
+  { key: '5y', label: '5A', fullLabel: '5 Ans', interval: '1mo' },
+];
+
+export interface ChartHistoryResult {
+  history: StockHistoryPoint[];
+  firstPrice: number;
+  lastPrice: number;
+  change: number;
+  changePercent: number;
+  low: number;
+  high: number;
+}
+
+export async function fetchStockChartHistory(
+  symbol: string,
+  rangeKey: StockChartRange = '1d'
+): Promise<ChartHistoryResult> {
+  const intervals: Record<StockChartRange, string> = {
+    '1d': '15m',
+    '1mo': '1d',
+    '6mo': '1d',
+    '1y': '1wk',
+    '5y': '1mo',
+  };
+  const interval = intervals[rangeKey] || '1d';
+  const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}&range=${rangeKey}`;
+  const fetchUrls = [
+    `https://cors-get-proxy.sirjosh.workers.dev/?url=${encodeURIComponent(targetUrl)}`,
+    `https://proxy.cors.sh/${targetUrl}`,
+    targetUrl,
+  ];
+
+  for (const url of fetchUrls) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(3500) });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const res0 = data?.chart?.result?.[0];
+      if (!res0) continue;
+
+      const timestamps = res0.timestamp || [];
+      const quotes = res0.indicators?.quote?.[0]?.close || [];
+      const history: StockHistoryPoint[] = [];
+
+      for (let i = 0; i < quotes.length; i++) {
+        const val = quotes[i];
+        if (typeof val === 'number' && !isNaN(val)) {
+          const t = timestamps[i];
+          const d = new Date(t * 1000);
+          const timeStr =
+            rangeKey === '1d'
+              ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+              : rangeKey === '1mo' || rangeKey === '6mo'
+              ? d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+              : d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+          history.push({ time: timeStr, price: val });
+        }
+      }
+
+      if (history.length > 0) {
+        const prices = history.map((h) => h.price);
+        const meta = res0.meta;
+        const first = rangeKey === '1d' && meta?.previousClose ? meta.previousClose : history[0].price;
+        const last = history[history.length - 1].price;
+        const change = last - first;
+        const changePercent = first !== 0 ? (change / first) * 100 : 0;
+        return {
+          history,
+          firstPrice: first,
+          lastPrice: last,
+          change,
+          changePercent,
+          low: Math.min(...prices),
+          high: Math.max(...prices),
+        };
+      }
+    } catch {
+      // try next proxy
+    }
+  }
+
+  // Fallback for crypto
+  if (symbol.endsWith('-USD')) {
+    try {
+      const binanceSym = symbol.replace('-USD', 'USDT').toUpperCase();
+      const binanceIntervals: Record<StockChartRange, [string, number]> = {
+        '1d': ['15m', 30],
+        '1mo': ['1d', 30],
+        '6mo': ['1d', 180],
+        '1y': ['1w', 52],
+        '5y': ['1M', 60],
+      };
+      const [bInt, bLim] = binanceIntervals[rangeKey] || ['1d', 30];
+      const res = await fetch(
+        `https://api.binance.com/api/v3/klines?symbol=${binanceSym}&interval=${bInt}&limit=${bLim}`,
+        { signal: AbortSignal.timeout(3000) }
+      );
+      if (res.ok) {
+        const klines = await res.json();
+        if (Array.isArray(klines) && klines.length > 0) {
+          const history: StockHistoryPoint[] = klines.map((k: any) => {
+            const d = new Date(k[0]);
+            const timeStr =
+              rangeKey === '1d'
+                ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                : rangeKey === '1mo' || rangeKey === '6mo'
+                ? d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+                : d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+            return { time: timeStr, price: parseFloat(k[4]) };
+          });
+          const prices = history.map((h) => h.price);
+          const first = history[0].price;
+          const last = history[history.length - 1].price;
+          const change = last - first;
+          const changePercent = first !== 0 ? (change / first) * 100 : 0;
+          return {
+            history,
+            firstPrice: first,
+            lastPrice: last,
+            change,
+            changePercent,
+            low: Math.min(...prices),
+            high: Math.max(...prices),
+          };
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  throw new Error(`Données de graphique indisponibles pour ${symbol}`);
+}
