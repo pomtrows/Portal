@@ -164,12 +164,12 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`glass-panel ${getPaddingClass()} w-full h-auto md:h-full flex flex-col ${
+      className={`glass-panel ${getPaddingClass()} w-full h-auto md:h-full flex flex-col overflow-hidden ${
         isDragging ? 'z-50 shadow-2xl ring-2 ring-[var(--color-primary)]' : ''
       }`}
     >
       {/* Widget Header */}
-      <div className="flex items-center justify-between mb-1.5 pb-1 border-b border-[var(--color-border)]">
+      <div className="flex items-center justify-between mb-1.5 pb-1 border-b border-[var(--color-border)] flex-shrink-0">
         <div
           className={`flex items-center gap-1.5 min-w-0 flex-1 ${isEditMode ? 'cursor-grab active:cursor-grabbing select-none' : ''}`}
           {...(isEditMode ? { ...attributes, ...listeners } : {})}
@@ -230,8 +230,8 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
                 >
                   <button
                     type="button"
-                    onClick={() => onUpdateHeight(section.id, Math.max(2, (section.row_span || 6) - 1))}
-                    disabled={(section.row_span || 6) <= 2}
+                    onClick={() => onUpdateHeight(section.id, Math.max(4, (section.row_span || 6) - 1))}
+                    disabled={(section.row_span || 6) <= 4}
                     className="px-1 hover:text-[var(--color-primary)] disabled:opacity-25 transition-colors"
                     title="Diminuer la hauteur"
                   >
@@ -270,84 +270,86 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
         </div>
       </div>
 
-      {/* Search Input Bar */}
-      <div className="space-y-2.5">
-        <div className="relative">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={`Rechercher avec ${selectedEngine.name}...`}
-            className="w-full bg-slate-100/90 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-xl pl-9 pr-16 py-2 text-xs sm:text-sm font-semibold text-slate-950 dark:text-white focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all shadow-inner"
-          />
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 pointer-events-none">
-            {getEngineIcon(selectedEngine.icon, 15)}
-          </div>
+      {/* Search Content */}
+      <div className="space-y-2 flex-1 min-h-0 flex flex-col justify-between">
+        <div className="space-y-2 flex-shrink-0">
+          <div className="relative">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={`Rechercher avec ${selectedEngine.name}...`}
+              className="w-full bg-slate-100/90 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700 rounded-xl pl-9 pr-16 py-1.5 text-xs sm:text-sm font-semibold text-slate-950 dark:text-white focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all shadow-inner"
+            />
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 pointer-events-none">
+              {getEngineIcon(selectedEngine.icon, 15)}
+            </div>
 
-          <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            {query && (
+            <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-md transition-colors"
+                  title="Effacer"
+                >
+                  <X size={14} />
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => setQuery('')}
-                className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-md transition-colors"
-                title="Effacer"
+                onClick={() => handleSearch(selectedEngine)}
+                className="p-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg transition-colors shadow-sm"
+                title={`Lancer la recherche sur ${selectedEngine.name}`}
               >
-                <X size={14} />
+                <ArrowUpRight size={14} />
               </button>
-            )}
+            </div>
+          </div>
+
+          {/* Category Tabs */}
+          <div className="flex items-center justify-between gap-1 p-0.5 bg-slate-200/80 dark:bg-black/40 rounded-lg border border-slate-300 dark:border-slate-700 text-[11px]">
             <button
               type="button"
-              onClick={() => handleSearch(selectedEngine)}
-              className="p-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg transition-colors shadow-sm"
-              title={`Lancer la recherche sur ${selectedEngine.name}`}
+              onClick={() => setSelectedCategory('all')}
+              className={`flex-1 py-0.5 px-1.5 rounded-md font-bold transition-all ${
+                selectedCategory === 'all'
+                  ? 'bg-blue-800 dark:bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-800 dark:text-slate-200 hover:text-black dark:hover:text-white'
+              }`}
             >
-              <ArrowUpRight size={14} />
+              Tous
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedCategory('ai')}
+              className={`flex-1 flex items-center justify-center gap-1 py-0.5 px-1.5 rounded-md font-bold transition-all ${
+                selectedCategory === 'ai'
+                  ? 'bg-blue-800 dark:bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-800 dark:text-slate-200 hover:text-black dark:hover:text-white'
+              }`}
+            >
+              <Sparkles size={11} />
+              <span>IA</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedCategory('web')}
+              className={`flex-1 flex items-center justify-center gap-1 py-0.5 px-1.5 rounded-md font-bold transition-all ${
+                selectedCategory === 'web'
+                  ? 'bg-blue-800 dark:bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-800 dark:text-slate-200 hover:text-black dark:hover:text-white'
+              }`}
+            >
+              <Globe size={11} />
+              <span>Web</span>
             </button>
           </div>
         </div>
 
-        {/* Category Tabs */}
-        <div className="flex items-center justify-between gap-1 p-0.5 bg-slate-200/80 dark:bg-black/40 rounded-lg border border-slate-300 dark:border-slate-700 text-[11px]">
-          <button
-            type="button"
-            onClick={() => setSelectedCategory('all')}
-            className={`flex-1 py-1 px-1.5 rounded-md font-bold transition-all ${
-              selectedCategory === 'all'
-                ? 'bg-blue-800 dark:bg-blue-600 text-white shadow-sm'
-                : 'text-slate-800 dark:text-slate-200 hover:text-black dark:hover:text-white'
-            }`}
-          >
-            Tous
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedCategory('ai')}
-            className={`flex-1 flex items-center justify-center gap-1 py-1 px-1.5 rounded-md font-bold transition-all ${
-              selectedCategory === 'ai'
-                ? 'bg-blue-800 dark:bg-blue-600 text-white shadow-sm'
-                : 'text-slate-800 dark:text-slate-200 hover:text-black dark:hover:text-white'
-            }`}
-          >
-            <Sparkles size={11} />
-            <span>IA</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedCategory('web')}
-            className={`flex-1 flex items-center justify-center gap-1 py-1 px-1.5 rounded-md font-bold transition-all ${
-              selectedCategory === 'web'
-                ? 'bg-blue-800 dark:bg-blue-600 text-white shadow-sm'
-                : 'text-slate-800 dark:text-slate-200 hover:text-black dark:hover:text-white'
-            }`}
-          >
-            <Globe size={11} />
-            <span>Web</span>
-          </button>
-        </div>
-
         {/* Engine Pills Grid */}
-        <div className="flex flex-wrap gap-1.5 max-h-[160px] overflow-y-auto pr-0.5 scrollbar-thin">
+        <div className="flex flex-wrap gap-1 max-h-[105px] overflow-y-auto pr-0.5 scrollbar-thin">
           {filteredEngines.map((engine) => {
             const isSelected = engine.id === selectedEngineId;
             return (
@@ -360,7 +362,7 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
                     handleSearch(engine);
                   }
                 }}
-                className={`flex items-center gap-1.5 py-1 px-2 rounded-lg border text-xs font-bold transition-all shadow-xs ${
+                className={`flex items-center gap-1.5 py-0.5 px-2 rounded-lg border text-xs font-bold transition-all shadow-xs ${
                   isSelected
                     ? 'ring-2 ring-blue-600 border-blue-600 bg-blue-50 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 font-extrabold'
                     : `bg-slate-100/90 dark:bg-slate-800/60 hover:bg-slate-200/90 dark:hover:bg-slate-700/80 border-slate-200 dark:border-slate-700/80 text-slate-900 dark:text-slate-100`
@@ -377,9 +379,9 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
           })}
         </div>
 
-        {/* Recent Searches */}
+        {/* Recent Searches (Horizontal Scrollable Strip) */}
         {recentSearches.length > 0 && (
-          <div className="pt-2 border-t border-slate-200 dark:border-slate-700/60 space-y-1">
+          <div className="pt-1.5 border-t border-slate-200 dark:border-slate-700/60 flex-shrink-0 space-y-0.5">
             <div className="flex items-center justify-between text-[10px] font-bold text-slate-700 dark:text-slate-400 px-0.5">
               <span className="flex items-center gap-1">
                 <History size={11} />
@@ -393,7 +395,7 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
                 Effacer
               </button>
             </div>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 pr-0.5">
               {recentSearches.map((term, idx) => (
                 <button
                   key={idx}
@@ -402,7 +404,7 @@ export const SearchWidgetCard: React.FC<SearchWidgetCardProps> = ({
                     setQuery(term);
                     handleSearch(selectedEngine);
                   }}
-                  className="py-0.5 px-2 rounded-md bg-slate-200/80 dark:bg-slate-800/50 hover:bg-blue-100 dark:hover:bg-slate-700 border border-slate-300/60 dark:border-slate-700/60 text-[11px] font-semibold text-slate-800 dark:text-slate-300 transition-colors truncate max-w-[130px]"
+                  className="py-0.5 px-2 rounded-md bg-slate-200/80 dark:bg-slate-800/50 hover:bg-blue-100 dark:hover:bg-slate-700 border border-slate-300/60 dark:border-slate-700/60 text-[11px] font-semibold text-slate-800 dark:text-slate-300 transition-colors whitespace-nowrap flex-shrink-0"
                   title={`Rechercher "${term}"`}
                 >
                   {term}
