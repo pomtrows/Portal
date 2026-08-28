@@ -349,13 +349,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
 function findNonCollidingY(
   movingSectionId: string,
   targetX: number,
-  targetY: number,
+  initialY: number,
   w: number,
   h: number,
   currentLayouts: Record<string, GridItemGeometry>,
-  allSections?: Section[]
+  allSections: Section[],
+  paddingLevel: SpacingLevel = 'md',
+  spacingLevel: SpacingLevel = 'md',
+  itemPadLevel: SpacingLevel = 'md',
+  iconSizeLevel: SpacingLevel = 'md'
 ): number {
-  let adjustedY = Math.max(0, targetY);
+  let adjustedY = initialY;
   let hasCollision = true;
   let iterations = 0;
 
@@ -366,12 +370,14 @@ function findNonCollidingY(
     for (const [id, geo] of Object.entries(currentLayouts)) {
       if (id === movingSectionId) continue;
       const otherSection = allSections?.find((s) => s.id === id);
+      const isLinks = !otherSection?.type || otherSection?.type === 'links';
       const otherX = geo.grid_x ?? 0;
       const otherY = geo.grid_y ?? 0;
       const otherW = geo.col_span ?? 1;
-      const otherH = otherSection
-        ? Math.max(getSectionRowSpan(otherSection, otherW), geo.row_span || 1)
+      const minH = otherSection
+        ? getSectionRowSpan(otherSection, otherW, paddingLevel, spacingLevel, itemPadLevel, iconSizeLevel)
         : (geo.row_span ?? 1);
+      const otherH = isLinks ? minH : Math.max(minH, geo.row_span || 1);
 
       // Check horizontal overlap
       const horizontalOverlap = targetX < otherX + otherW && targetX + w > otherX;
@@ -400,15 +406,21 @@ function resolveCascadeGeometries(
   newGeo: Partial<GridItemGeometry>,
   currentLayouts: Record<string, GridItemGeometry>,
   allSections: Section[],
-  cols: number
+  cols: number,
+  paddingLevel: SpacingLevel = 'md',
+  spacingLevel: SpacingLevel = 'md',
+  itemPadLevel: SpacingLevel = 'md',
+  iconSizeLevel: SpacingLevel = 'md'
 ): Record<string, { grid_x: number; grid_y: number; col_span: number; row_span: number }> {
   const result: Record<string, { grid_x: number; grid_y: number; col_span: number; row_span: number }> = {};
 
   // Copy current layouts with full accurate heights
   for (const [id, g] of Object.entries(currentLayouts)) {
     const sec = allSections.find((s) => s.id === id);
+    const isLinks = !sec?.type || sec?.type === 'links';
     const w = g.col_span ?? 1;
-    const h = sec ? Math.max(getSectionRowSpan(sec, w), g.row_span || 1) : (g.row_span ?? 1);
+    const minH = sec ? getSectionRowSpan(sec, w, paddingLevel, spacingLevel, itemPadLevel, iconSizeLevel) : (g.row_span ?? 1);
+    const h = isLinks ? minH : Math.max(minH, g.row_span ?? minH);
     result[id] = {
       grid_x: g.grid_x ?? 0,
       grid_y: g.grid_y ?? 0,
@@ -484,10 +496,12 @@ function resolveCascadeGeometries(
     if (!sourceGeo) return;
 
     const sourceSection = sections.find((s) => s.id === sourceId);
+    const isLinks = !sourceSection?.type || sourceSection?.type === 'links';
     const w = sourceGeo.col_span ?? 1;
-    const h = sourceSection
-      ? Math.max(getSectionRowSpan(sourceSection, w), sourceGeo.row_span || 1)
+    const minH = sourceSection
+      ? getSectionRowSpan(sourceSection, w, sectionPadding, linkSpacing, linkPadding, iconSize)
       : (sourceGeo.row_span ?? 1);
+    const h = isLinks ? minH : Math.max(minH, sourceGeo.row_span || 1);
 
     let targetX = sourceGeo.grid_x ?? 0;
     let targetY = sourceGeo.grid_y ?? 0;
@@ -505,9 +519,11 @@ function resolveCascadeGeometries(
       } else if (overId !== sourceId && layoutMap[overId]) {
         const targetGeo = layoutMap[overId];
         const targetSection = sections.find((s) => s.id === overId);
-        const targetH = targetSection
-          ? Math.max(getSectionRowSpan(targetSection, targetGeo.col_span ?? 1), targetGeo.row_span || 1)
+        const targetIsLinks = !targetSection?.type || targetSection?.type === 'links';
+        const targetMinH = targetSection
+          ? getSectionRowSpan(targetSection, targetGeo.col_span ?? 1, sectionPadding, linkSpacing, linkPadding, iconSize)
           : (targetGeo.row_span ?? 1);
+        const targetH = targetIsLinks ? targetMinH : Math.max(targetMinH, targetGeo.row_span || 1);
         targetX = targetGeo.grid_x ?? 0;
         targetY = (targetGeo.grid_y ?? 0) + targetH;
       }
@@ -528,11 +544,15 @@ function resolveCascadeGeometries(
         { grid_x: targetX, grid_y: targetY, col_span: w, row_span: h },
         layoutMap,
         sections,
-        columnCount
+        columnCount,
+        sectionPadding,
+        linkSpacing,
+        linkPadding,
+        iconSize
       );
       onUpdateAllGeometries(updates);
     } else if (onUpdateSectionGeometry) {
-      const nonCollidingY = findNonCollidingY(sourceId, targetX, targetY, w, h, layoutMap, sections);
+      const nonCollidingY = findNonCollidingY(sourceId, targetX, targetY, w, h, layoutMap, sections, sectionPadding, linkSpacing, linkPadding, iconSize);
       onUpdateSectionGeometry(sourceId, { grid_x: targetX, grid_y: nonCollidingY });
     }
   };
@@ -548,7 +568,11 @@ function resolveCascadeGeometries(
         { col_span: clampedSpan },
         layoutMap,
         sections,
-        columnCount
+        columnCount,
+        sectionPadding,
+        linkSpacing,
+        linkPadding,
+        iconSize
       );
       onUpdateAllGeometries(updates);
     } else if (onUpdateSectionGeometry) {
@@ -569,11 +593,15 @@ function resolveCascadeGeometries(
         { col_span: newW, row_span: newH },
         layoutMap,
         sections,
-        columnCount
+        columnCount,
+        sectionPadding,
+        linkSpacing,
+        linkPadding,
+        iconSize
       );
       onUpdateAllGeometries(updates);
     } else if (onUpdateSectionGeometry) {
-      const nonCollidingY = findNonCollidingY(sectionId, curX, geo.grid_y ?? 0, newW, newH, layoutMap, sections);
+      const nonCollidingY = findNonCollidingY(sectionId, curX, geo.grid_y ?? 0, newW, newH, layoutMap, sections, sectionPadding, linkSpacing, linkPadding, iconSize);
       onUpdateSectionGeometry(sectionId, { grid_x: curX, grid_y: nonCollidingY, col_span: newW, row_span: newH });
     }
   };
