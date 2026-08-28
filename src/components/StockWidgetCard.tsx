@@ -32,6 +32,191 @@ interface StockWidgetCardProps {
   maxAllowedSpan?: number;
 }
 
+const StockEvolutionChart: React.FC<{
+  quote?: StockQuote;
+  item?: StockItemConfig;
+}> = ({ quote, item }) => {
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+
+  if (!quote && !item) return null;
+
+  const symbol = item?.symbol || quote?.symbol || '';
+  const displayName = item?.name || quote?.name || symbol;
+  const isPositive = (quote?.changePercent ?? 0) >= 0;
+
+  const history = quote?.history && quote.history.length > 1
+    ? quote.history
+    : quote?.sparkline && quote.sparkline.length > 1
+    ? quote.sparkline.map((p, i) => ({ time: `${i}`, price: p }))
+    : quote?.previousClose !== undefined && quote?.price !== undefined
+    ? [
+        { time: 'Précédent', price: quote.previousClose },
+        { time: 'Actuel', price: quote.price }
+      ]
+    : [];
+
+  const prices = history.map((h) => h.price);
+  const minP = prices.length > 0 ? Math.min(...prices) : 0;
+  const maxP = prices.length > 0 ? Math.max(...prices) : 1;
+  const range = maxP - minP || 1;
+
+  const width = 320;
+  const height = 75;
+  const padX = 8;
+  const padY = 8;
+
+  // Build SVG path
+  const pointsCoords = history.map((h, i) => {
+    const x = padX + (i / Math.max(1, history.length - 1)) * (width - 2 * padX);
+    const y = (height - padY) - ((h.price - minP) / range) * (height - 2 * padY);
+    return { x, y, ...h };
+  });
+
+  const pathD = pointsCoords.length > 0
+    ? `M ${pointsCoords[0].x} ${pointsCoords[0].y} ` + pointsCoords.slice(1).map(p => `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
+    : '';
+
+  const areaD = pointsCoords.length > 0
+    ? `${pathD} L ${pointsCoords[pointsCoords.length - 1].x.toFixed(1)} ${height} L ${pointsCoords[0].x.toFixed(1)} ${height} Z`
+    : '';
+
+  const activePoint = hoverIndex !== null && pointsCoords[hoverIndex] ? pointsCoords[hoverIndex] : null;
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (pointsCoords.length < 2) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const ratio = Math.max(0, Math.min(1, (mouseX - padX) / (width - 2 * padX)));
+    const closestIdx = Math.round(ratio * (pointsCoords.length - 1));
+    setHoverIndex(closestIdx);
+  };
+
+  const strokeColor = isPositive ? '#10b981' : '#f43f5e';
+  const gradientId = `stock-grad-${symbol.replace(/[^a-zA-Z0-9]/g, '')}`;
+
+  return (
+    <div className="p-2.5 rounded-xl bg-slate-50/90 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 shadow-xs mb-2">
+      {/* Top row: Name, price, change */}
+      <div className="flex items-center justify-between gap-1 mb-1">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="font-extrabold text-xs text-slate-950 dark:text-white truncate">
+              {displayName}
+            </span>
+            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase">
+              {symbol}
+            </span>
+          </div>
+          <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-2">
+            <span>Évolution du jour</span>
+            {activePoint && (
+              <span className="text-blue-600 dark:text-sky-400 font-bold">
+                {activePoint.time} : {formatPrice(activePoint.price, quote?.currency)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="text-right flex items-center gap-1.5 flex-shrink-0">
+          <div className="text-sm sm:text-base font-black text-slate-950 dark:text-white tracking-tight">
+            {quote ? formatPrice(quote.price, quote.currency) : '--'}
+          </div>
+          {quote && (
+            <div
+              className={`px-1.5 py-0.5 rounded-md text-[10px] font-extrabold flex items-center gap-0.5 ${
+                isPositive
+                  ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30'
+                  : 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30'
+              }`}
+            >
+              {isPositive ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+              <span>
+                {quote.changePercent >= 0 ? '+' : ''}{quote.changePercent.toFixed(2)}%
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* SVG Chart */}
+      <div className="relative w-full h-[75px] pt-1">
+        {pointsCoords.length > 1 ? (
+          <svg
+            viewBox={`0 0 ${width} ${height}`}
+            className="w-full h-full overflow-visible select-none cursor-crosshair"
+            preserveAspectRatio="none"
+            onMouseMove={handleMouseMove}
+            onMouseLeave={() => setHoverIndex(null)}
+          >
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={strokeColor} stopOpacity="0.28" />
+                <stop offset="100%" stopColor={strokeColor} stopOpacity="0.0" />
+              </linearGradient>
+            </defs>
+
+            {/* Area Fill */}
+            <path d={areaD} fill={`url(#${gradientId})`} />
+
+            {/* Main Line */}
+            <path
+              d={pathD}
+              fill="none"
+              stroke={strokeColor}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+
+            {/* Hover Indicator */}
+            {activePoint && (
+              <g>
+                <line
+                  x1={activePoint.x}
+                  y1={0}
+                  x2={activePoint.x}
+                  y2={height}
+                  stroke="currentColor"
+                  strokeWidth="1"
+                  strokeDasharray="2,2"
+                  className="text-slate-400 dark:text-slate-500"
+                />
+                <circle
+                  cx={activePoint.x}
+                  cy={activePoint.y}
+                  r="4"
+                  fill={strokeColor}
+                  className="stroke-white dark:stroke-slate-900"
+                  strokeWidth="2"
+                />
+              </g>
+            )}
+          </svg>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400 italic">
+            Données graphiques en cours de chargement...
+          </div>
+        )}
+      </div>
+
+      {/* Day Low / High footer */}
+      {quote && (
+        <div className="flex items-center justify-between text-[9px] text-slate-500 dark:text-slate-400 mt-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 font-medium">
+          <span>
+            Bas: {quote.dayLow ? formatPrice(quote.dayLow, quote.currency) : (minP ? formatPrice(minP, quote.currency) : '--')}
+          </span>
+          <span>
+            Préc: {quote.previousClose ? formatPrice(quote.previousClose, quote.currency) : '--'}
+          </span>
+          <span>
+            Haut: {quote.dayHigh ? formatPrice(quote.dayHigh, quote.currency) : (maxP ? formatPrice(maxP, quote.currency) : '--')}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
   section,
   isEditMode,
@@ -80,6 +265,7 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     const conf = parseStockConfig(section.widget_url);
@@ -128,6 +314,14 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
     if (activeCategory === 'all') return true;
     return s.category === activeCategory;
   }), [config.symbols, activeCategory]);
+
+  // Active selected item for the top chart (defaults to the first item)
+  const activeSelectedSymbol = selectedSymbol && config.symbols.some((s) => s.symbol === selectedSymbol)
+    ? selectedSymbol
+    : filteredSymbols[0]?.symbol || config.symbols[0]?.symbol;
+
+  const activeSelectedQuote = quotes[activeSelectedSymbol];
+  const activeSelectedItem = config.symbols.find((s) => s.symbol === activeSelectedSymbol);
 
   const getCategoryLabel = (cat: string) => {
     switch (cat) {
@@ -262,6 +456,11 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
         </div>
       </div>
 
+      {/* Selected Asset Evolution Chart */}
+      {activeSelectedSymbol && (
+        <StockEvolutionChart quote={activeSelectedQuote} item={activeSelectedItem} />
+      )}
+
       {/* Category Pills Filter (if multiple categories) */}
       {categories.length > 2 && (
         <div className="flex items-center gap-1 mb-2 overflow-x-auto scrollbar-none pb-0.5">
@@ -269,7 +468,7 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
             <button
               key={cat}
               onClick={() => setActiveCategory(cat || 'all')}
-              className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap ${
+              className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap cursor-pointer ${
                 activeCategory === cat
                   ? 'bg-[var(--color-primary)] text-white shadow-xs'
                   : 'bg-black/5 dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-black/10'
@@ -281,7 +480,7 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
         </div>
       )}
 
-      {/* Widget Body */}
+      {/* Widget Body / List of Assets */}
       <div className="space-y-1.5 flex-1 overflow-y-auto pr-0.5">
         {loading && Object.keys(quotes).length === 0 ? (
           <div className="space-y-1.5 py-1 animate-pulse">
@@ -309,19 +508,24 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
               const quote = quotes[item.symbol];
               const isPositive = quote ? quote.changePercent > 0 : false;
               const isNegative = quote ? quote.changePercent < 0 : false;
+              const isSelected = item.symbol === activeSelectedSymbol;
 
               return (
-                <a
+                <div
                   key={item.symbol}
-                  href={getStockDetailsUrl(item.symbol)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between p-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/50 hover:bg-black/5 dark:hover:bg-white/10 border border-slate-200/80 dark:border-slate-700/50 transition-all group"
+                  onClick={() => setSelectedSymbol(item.symbol)}
+                  className={`flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer group border ${
+                    isSelected
+                      ? 'bg-blue-500/10 dark:bg-blue-500/15 border-[var(--color-primary)] ring-1 ring-[var(--color-primary)] shadow-xs'
+                      : 'bg-slate-100/90 dark:bg-slate-800/50 hover:bg-black/5 dark:hover:bg-white/10 border-slate-200/80 dark:border-slate-700/50'
+                  }`}
                 >
                   {/* Asset Name & Ticker */}
                   <div className="min-w-0 flex-1 pr-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-extrabold text-xs text-slate-950 dark:text-white truncate group-hover:text-[var(--color-primary)] transition-colors">
+                      <span className={`font-extrabold text-xs truncate transition-colors ${
+                        isSelected ? 'text-[var(--color-primary)]' : 'text-slate-950 dark:text-white group-hover:text-[var(--color-primary)]'
+                      }`}>
                         {item.name || quote?.name || item.symbol}
                       </span>
                       <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase">
@@ -372,12 +576,18 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
                       </span>
                     </div>
 
-                    <ExternalLink
-                      size={12}
-                      className="text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 -mr-0.5"
-                    />
+                    <a
+                      href={getStockDetailsUrl(item.symbol)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-1 rounded-md text-slate-400 hover:text-[var(--color-primary)] hover:bg-black/10 dark:hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0 -mr-0.5"
+                      title="Ouvrir la fiche détaillée"
+                    >
+                      <ExternalLink size={12} />
+                    </a>
                   </div>
-                </a>
+                </div>
               );
             })}
 

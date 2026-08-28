@@ -10,6 +10,11 @@ export interface StockWidgetConfig {
   viewMode?: 'compact' | 'detailed';
 }
 
+export interface StockHistoryPoint {
+  time: string;
+  price: number;
+}
+
 export interface StockQuote {
   symbol: string;
   name: string;
@@ -21,6 +26,7 @@ export interface StockQuote {
   dayLow?: number;
   previousClose?: number;
   sparkline?: number[];
+  history?: StockHistoryPoint[];
   updatedAt: string;
 }
 
@@ -128,10 +134,22 @@ async function fetchFromYahooChart(symbol: string): Promise<StockQuote> {
       const changePercent = previousClose !== 0 ? (change / previousClose) * 100 : 0;
       const currency = meta.currency || (symbol.endsWith('.PA') ? 'EUR' : 'USD');
       
+      const timestamps = result.timestamp || [];
       const quotes = result.indicators?.quote?.[0]?.close || [];
-      const sparkline: number[] = quotes
-        .filter((v: number | null) => typeof v === 'number' && !isNaN(v))
-        .slice(-20);
+      const history: StockHistoryPoint[] = [];
+      const sparkline: number[] = [];
+
+      for (let i = 0; i < quotes.length; i++) {
+        const val = quotes[i];
+        if (typeof val === 'number' && !isNaN(val)) {
+          sparkline.push(val);
+          const t = timestamps[i];
+          const timeStr = t
+            ? new Date(t * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+            : `${i}`;
+          history.push({ time: timeStr, price: val });
+        }
+      }
 
       const foundPreset = POPULAR_STOCK_PRESETS.find((p) => p.symbol.toUpperCase() === symbol.toUpperCase());
       const displayName = foundPreset?.name || meta.shortName || meta.symbol || symbol;
@@ -147,6 +165,7 @@ async function fetchFromYahooChart(symbol: string): Promise<StockQuote> {
         dayLow: meta.regularMarketDayLow,
         previousClose,
         sparkline,
+        history,
         updatedAt: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
       };
     } catch {
@@ -158,15 +177,35 @@ async function fetchFromYahooChart(symbol: string): Promise<StockQuote> {
   if (symbol.endsWith('-USD')) {
     try {
       const binanceSym = symbol.replace('-USD', 'USDT').toUpperCase();
-      const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${binanceSym}`, {
-        signal: AbortSignal.timeout(2500),
-      });
-      if (res.ok) {
-        const bData = await res.json();
+      const [tickerRes, klinesRes] = await Promise.all([
+        fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${binanceSym}`, {
+          signal: AbortSignal.timeout(2500),
+        }),
+        fetch(`https://api.binance.com/api/v3/klines?symbol=${binanceSym}&interval=15m&limit=30`, {
+          signal: AbortSignal.timeout(2500),
+        }).catch(() => null),
+      ]);
+
+      if (tickerRes.ok) {
+        const bData = await tickerRes.json();
         const price = parseFloat(bData.lastPrice);
         const changePercent = parseFloat(bData.priceChangePercent);
         const change = parseFloat(bData.priceChange);
         const foundPreset = POPULAR_STOCK_PRESETS.find((p) => p.symbol.toUpperCase() === symbol.toUpperCase());
+
+        let history: StockHistoryPoint[] = [];
+        let sparkline: number[] = [];
+        if (klinesRes && klinesRes.ok) {
+          const klines = await klinesRes.json();
+          if (Array.isArray(klines)) {
+            history = klines.map((k: any) => ({
+              time: new Date(k[0]).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+              price: parseFloat(k[4]),
+            }));
+            sparkline = history.map((h) => h.price);
+          }
+        }
+
         return {
           symbol,
           name: foundPreset?.name || symbol,
@@ -174,6 +213,9 @@ async function fetchFromYahooChart(symbol: string): Promise<StockQuote> {
           currency: 'USD',
           change,
           changePercent,
+          previousClose: price - change,
+          sparkline,
+          history,
           updatedAt: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
         };
       }
