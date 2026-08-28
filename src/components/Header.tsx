@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Search, Settings, Edit3, X, Check, Palette, LogOut, User, LayoutGrid, Menu } from 'lucide-react';
-import { useTheme, type Theme } from '../hooks/useTheme';
+import { Search, Settings, Edit3, X, Check, LogOut, User, LayoutGrid, Menu, Plus } from 'lucide-react';
 import { useLayout, type ColumnCount } from '../hooks/useLayout';
 import { supabase } from '../utils/supabase';
 
@@ -14,6 +13,7 @@ interface HeaderProps {
   onToggleEditMode: () => void;
   onOpenAccountModal: () => void;
   onOpenSettingsModal: () => void;
+  onOpenAddModal: () => void;
   profile: 'perso' | 'pro';
   onChangeProfile: (p: 'perso' | 'pro') => void;
   onOpenMobileMenu: () => void;
@@ -29,13 +29,13 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleEditMode,
   onOpenAccountModal,
   onOpenSettingsModal,
+  onOpenAddModal,
   profile,
   onChangeProfile,
   onOpenMobileMenu
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(title);
-  const { theme, setTheme } = useTheme();
   const { columnCount, setColumnCount } = useLayout(activePageId);
 
   const handleTitleSubmit = () => {
@@ -157,25 +157,6 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        <div className="relative group">
-          <button className="flex items-center justify-center p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-black/10 transition-colors">
-            <Palette size={20} />
-          </button>
-          <div className="absolute right-0 top-full mt-2 w-36 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-            {(['light', 'tokyo-night', 'nord', 'dracula', 'midnight'] as Theme[]).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTheme(t)}
-                className={`w-full text-left px-4 py-2 text-sm capitalize transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                  theme === t ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]'
-                }`}
-              >
-                {t.replace('-', ' ')}
-              </button>
-            ))}
-          </div>
-        </div>
-
         <button
           onClick={onOpenSettingsModal}
           className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-[var(--color-text)] bg-black/10 hover:bg-black/20 border border-[var(--color-border)] transition-all"
@@ -184,6 +165,17 @@ export const Header: React.FC<HeaderProps> = ({
           <Settings size={17} />
           <span>Paramètres</span>
         </button>
+
+        {isEditMode && (
+          <button
+            onClick={onOpenAddModal}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 transition-all shadow-sm shadow-emerald-600/20"
+            title="Ajouter une section ou un widget"
+          >
+            <Plus size={17} className="stroke-[2.5]" />
+            <span>Ajouter</span>
+          </button>
+        )}
 
         <button
           onClick={onToggleEditMode}

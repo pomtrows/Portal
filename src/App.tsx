@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { SectionModal, ItemModal, RssModal, WeatherModal, TrafficModal, SearchModal } from './components/EditModals';
+import { AddElementModal } from './components/AddElementModal';
 import { SettingsModal } from './components/SettingsModal';
 import { MobileMenu } from './components/MobileMenu';
 import { Auth } from './components/Auth';
@@ -35,6 +36,7 @@ function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Modals state
+  const [isAddElementModalOpen, setIsAddElementModalOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isSectionModalOpen, setIsSectionModalOpen] = useState(false);
@@ -794,6 +796,7 @@ function App() {
         onToggleEditMode={() => setIsEditMode(!isEditMode)}
         onOpenAccountModal={() => setIsAccountModalOpen(true)}
         onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
+        onOpenAddModal={() => setIsAddElementModalOpen(true)}
         profile={currentProfile}
         onChangeProfile={handleChangeProfile}
         onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
@@ -907,6 +910,16 @@ function App() {
       </main>
 
       {/* Modals */}
+      <AddElementModal
+        isOpen={isAddElementModalOpen}
+        onClose={() => setIsAddElementModalOpen(false)}
+        onAddSection={handleAddSection}
+        onAddRssWidget={handleAddRssWidget}
+        onAddWeatherWidget={handleAddWeatherWidget}
+        onAddTrafficWidget={handleAddTrafficWidget}
+        onAddSearchWidget={handleAddSearchWidget}
+      />
+
       <AccountModal
         isOpen={isAccountModalOpen}
         onClose={() => setIsAccountModalOpen(false)}
