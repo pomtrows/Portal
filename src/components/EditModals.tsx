@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Section, LinkItem } from '../types';
 import { searchCities, parseWeatherConfig, type WeatherLocation } from '../utils/weather';
 import { searchAddresses, parseTrafficConfig, calculateRoute, type TrafficLocation, type RouteResult } from '../utils/traffic';
-import { ALL_SEARCH_ENGINES, parseSearchConfig, type SearchWidgetConfig } from '../utils/searchEngines';
+import { ALL_SEARCH_ENGINES, parseSearchConfig, DEFAULT_SEARCH_CONFIG, type SearchWidgetConfig } from '../utils/searchEngines';
 import {
   DEFAULT_STOCK_SYMBOLS,
   MAJOR_INDICES,
@@ -978,7 +978,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   const [title, setTitle] = useState('');
   const [defaultEngineId, setDefaultEngineId] = useState<string>('google');
   const [enabledEngineIds, setEnabledEngineIds] = useState<string[]>([]);
-  const [colSpan, setColSpan] = useState<number>(1);
+  const [colSpan, setColSpan] = useState<number>(2);
 
   const [orderedEngineIds, setOrderedEngineIds] = useState<string[]>([]);
 
@@ -988,18 +988,18 @@ export const SearchModal: React.FC<SearchModalProps> = ({
       const conf = parseSearchConfig(initialData.widget_url);
       setDefaultEngineId(conf.defaultEngineId);
       setEnabledEngineIds(conf.enabledEngineIds);
-      const allIds = ALL_SEARCH_ENGINES.map((e) => e.id);
+      const allIds = DEFAULT_SEARCH_CONFIG.enabledEngineIds;
       const existing = conf.enabledEngineIds || [];
       const remaining = allIds.filter((id) => !existing.includes(id));
       setOrderedEngineIds([...existing, ...remaining]);
-      setColSpan(initialData.col_span || (conf as any)?.col_span || 1);
+      setColSpan(initialData.col_span || (conf as any)?.col_span || 2);
     } else {
       setTitle('Hub de recherche & IA');
       setDefaultEngineId('google');
-      const allIds = ALL_SEARCH_ENGINES.map((e) => e.id);
+      const allIds = DEFAULT_SEARCH_CONFIG.enabledEngineIds;
       setEnabledEngineIds(allIds);
       setOrderedEngineIds(allIds);
-      setColSpan(1);
+      setColSpan(2);
     }
   }, [initialData, isOpen]);
 
@@ -1641,7 +1641,7 @@ export const BeszelModal: React.FC<BeszelModalProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
-  const [authType, setAuthType] = useState<'token' | 'password'>('token');
+  const [authType, setAuthType] = useState<'password' | 'token'>('password');
   const [token, setToken] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -1667,7 +1667,7 @@ export const BeszelModal: React.FC<BeszelModalProps> = ({
     } else {
       setTitle('Monitoring Serveurs');
       setUrl('');
-      setAuthType('token');
+      setAuthType('password');
       setToken('');
       setEmail('');
       setPassword('');
@@ -1794,7 +1794,7 @@ export const BeszelModal: React.FC<BeszelModalProps> = ({
               className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
             <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
-              L'adresse web où est hébergé votre serveur Beszel Hub.
+              L'adresse de base de votre serveur Beszel Hub (ex: <code>https://beszel.imagina.sbs</code>).
             </p>
           </div>
 
@@ -1804,18 +1804,6 @@ export const BeszelModal: React.FC<BeszelModalProps> = ({
               Méthode d'authentification
             </label>
             <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setAuthType('token')}
-                className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border text-xs font-bold transition-all ${
-                  authType === 'token'
-                    ? 'border-teal-500 bg-teal-500/10 text-teal-600 dark:text-teal-400 ring-2 ring-teal-500/20'
-                    : 'border-[var(--color-border)] bg-black/5 hover:bg-black/10 text-[var(--color-text-muted)]'
-                }`}
-              >
-                <Key size={14} />
-                <span>Token API / PocketBase</span>
-              </button>
               <button
                 type="button"
                 onClick={() => setAuthType('password')}
@@ -1828,34 +1816,27 @@ export const BeszelModal: React.FC<BeszelModalProps> = ({
                 <Mail size={14} />
                 <span>Email & Mot de passe</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setAuthType('token')}
+                className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border text-xs font-bold transition-all ${
+                  authType === 'token'
+                    ? 'border-teal-500 bg-teal-500/10 text-teal-600 dark:text-teal-400 ring-2 ring-teal-500/20'
+                    : 'border-[var(--color-border)] bg-black/5 hover:bg-black/10 text-[var(--color-text-muted)]'
+                }`}
+              >
+                <Key size={14} />
+                <span>Token d'accès API</span>
+              </button>
             </div>
           </div>
 
-          {/* Token input */}
-          {authType === 'token' && (
-            <div>
-              <label className="block text-xs font-bold text-[var(--color-text-strong)] mb-1">
-                Token API ou Token d'accès
-              </label>
-              <input
-                type="password"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
-              />
-              <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
-                Token généré depuis votre compte ou les paramètres Beszel/PocketBase.
-              </p>
-            </div>
-          )}
-
-          {/* Email & Password inputs */}
+          {/* Email & Password inputs (Recommended) */}
           {authType === 'password' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-bold text-[var(--color-text-strong)] mb-1">
-                  Email
+                  Email du compte Beszel <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <Mail
@@ -1873,7 +1854,7 @@ export const BeszelModal: React.FC<BeszelModalProps> = ({
               </div>
               <div>
                 <label className="block text-xs font-bold text-[var(--color-text-strong)] mb-1">
-                  Mot de passe
+                  Mot de passe <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <Lock
@@ -1889,6 +1870,28 @@ export const BeszelModal: React.FC<BeszelModalProps> = ({
                   />
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Token input */}
+          {authType === 'token' && (
+            <div>
+              <label className="block text-xs font-bold text-[var(--color-text-strong)] mb-1">
+                Token d'authentification PocketBase / Beszel
+              </label>
+              <input
+                type="password"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1.5 flex items-start gap-1">
+                <AlertCircle size={13} className="flex-shrink-0 mt-0.5" />
+                <span>
+                  <strong>Note :</strong> Les tokens affichés dans <em>"Tokens et Empreintes"</em> de Beszel sont des jetons d'enregistrement pour les agents serveurs. Pour ce widget, utilisez plutôt l'option <strong>Email & Mot de passe</strong> de votre compte.
+                </span>
+              </p>
             </div>
           )}
 

@@ -100,10 +100,16 @@ export function parseBeszelConfig(widgetUrl?: string): BeszelConfig {
  */
 export function normalizeBeszelUrl(rawUrl: string): string {
   let u = rawUrl.trim();
+  if (!u) return '';
   if (!u.startsWith('http://') && !u.startsWith('https://')) {
     u = `https://${u}`;
   }
-  return u.replace(/\/+$/, '');
+  try {
+    const parsed = new URL(u);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return u.replace(/\/+$/, '');
+  }
 }
 
 /**
