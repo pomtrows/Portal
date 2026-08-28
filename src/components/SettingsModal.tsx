@@ -119,7 +119,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Completely transparent backdrop to allow instant live preview without dimming or blur */}
       <div className="fixed inset-0 -z-10" onClick={onClose} />
-      <div className="w-full max-w-2xl bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] relative z-10">
+      <div className="w-full max-w-3xl bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] relative z-10">
         {/* Modal Header */}
         <div className="px-5 py-3 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-surface)]">
           <div className="flex items-center gap-2">
@@ -140,32 +140,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-[var(--color-border)] bg-black/5 dark:bg-black/20 px-4 pt-1.5 gap-1 overflow-x-auto scrollbar-none">
+        <div className="flex border-b border-[var(--color-border)] bg-black/5 dark:bg-black/20 px-3 sm:px-4 pt-1.5 gap-1 overflow-x-auto scrollbar-none">
           <button
             onClick={() => setActiveTab('theme')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap flex-1 sm:flex-initial ${
               activeTab === 'theme'
                 ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-surface)] shadow-xs'
                 : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'
             }`}
           >
             <Palette size={14} />
-            <span>Style & Thème</span>
+            <span>Thèmes</span>
           </button>
           <button
             onClick={() => setActiveTab('spacing')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap flex-1 sm:flex-initial ${
               activeTab === 'spacing'
                 ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-surface)] shadow-xs'
                 : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'
             }`}
           >
             <LayoutGrid size={14} />
-            <span>Espacements & Marges</span>
+            <span>Espacements</span>
           </button>
           <button
             onClick={() => setActiveTab('fonts')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap flex-1 sm:flex-initial ${
               activeTab === 'fonts'
                 ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-surface)] shadow-xs'
                 : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'
@@ -176,25 +176,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           </button>
           <button
             onClick={() => setActiveTab('schedule')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap flex-1 sm:flex-initial ${
               activeTab === 'schedule'
                 ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-surface)] shadow-xs'
                 : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'
             }`}
           >
             <Clock size={14} />
-            <span>Planning Pro/Perso</span>
+            <span>Planning</span>
           </button>
           <button
             onClick={() => setActiveTab('traffic')}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-t-lg text-xs font-bold transition-all border-b-2 whitespace-nowrap flex-1 sm:flex-initial ${
               activeTab === 'traffic'
                 ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-surface)] shadow-xs'
                 : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'
             }`}
           >
             <Car size={14} />
-            <span>Info Trafic (TomTom)</span>
+            <span>Info Trafic</span>
           </button>
         </div>
 
