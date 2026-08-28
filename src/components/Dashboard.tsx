@@ -125,24 +125,24 @@ function getSectionRowSpan(
   const innerCols = Math.max(1, colSpan);
   const itemRows = Math.ceil(count / innerCols);
 
-  // Section container padding top+bottom + card header & border
-  const padOverhead = paddingLevel === 'xs' ? 52 : paddingLevel === 'sm' ? 58 : paddingLevel === 'lg' ? 72 : paddingLevel === 'xl' ? 82 : 64;
+  // Section container padding top+bottom + card header + breathing room margin
+  const padOverhead = paddingLevel === 'xs' ? 64 : paddingLevel === 'sm' ? 70 : paddingLevel === 'lg' ? 88 : paddingLevel === 'xl' ? 98 : 78;
 
   // Icon container height (xs: 28px, sm: 32px, md: 36px, lg: 40px, xl: 44px)
   const iconHeight = iconSizeLevel === 'xs' ? 28 : iconSizeLevel === 'sm' ? 32 : iconSizeLevel === 'lg' ? 40 : iconSizeLevel === 'xl' ? 44 : 36;
 
-  // Item inner padding top+bottom (xs: 10px, sm: 14px, md: 18px, lg: 24px, xl: 30px)
-  const itemPad = itemPadLevel === 'xs' ? 10 : itemPadLevel === 'sm' ? 14 : itemPadLevel === 'lg' ? 24 : itemPadLevel === 'xl' ? 30 : 18;
+  // Item inner padding top+bottom (xs: 12px, sm: 16px, md: 20px, lg: 28px, xl: 36px)
+  const itemPad = itemPadLevel === 'xs' ? 12 : itemPadLevel === 'sm' ? 16 : itemPadLevel === 'lg' ? 28 : itemPadLevel === 'xl' ? 36 : 20;
 
   // Average text height: check if items have descriptions
   const hasDesc = section.items?.some((it) => !!it.description);
-  const textHeight = hasDesc ? 34 : 20;
+  const textHeight = hasDesc ? 36 : 22;
 
   // Actual single item card height = max(icon, text) + inner padding + 2px border
   const singleItemHeight = Math.max(iconHeight, textHeight) + itemPad + 2;
 
-  // Gap between items (xs: 6px, sm: 8px, md: 10px, lg: 13px, xl: 16px)
-  const gap = spacingLevel === 'xs' ? 6 : spacingLevel === 'sm' ? 8 : spacingLevel === 'lg' ? 13 : spacingLevel === 'xl' ? 16 : 10;
+  // Gap between items (xs: 6px, sm: 8px, md: 10px, lg: 14px, xl: 18px)
+  const gap = spacingLevel === 'xs' ? 6 : spacingLevel === 'sm' ? 8 : spacingLevel === 'lg' ? 14 : spacingLevel === 'xl' ? 18 : 10;
 
   // Total required height in pixels: overhead + all rows of items + gaps between them
   const totalPx = padOverhead + itemRows * singleItemHeight + Math.max(0, itemRows - 1) * gap;
