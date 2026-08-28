@@ -159,13 +159,8 @@ const StockEvolutionChart: React.FC<{
       {/* Top row: Name, price, change */}
       <div className="flex items-center justify-between gap-1 mb-1">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <span className="font-extrabold text-xs text-slate-950 dark:text-white truncate">
-              {displayName}
-            </span>
-            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase">
-              {symbol}
-            </span>
+          <div className="font-extrabold text-xs text-slate-950 dark:text-white truncate">
+            {displayName}
           </div>
           <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-2">
             <span>{currentRangeConfig?.fullLabel || 'Évolution'}</span>
@@ -607,36 +602,23 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
                       : 'bg-slate-100/90 dark:bg-slate-800/50 hover:bg-black/5 dark:hover:bg-white/10 border-slate-200/80 dark:border-slate-700/50'
                   }`}
                 >
-                  {/* Asset Name & Ticker */}
+                  {/* Asset Name */}
                   <div className="min-w-0 flex-1 pr-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`font-extrabold text-xs truncate transition-colors ${
-                        isSelected ? 'text-[var(--color-primary)]' : 'text-slate-950 dark:text-white group-hover:text-[var(--color-primary)]'
-                      }`}>
-                        {item.name || quote?.name || item.symbol}
-                      </span>
-                      <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 uppercase">
-                        {item.symbol}
-                      </span>
-                    </div>
-                    {item.category && (
-                      <div className="text-[9px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                        {getCategoryLabel(item.category)}
-                      </div>
-                    )}
+                    <span
+                      className={`font-bold text-xs truncate block transition-colors ${
+                        isSelected
+                          ? 'text-[var(--color-primary)] font-extrabold'
+                          : 'text-slate-950 dark:text-white group-hover:text-[var(--color-primary)]'
+                      }`}
+                    >
+                      {item.name || quote?.name || item.symbol}
+                    </span>
                   </div>
 
                   {/* Price & Variation Badge */}
                   <div className="text-right flex items-center gap-2 flex-shrink-0">
-                    <div>
-                      <div className="text-xs font-black text-slate-950 dark:text-white tracking-tight">
-                        {quote ? formatPrice(quote.price, quote.currency) : '--'}
-                      </div>
-                      {quote?.previousClose !== undefined && (
-                        <div className="text-[9px] text-slate-600 dark:text-slate-400">
-                          Préc: {formatPrice(quote.previousClose, quote.currency)}
-                        </div>
-                      )}
+                    <div className="text-xs font-black text-slate-950 dark:text-white tracking-tight">
+                      {quote ? formatPrice(quote.price, quote.currency) : '--'}
                     </div>
 
                     {/* Change % Badge */}
