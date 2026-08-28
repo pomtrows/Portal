@@ -112,9 +112,9 @@ const StockEvolutionChart: React.FC<{
   const isPositive = changePercent >= 0;
 
   const width = 320;
-  const height = 75;
-  const padX = 8;
-  const padY = 8;
+  const height = 62;
+  const padX = 6;
+  const padY = 6;
 
   // Build SVG path coordinates
   const pointsCoords = history.map((h, i) => {
@@ -155,14 +155,14 @@ const StockEvolutionChart: React.FC<{
   const currentRangeConfig = STOCK_CHART_RANGES.find((r) => r.key === selectedRange);
 
   return (
-    <div className="p-2.5 rounded-xl bg-slate-50/90 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 shadow-xs mb-2">
+    <div className="p-2 rounded-xl bg-slate-50/90 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 shadow-xs mb-1.5">
       {/* Top row: Name, price, change */}
-      <div className="flex items-center justify-between gap-1 mb-1">
+      <div className="flex items-center justify-between gap-1 mb-0.5">
         <div className="min-w-0 flex-1">
           <div className="font-extrabold text-xs text-slate-950 dark:text-white truncate">
             {displayName}
           </div>
-          <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-2">
+          <div className="text-[9.5px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 leading-none">
             <span>{currentRangeConfig?.fullLabel || 'Évolution'}</span>
             {activePoint && (
               <span className="text-blue-600 dark:text-sky-400 font-bold">
@@ -172,19 +172,19 @@ const StockEvolutionChart: React.FC<{
           </div>
         </div>
 
-        <div className="text-right flex items-center gap-1.5 flex-shrink-0">
-          <div className="text-sm sm:text-base font-black text-slate-950 dark:text-white tracking-tight">
+        <div className="text-right flex items-center gap-1 flex-shrink-0">
+          <div className="text-xs sm:text-sm font-black text-slate-950 dark:text-white tracking-tight">
             {quote ? formatPrice(quote.price, quote.currency) : '--'}
           </div>
           {(quote || rangeData) && (
             <div
-              className={`px-1.5 py-0.5 rounded-md text-[10px] font-extrabold flex items-center gap-0.5 ${
+              className={`px-1 py-0.5 rounded text-[9.5px] font-extrabold flex items-center gap-0.5 ${
                 isPositive
                   ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30'
                   : 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30'
               }`}
             >
-              {isPositive ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+              {isPositive ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
               <span>
                 {changePercent >= 0 ? '+' : ''}
                 {changePercent.toFixed(2)}%
@@ -195,14 +195,14 @@ const StockEvolutionChart: React.FC<{
       </div>
 
       {/* Range Selection Pills (1J, 1M, 6M, 1A, 5A) */}
-      <div className="flex items-center justify-between gap-1 my-1.5">
-        <div className="flex items-center gap-1 p-0.5 bg-black/5 dark:bg-white/5 rounded-lg w-full">
+      <div className="flex items-center justify-between gap-1 my-1">
+        <div className="flex items-center gap-0.5 p-0.5 bg-black/5 dark:bg-white/5 rounded-lg w-full">
           {STOCK_CHART_RANGES.map((r) => (
             <button
               key={r.key}
               type="button"
               onClick={() => setSelectedRange(r.key)}
-              className={`flex-1 py-0.5 px-1 rounded-md text-[10px] font-bold transition-all text-center cursor-pointer select-none ${
+              className={`flex-1 py-0.5 px-0.5 rounded text-[9.5px] font-bold transition-all text-center cursor-pointer select-none ${
                 selectedRange === r.key
                   ? 'bg-[var(--color-primary)] text-white shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
@@ -216,7 +216,7 @@ const StockEvolutionChart: React.FC<{
       </div>
 
       {/* SVG Chart */}
-      <div className="relative w-full h-[75px] pt-1">
+      <div className="relative w-full h-[62px]">
         {pointsCoords.length > 1 ? (
           <svg
             viewBox={`0 0 ${width} ${height}`}
@@ -242,7 +242,7 @@ const StockEvolutionChart: React.FC<{
               d={pathD}
               fill="none"
               stroke={strokeColor}
-              strokeWidth="2"
+              strokeWidth="1.75"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -263,10 +263,10 @@ const StockEvolutionChart: React.FC<{
                 <circle
                   cx={activePoint.x}
                   cy={activePoint.y}
-                  r="4"
+                  r="3.5"
                   fill={strokeColor}
                   className="stroke-white dark:stroke-slate-900"
-                  strokeWidth="2"
+                  strokeWidth="1.5"
                 />
               </g>
             )}
@@ -279,7 +279,7 @@ const StockEvolutionChart: React.FC<{
       </div>
 
       {/* Low / Start / High footer */}
-      <div className="flex items-center justify-between text-[9px] text-slate-500 dark:text-slate-400 mt-1 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 font-medium">
+      <div className="flex items-center justify-between text-[8.5px] text-slate-500 dark:text-slate-400 mt-0.5 pt-0.5 border-t border-slate-200/60 dark:border-slate-700/60 font-medium leading-none">
         <span>
           Bas: {minP ? formatPrice(minP, quote?.currency) : '--'}
           {quote?.changeFrom52wLow !== undefined && (
@@ -573,13 +573,13 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
       )}
 
       {/* Widget Body / List of Assets */}
-      <div className="space-y-1.5 flex-1 overflow-y-auto pr-0.5">
+      <div className="space-y-1 flex-1 overflow-y-auto pr-0.5">
         {loading && Object.keys(quotes).length === 0 ? (
-          <div className="space-y-1.5 py-1 animate-pulse">
+          <div className="space-y-1 py-1 animate-pulse">
             {filteredSymbols.map((item) => (
               <div
                 key={item.symbol}
-                className="h-12 bg-slate-200/80 dark:bg-slate-800/80 rounded-xl border border-slate-200/40 dark:border-slate-700/40"
+                className="h-10 bg-slate-200/80 dark:bg-slate-800/80 rounded-lg border border-slate-200/40 dark:border-slate-700/40"
               ></div>
             ))}
           </div>
@@ -606,7 +606,7 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
                 <div
                   key={item.symbol}
                   onClick={() => setSelectedSymbol(item.symbol)}
-                  className={`flex items-center justify-between p-2 rounded-xl transition-all cursor-pointer group border ${
+                  className={`flex items-center justify-between py-1.5 px-2.5 rounded-lg transition-all cursor-pointer group border ${
                     isSelected
                       ? 'bg-blue-500/10 dark:bg-blue-500/15 border-[var(--color-primary)] ring-1 ring-[var(--color-primary)] shadow-xs'
                       : 'bg-slate-100/90 dark:bg-slate-800/50 hover:bg-black/5 dark:hover:bg-white/10 border-slate-200/80 dark:border-slate-700/50'
@@ -615,7 +615,7 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
                   {/* Asset Name & 52-week variations */}
                   <div className="min-w-0 flex-1 pr-2">
                     <span
-                      className={`font-bold text-xs truncate block transition-colors ${
+                      className={`font-bold text-xs truncate block leading-tight transition-colors ${
                         isSelected
                           ? 'text-[var(--color-primary)] font-extrabold'
                           : 'text-slate-950 dark:text-white group-hover:text-[var(--color-primary)]'
@@ -624,7 +624,7 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
                       {item.name || quote?.name || item.symbol}
                     </span>
                     {(quote?.changeFrom52wLow !== undefined || quote?.changeFrom52wHigh !== undefined) && (
-                      <div className="text-[9px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
+                      <div className="text-[8.5px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5 leading-none">
                         {quote.changeFrom52wLow !== undefined && (
                           <span
                             title={`Plus bas 52 semaines : ${formatPrice(quote.fiftyTwoWeekLow || 0, quote.currency)}`}
@@ -646,14 +646,14 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
                   </div>
 
                   {/* Price & Variation Badge */}
-                  <div className="text-right flex items-center gap-2 flex-shrink-0">
+                  <div className="text-right flex items-center gap-1.5 flex-shrink-0">
                     <div className="text-xs font-black text-slate-950 dark:text-white tracking-tight">
                       {quote ? formatPrice(quote.price, quote.currency) : '--'}
                     </div>
 
                     {/* Change % Badge */}
                     <div
-                      className={`min-w-[62px] px-1.5 py-1 rounded-lg text-right font-extrabold text-[11px] flex items-center justify-end gap-0.5 ${
+                      className={`min-w-[56px] px-1.5 py-0.5 rounded-md text-right font-extrabold text-[10px] flex items-center justify-end gap-0.5 ${
                         isPositive
                           ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30'
                           : isNegative
@@ -662,11 +662,11 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
                       }`}
                     >
                       {isPositive ? (
-                        <TrendingUp size={11} className="text-emerald-700 dark:text-emerald-400" />
+                        <TrendingUp size={10} className="text-emerald-700 dark:text-emerald-400" />
                       ) : isNegative ? (
-                        <TrendingDown size={11} className="text-red-600 dark:text-red-400" />
+                        <TrendingDown size={10} className="text-red-600 dark:text-red-400" />
                       ) : (
-                        <Minus size={11} className="text-slate-500" />
+                        <Minus size={10} className="text-slate-500" />
                       )}
                       <span>
                         {quote
@@ -680,10 +680,10 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="p-1 rounded-md text-slate-400 hover:text-[var(--color-primary)] hover:bg-black/10 dark:hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0 -mr-0.5"
+                      className="p-0.5 rounded text-slate-400 hover:text-[var(--color-primary)] hover:bg-black/10 dark:hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0 -mr-0.5"
                       title="Ouvrir la fiche détaillée"
                     >
-                      <ExternalLink size={12} />
+                      <ExternalLink size={11} />
                     </a>
                   </div>
                 </div>
