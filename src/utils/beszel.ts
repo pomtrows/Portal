@@ -30,13 +30,13 @@ export interface BeszelSystem {
   host?: string;
   status: 'up' | 'down' | 'paused' | 'pending';
   info?: {
-    cpu?: number;
+    cpu?: string | number;
     cores?: number;
-    m?: number; // total memory
-    d?: number; // total disk
+    m?: number; // total memory (GB or bytes)
+    d?: number; // total disk (GB or bytes)
     k?: string; // kernel
-    u?: number; // uptime
-    t?: number; // temp
+    u?: number; // uptime in seconds
+    t?: any; // temp number or sensor map
     dc?: number; // docker count
     [key: string]: any;
   };
@@ -69,9 +69,11 @@ export function formatGigabytes(gb: number): string {
 export function parseBeszelConfig(widgetUrl?: string): BeszelConfig {
   const defaultConfig: BeszelConfig = {
     url: '',
-    authType: 'token',
+    authType: 'password',
     systemId: 'all',
-    title: 'Monitoring Beszel',
+    title: 'Monitoring Serveurs',
+    col_span: 1,
+    row_span: 6,
   };
 
   if (!widgetUrl) return defaultConfig;
@@ -86,9 +88,9 @@ export function parseBeszelConfig(widgetUrl?: string): BeszelConfig {
       password: parsed.password || '',
       systemId: parsed.systemId || 'all',
       systemName: parsed.systemName || '',
-      title: parsed.title || 'Monitoring Beszel',
+      title: parsed.title || 'Monitoring Serveurs',
       col_span: parsed.col_span || 1,
-      row_span: parsed.row_span || 1,
+      row_span: parsed.row_span || 6,
     };
   } catch {
     return defaultConfig;
@@ -96,7 +98,7 @@ export function parseBeszelConfig(widgetUrl?: string): BeszelConfig {
 }
 
 /**
- * Normalizes Beszel URL by stripping trailing slash
+ * Normalizes Beszel URL by extracting origin (protocol + host)
  */
 export function normalizeBeszelUrl(rawUrl: string): string {
   let u = rawUrl.trim();
@@ -132,7 +134,6 @@ export async function authenticateBeszel(
     throw new Error('Veuillez renseigner votre email et mot de passe Beszel.');
   }
 
-  // PocketBase auth endpoints (try users then admins)
   const endpoints = [
     `${baseUrl}/api/collections/users/auth-with-password`,
     `${baseUrl}/api/admins/auth-with-password`,
@@ -172,64 +173,189 @@ export async function authenticateBeszel(
 }
 
 /**
- * Parses Beszel stats payload from systems collection record or system_records
+ * Parses numeric memory / disk value into GB.
+ * Handles both raw bytes (> 1,000,000) and pre-converted GB values (< 1,000,000).
  */
-function extractStatsFromRecord(item: any): BeszelStats {
-  const info = item.info || {};
+function parseGigabytes(val: any, fallback: number = 0): number {
+  if (typeof val === 'number') {
+    if (isNaN(val) || val <= 0) return fallback;
+    if (val > 1_000_000) {
+      return parseFloat((val / (1024 * 1024 * 1024)).toFixed(1));
+    }
+    return parseFloat(val.toFixed(1));
+  }
+  if (typeof val === 'string') {
+    const cleanStr = val.replace(/[^0-9.]/g, '');
+    const num = parseFloat(cleanStr);
+    if (!isNaN(num) && num > 0) {
+      return parseGigabytes(num, fallback);
+    }
+  }
+  return fallback;
+}
 
-  // Extract CPU percent
+/**
+ * Parses temperature from number, string, or sensor dictionary.
+ * Filters out idle motherboard/ACPI sensor anomalies and prioritizes CPU sensors.
+ */
+function parseTemperature(val: any): number | undefined {
+  if (typeof val === 'number' && !isNaN(val) && val > 0) {
+    return parseFloat(val.toFixed(1));
+  }
+  if (typeof val === 'string') {
+    const num = parseFloat(val);
+    if (!isNaN(num) && num > 0) return parseFloat(num.toFixed(1));
+  }
+  if (typeof val === 'object' && val !== null) {
+    const entries = Object.entries(val);
+    if (entries.length === 0) return undefined;
+
+    // Prioritize CPU-specific temperature sensors (AMD k10temp, Intel coretemp, package, tctl, etc.)
+    const cpuKeys = ['k10temp_tctl', 'k10temp', 'coretemp', 'cpu', 'package', 'tctl', 'tdie', 'tccd', 'soc'];
+    for (const key of cpuKeys) {
+      const match = entries.find(([k]) => k.toLowerCase().includes(key));
+      if (match) {
+        const tempVal = typeof match[1] === 'number' ? match[1] : parseFloat(String(match[1]));
+        if (!isNaN(tempVal) && tempVal > 0) {
+          return parseFloat(tempVal.toFixed(1));
+        }
+      }
+    }
+
+    // Fallback: Pick the maximum realistic active sensor temperature (> 20°C and < 120°C)
+    const validTemps = entries
+      .map(([, v]) => (typeof v === 'number' ? v : typeof v === 'string' ? parseFloat(v) : NaN))
+      .filter((n) => !isNaN(n) && n > 0 && n < 120);
+
+    if (validTemps.length > 0) {
+      return parseFloat(Math.max(...validTemps).toFixed(1));
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Parses Beszel stats payload from systems record and optional system_records latest entry
+ */
+function extractStatsFromRecord(systemItem: any, latestRecordStats?: any): BeszelStats {
+  const info = systemItem.info || {};
+  const recStats = latestRecordStats || systemItem.stats || {};
+
+  // 1. CPU Usage Percentage
   let cpuPercent = 0;
-  if (typeof info.cpu === 'number') {
-    cpuPercent = Math.round(info.cpu);
-  } else if (typeof item.cpu === 'number') {
-    cpuPercent = Math.round(item.cpu);
-  } else if (typeof item.stats?.cpu === 'number') {
-    cpuPercent = Math.round(item.stats.cpu);
+  if (typeof recStats.cpu === 'number') {
+    cpuPercent = recStats.cpu;
+  } else if (typeof recStats.cp === 'number') {
+    cpuPercent = recStats.cp;
+  } else if (typeof info.cp === 'number') {
+    cpuPercent = info.cp;
+  } else if (typeof systemItem.cpu === 'number') {
+    cpuPercent = systemItem.cpu;
+  } else if (typeof info.cpu === 'number') {
+    cpuPercent = info.cpu;
   }
 
-  // Extract Memory
-  let memTotal = (info.m || info.memory || item.memory || 16 * 1024 * 1024 * 1024) / (1024 * 1024 * 1024);
-  let memUsed = (info.mu || item.memory_used || item.stats?.mu || 0) / (1024 * 1024 * 1024);
-  let memPercent = (info.mp || item.memory_percent || item.stats?.mp || 0);
+  // 2. Memory (RAM)
+  // info.m is total RAM in GB (e.g. 28.7 GB)
+  const memTotal = parseGigabytes(
+    info.m || info.memory || recStats.m || recStats.memory || systemItem.memory,
+    16
+  );
 
-  if (memPercent === 0 && memTotal > 0 && memUsed > 0) {
-    memPercent = Math.round((memUsed / memTotal) * 100);
-  } else if (memUsed === 0 && memPercent > 0 && memTotal > 0) {
+  // Memory percent (e.g. 28.5%)
+  let memPercent = 0;
+  if (typeof recStats.mp === 'number') {
+    memPercent = recStats.mp;
+  } else if (typeof recStats.memory_percent === 'number') {
+    memPercent = recStats.memory_percent;
+  } else if (typeof info.mp === 'number') {
+    memPercent = info.mp;
+  } else if (typeof systemItem.memory_percent === 'number') {
+    memPercent = systemItem.memory_percent;
+  }
+
+  // Memory used (in GB)
+  let memUsed = 0;
+  if (typeof recStats.mu === 'number') {
+    memUsed = parseGigabytes(recStats.mu, 0);
+  } else if (typeof recStats.memory_used === 'number') {
+    memUsed = parseGigabytes(recStats.memory_used, 0);
+  } else if (typeof info.mu === 'number') {
+    memUsed = parseGigabytes(info.mu, 0);
+  } else if (typeof systemItem.memory_used === 'number') {
+    memUsed = parseGigabytes(systemItem.memory_used, 0);
+  }
+
+  // Cross-compute between memPercent and memUsed
+  if (memUsed === 0 && memPercent > 0 && memTotal > 0) {
     memUsed = parseFloat(((memPercent / 100) * memTotal).toFixed(1));
+  } else if (memPercent === 0 && memTotal > 0 && memUsed > 0) {
+    memPercent = parseFloat(((memUsed / memTotal) * 100).toFixed(1));
   }
 
-  // Extract Disk
-  let diskTotal = (info.d || info.disk || item.disk || 100 * 1024 * 1024 * 1024) / (1024 * 1024 * 1024);
-  let diskUsed = (info.du || item.disk_used || item.stats?.du || 0) / (1024 * 1024 * 1024);
-  let diskPercent = (info.dp || item.disk_percent || item.stats?.dp || 0);
+  // 3. Disk
+  // info.d is total Disk (e.g. 100 GB or 953.8 GB)
+  const diskTotal = parseGigabytes(
+    info.d || info.disk || recStats.d || recStats.disk || systemItem.disk,
+    100
+  );
 
-  if (diskPercent === 0 && diskTotal > 0 && diskUsed > 0) {
-    diskPercent = Math.round((diskUsed / diskTotal) * 100);
-  } else if (diskUsed === 0 && diskPercent > 0 && diskTotal > 0) {
+  // Disk percent (e.g. 6.5%)
+  let diskPercent = 0;
+  if (typeof recStats.dp === 'number') {
+    diskPercent = recStats.dp;
+  } else if (typeof recStats.disk_percent === 'number') {
+    diskPercent = recStats.disk_percent;
+  } else if (typeof info.dp === 'number') {
+    diskPercent = info.dp;
+  } else if (typeof systemItem.disk_percent === 'number') {
+    diskPercent = systemItem.disk_percent;
+  }
+
+  // Disk used (in GB)
+  let diskUsed = 0;
+  if (typeof recStats.du === 'number') {
+    diskUsed = parseGigabytes(recStats.du, 0);
+  } else if (typeof recStats.disk_used === 'number') {
+    diskUsed = parseGigabytes(recStats.disk_used, 0);
+  } else if (typeof info.du === 'number') {
+    diskUsed = parseGigabytes(info.du, 0);
+  } else if (typeof systemItem.disk_used === 'number') {
+    diskUsed = parseGigabytes(systemItem.disk_used, 0);
+  }
+
+  // Cross-compute between diskPercent and diskUsed
+  if (diskUsed === 0 && diskPercent > 0 && diskTotal > 0) {
     diskUsed = parseFloat(((diskPercent / 100) * diskTotal).toFixed(1));
+  } else if (diskPercent === 0 && diskTotal > 0 && diskUsed > 0) {
+    diskPercent = parseFloat(((diskUsed / diskTotal) * 100).toFixed(1));
   }
 
-  // Extract Uptime, Temp, Docker
-  const uptimeSeconds = info.u || info.uptime || item.uptime || 0;
-  const temp = info.t || info.temp || item.temp || undefined;
-  const dockerCount = info.dc || info.docker || item.docker_count || undefined;
+  // 4. Temperature
+  const temp = parseTemperature(recStats.t ?? info.t ?? systemItem.temp ?? info.temp ?? recStats.temp);
+
+  // 5. Uptime & Docker
+  const uptimeSeconds =
+    info.u || info.uptime || recStats.u || recStats.uptime || systemItem.uptime || 0;
+  const dockerCount =
+    info.dc || info.docker || recStats.dc || recStats.docker || systemItem.docker_count || undefined;
 
   return {
-    cpuPercent: Math.min(100, Math.max(0, cpuPercent)),
+    cpuPercent: parseFloat(Math.min(100, Math.max(0, cpuPercent)).toFixed(1)),
     memUsed: parseFloat(memUsed.toFixed(1)),
     memTotal: parseFloat(memTotal.toFixed(1)),
-    memPercent: Math.min(100, Math.max(0, Math.round(memPercent))),
+    memPercent: parseFloat(Math.min(100, Math.max(0, memPercent)).toFixed(1)),
     diskUsed: parseFloat(diskUsed.toFixed(1)),
     diskTotal: parseFloat(diskTotal.toFixed(1)),
-    diskPercent: Math.min(100, Math.max(0, Math.round(diskPercent))),
-    temp: temp ? Math.round(temp) : undefined,
+    diskPercent: parseFloat(Math.min(100, Math.max(0, diskPercent)).toFixed(1)),
+    temp,
     dockerCount,
     uptimeSeconds,
   };
 }
 
 /**
- * Fetches the list of systems from Beszel Hub
+ * Fetches the list of systems from Beszel Hub and enriches with latest real-time stats
  */
 export async function fetchBeszelSystems(config: BeszelConfig): Promise<BeszelSystem[]> {
   if (!config.url?.trim()) {
@@ -264,10 +390,34 @@ export async function fetchBeszelSystems(config: BeszelConfig): Promise<BeszelSy
   }
 
   const data = await res.json();
-  const rawItems = Array.isArray(data.items) ? data.items : [];
+  const rawItems: any[] = Array.isArray(data.items) ? data.items : [];
+
+  // Fetch latest system_records point for real-time accuracy if available
+  const latestRecordsMap: Record<string, any> = {};
+  try {
+    const recPromises = rawItems.slice(0, 10).map(async (sys) => {
+      try {
+        const recUrl = `${baseUrl}/api/collections/system_records/records?filter=(system="${sys.id}")&sort=-created&perPage=1&_t=${Date.now()}`;
+        const recRes = await fetch(recUrl, { headers, signal: AbortSignal.timeout(3000) });
+        if (recRes.ok) {
+          const recData = await recRes.json();
+          if (recData.items && recData.items.length > 0) {
+            const first = recData.items[0];
+            latestRecordsMap[sys.id] = first.stats || first;
+          }
+        }
+      } catch {
+        // ignore per-system stats error and use info fallback
+      }
+    });
+    await Promise.allSettled(recPromises);
+  } catch {
+    // ignore
+  }
 
   const systems: BeszelSystem[] = rawItems.map((item: any) => {
-    const stats = extractStatsFromRecord(item);
+    const latestStats = latestRecordsMap[item.id];
+    const stats = extractStatsFromRecord(item, latestStats);
     const status: 'up' | 'down' | 'paused' | 'pending' =
       item.status === 'up' || item.status === true
         ? 'up'
