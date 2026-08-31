@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Thermometer,
   Boxes,
+  Zap,
   CheckCircle2,
   XCircle,
   PauseCircle,
@@ -482,6 +483,12 @@ export const BeszelWidgetCard: React.FC<BeszelWidgetCardProps> = ({
                 <div className="flex items-center gap-1">
                   <Clock size={12} className="opacity-70" />
                   <span>Uptime : {formatUptime(targetSystem.stats.uptimeSeconds)}</span>
+                </div>
+              )}
+              {targetSystem.stats.powerWatts !== undefined && (
+                <div className="flex items-center gap-1 font-mono text-amber-600 dark:text-amber-400 font-semibold" title="Consommation électrique instantanée">
+                  <Zap size={12} className="text-amber-500 fill-amber-500/20" />
+                  <span>{targetSystem.stats.powerWatts} W</span>
                 </div>
               )}
               {targetSystem.stats.temp !== undefined && (
