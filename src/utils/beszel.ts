@@ -40,6 +40,7 @@ export interface BeszelSystem {
     t?: any; // temp number or sensor map
     dc?: number; // docker count
     p?: number; // power in Watts
+    g?: any; // GPU data
     [key: string]: any;
   };
   stats: BeszelStats;
@@ -186,7 +187,7 @@ function parseGigabytes(val: any, fallback: number = 0): number {
     if (val > 1_000_000) {
       return parseFloat((val / (1024 * 1024)).toFixed(1));
     }
-    if (val > 1_000) {
+    if (val > 10_000) {
       return parseFloat((val / 1024).toFixed(1));
     }
     return parseFloat(val.toFixed(1));
@@ -303,10 +304,13 @@ function extractStatsFromRecord(systemItem: any, latestRecordStats?: any): Besze
   }
 
   // 2. Memory (RAM)
-  // In Beszel system_stats:
-  // - recStats.mp is memory percent (e.g. 33.6)
-  // - recStats.m or recStats.mu is memory used in GB (e.g. 9.64)
-  // - info.m is total RAM in GB (e.g. 28.7)
+  // info.m is the TOTAL RAM of the system (e.g. 28.7 Go)
+  // recStats.mp or info.mp is the RAM percentage used (e.g. 33.6%)
+  let memTotal = parseGigabytes(
+    info.m || info.memory || info.mem || info.ram || info.total_mem || info.total_memory || systemItem.memory,
+    28.7
+  );
+
   let memPercent = 0;
   if (typeof recStats.mp === 'number') {
     memPercent = recStats.mp;
@@ -318,41 +322,17 @@ function extractStatsFromRecord(systemItem: any, latestRecordStats?: any): Besze
     memPercent = systemItem.memory_percent;
   }
 
-  let memUsed = 0;
-  if (typeof recStats.m === 'number' && recStats.m > 0) {
-    memUsed = parseGigabytes(recStats.m, 0);
-  } else if (typeof recStats.mu === 'number' && recStats.mu > 0) {
-    memUsed = parseGigabytes(recStats.mu, 0);
-  } else if (typeof info.mu === 'number' && info.mu > 0) {
-    memUsed = parseGigabytes(info.mu, 0);
-  } else if (typeof systemItem.memory_used === 'number') {
-    memUsed = parseGigabytes(systemItem.memory_used, 0);
-  }
+  // Calculate used RAM from the total and percentage
+  const memUsed = parseFloat(((memPercent / 100) * memTotal).toFixed(1));
 
-  let memTotal = parseGigabytes(
-    info.m || info.memory || info.mem || info.ram || info.total_mem || info.total_memory || systemItem.memory,
-    0
+  // 3. Disk (Stockage)
+  // info.d is the TOTAL DISK capacity of the root partition (e.g. 936.8 Go)
+  // recStats.dp or info.dp is the Disk percentage used (e.g. 6.8%)
+  let diskTotal = parseGigabytes(
+    info.d || info.disk || info.total_disk || systemItem.disk,
+    936.8
   );
 
-  // If memTotal is known (e.g. 28.7 GB) and memUsed was 0, compute memUsed = (memPercent / 100) * memTotal
-  // If memUsed is known (e.g. 9.64 GB) and memTotal was 0, compute memTotal = (memUsed / (memPercent / 100))
-  if (memTotal > 0 && memUsed === 0 && memPercent > 0) {
-    memUsed = parseFloat(((memPercent / 100) * memTotal).toFixed(1));
-  } else if (memTotal === 0 && memUsed > 0 && memPercent > 0) {
-    memTotal = parseFloat(((memUsed / memPercent) * 100).toFixed(1));
-  } else if (memTotal === 0) {
-    // If still unknown, use 28.7 GB default if known from server info
-    memTotal = 28.7;
-    if (memUsed === 0 && memPercent > 0) {
-      memUsed = parseFloat(((memPercent / 100) * memTotal).toFixed(1));
-    }
-  }
-
-  // 3. Disk
-  // In Beszel system_stats:
-  // - recStats.dp is disk percent (e.g. 6.8)
-  // - recStats.d or recStats.du is disk used in GB (e.g. 63.7)
-  // - info.d is total Disk in GB (e.g. 937.0)
   let diskPercent = 0;
   if (typeof recStats.dp === 'number') {
     diskPercent = recStats.dp;
@@ -364,32 +344,8 @@ function extractStatsFromRecord(systemItem: any, latestRecordStats?: any): Besze
     diskPercent = systemItem.disk_percent;
   }
 
-  let diskUsed = 0;
-  if (typeof recStats.d === 'number' && recStats.d > 0) {
-    diskUsed = parseGigabytes(recStats.d, 0);
-  } else if (typeof recStats.du === 'number' && recStats.du > 0) {
-    diskUsed = parseGigabytes(recStats.du, 0);
-  } else if (typeof info.du === 'number' && info.du > 0) {
-    diskUsed = parseGigabytes(info.du, 0);
-  } else if (typeof systemItem.disk_used === 'number') {
-    diskUsed = parseGigabytes(systemItem.disk_used, 0);
-  }
-
-  let diskTotal = parseGigabytes(
-    info.d || info.disk || info.total_disk || systemItem.disk,
-    0
-  );
-
-  if (diskTotal > 0 && diskUsed === 0 && diskPercent > 0) {
-    diskUsed = parseFloat(((diskPercent / 100) * diskTotal).toFixed(1));
-  } else if (diskTotal === 0 && diskUsed > 0 && diskPercent > 0) {
-    diskTotal = parseFloat(((diskUsed / diskPercent) * 100).toFixed(1));
-  } else if (diskTotal === 0) {
-    diskTotal = 937;
-    if (diskUsed === 0 && diskPercent > 0) {
-      diskUsed = parseFloat(((diskPercent / 100) * diskTotal).toFixed(1));
-    }
-  }
+  // Calculate used Disk from the total and percentage
+  const diskUsed = parseFloat(((diskPercent / 100) * diskTotal).toFixed(1));
 
   // 4. Temperature (Prioritize CPU sensor in recStats.t, info.t, etc.)
   const temp = parseTemperature(
@@ -422,6 +378,30 @@ function extractStatsFromRecord(systemItem: any, latestRecordStats?: any): Besze
     }
   }
 
+  // If power not in direct field, check GPU data
+  if (powerWatts === undefined) {
+    const gpuSources = [recStats.g, info.g, systemItem.g];
+    for (const g of gpuSources) {
+      if (typeof g === 'object' && g !== null) {
+        let totalGpuPower = 0;
+        for (const gpu of Object.values(g)) {
+          if (typeof gpu === 'object' && gpu !== null) {
+            const p = (gpu as any).p ?? (gpu as any).pw ?? (gpu as any).w ?? (gpu as any).power;
+            if (typeof p === 'number' && !isNaN(p) && p > 0) {
+              totalGpuPower += p;
+            }
+          } else if (typeof gpu === 'number' && !isNaN(gpu) && gpu > 0) {
+            totalGpuPower += gpu;
+          }
+        }
+        if (totalGpuPower > 0) {
+          powerWatts = parseFloat(totalGpuPower.toFixed(1));
+          break;
+        }
+      }
+    }
+  }
+
   // 6. Uptime & Docker
   const uptimeSeconds =
     info.u || info.uptime || recStats.u || recStats.uptime || systemItem.uptime || 0;
@@ -430,11 +410,11 @@ function extractStatsFromRecord(systemItem: any, latestRecordStats?: any): Besze
 
   return {
     cpuPercent: parseFloat(Math.min(100, Math.max(0, cpuPercent)).toFixed(1)),
-    memUsed: parseFloat(memUsed.toFixed(1)),
-    memTotal: parseFloat(memTotal.toFixed(1)),
+    memUsed,
+    memTotal,
     memPercent: parseFloat(Math.min(100, Math.max(0, memPercent)).toFixed(1)),
-    diskUsed: parseFloat(diskUsed.toFixed(1)),
-    diskTotal: parseFloat(diskTotal.toFixed(1)),
+    diskUsed,
+    diskTotal,
     diskPercent: parseFloat(Math.min(100, Math.max(0, diskPercent)).toFixed(1)),
     temp,
     powerWatts,
