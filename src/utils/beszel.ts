@@ -174,11 +174,7 @@ export async function authenticateBeszel(
 
 /**
  * Parses numeric memory / disk value into GB.
- * Handles:
- * - Direct GB values (e.g. 28.7, 100, 500)
- * - Raw bytes (> 1,000,000,000) -> bytes / 1024^3
- * - Raw kilobytes (> 1,000,000) -> kB / 1024^2
- * - Raw megabytes (> 1000) -> MB / 1024
+ * Handles direct GB (e.g. 28.7), MB (> 1000), kB (> 1,000,000) or bytes (> 1,000,000,000).
  */
 function parseGigabytes(val: any, fallback: number = 0): number {
   if (typeof val === 'number') {
@@ -208,68 +204,60 @@ function parseGigabytes(val: any, fallback: number = 0): number {
  * Parses temperature from number, string, or sensor dictionary.
  * Filters out idle motherboard/ACPI sensor anomalies (e.g. acpitz at 16°C) and prioritizes CPU sensors.
  */
-function parseTemperature(val: any, fallbackVal?: any): number | undefined {
-  const evaluate = (v: any): number | undefined => {
-    if (typeof v === 'object' && v !== null) {
-      const entries = Object.entries(v);
-      if (entries.length === 0) return undefined;
+function parseTemperature(...candidates: any[]): number | undefined {
+  for (const c of candidates) {
+    if (!c) continue;
 
-      // Prioritize CPU-specific temperature sensors (AMD k10temp, Intel coretemp, package, tctl, etc.)
-      const cpuKeys = ['k10temp_tctl', 'k10temp', 'coretemp', 'cpu', 'package', 'tctl', 'tdie', 'tccd', 'soc'];
-      for (const key of cpuKeys) {
-        const match = entries.find(([k]) => k.toLowerCase().includes(key));
-        if (match) {
-          const tempNum = typeof match[1] === 'number' ? match[1] : parseFloat(String(match[1]));
-          if (!isNaN(tempNum) && tempNum > 0) {
-            return parseFloat(tempNum.toFixed(1));
+    // If it's a sensor object / dictionary
+    if (typeof c === 'object') {
+      const entries = Object.entries(c);
+      if (entries.length > 0) {
+        // Prioritize CPU-specific temperature sensors
+        const cpuKeys = ['k10temp_tctl', 'k10temp', 'coretemp', 'cpu', 'package', 'tctl', 'tdie', 'tccd', 'soc'];
+        for (const key of cpuKeys) {
+          const match = entries.find(([k]) => k.toLowerCase().includes(key));
+          if (match) {
+            const num = typeof match[1] === 'number' ? match[1] : parseFloat(String(match[1]));
+            if (!isNaN(num) && num > 0) {
+              return parseFloat(num.toFixed(1));
+            }
           }
         }
-      }
 
-      // Filter out passive/idle sensors <= 20°C (like acpitz: 16°C)
-      const validTemps = entries
-        .map(([, temp]) => (typeof temp === 'number' ? temp : typeof temp === 'string' ? parseFloat(temp) : NaN))
-        .filter((n) => !isNaN(n) && n > 20 && n < 120);
+        // Pick maximum realistic sensor (> 20°C and < 120°C)
+        const validTemps = entries
+          .map(([, v]) => (typeof v === 'number' ? v : typeof v === 'string' ? parseFloat(v) : NaN))
+          .filter((n) => !isNaN(n) && n > 20 && n < 120);
 
-      if (validTemps.length > 0) {
-        return parseFloat(Math.max(...validTemps).toFixed(1));
-      }
-
-      // If only <= 20°C sensors exist
-      const allTemps = entries
-        .map(([, temp]) => (typeof temp === 'number' ? temp : typeof temp === 'string' ? parseFloat(temp) : NaN))
-        .filter((n) => !isNaN(n) && n > 0 && n < 120);
-      if (allTemps.length > 0) {
-        return parseFloat(Math.max(...allTemps).toFixed(1));
+        if (validTemps.length > 0) {
+          return parseFloat(Math.max(...validTemps).toFixed(1));
+        }
       }
     }
 
-    if (typeof v === 'number' && !isNaN(v) && v > 0) {
-      return parseFloat(v.toFixed(1));
+    // If it's a direct number or numeric string
+    const num = typeof c === 'number' ? c : typeof c === 'string' ? parseFloat(c) : NaN;
+    if (!isNaN(num) && num > 20 && num < 120) {
+      return parseFloat(num.toFixed(1));
     }
-    if (typeof v === 'string') {
-      const num = parseFloat(v);
-      if (!isNaN(num) && num > 0) return parseFloat(num.toFixed(1));
+  }
+
+  // Fallback: accept any positive temperature if nothing > 20 was found
+  for (const c of candidates) {
+    const num = typeof c === 'number' ? c : typeof c === 'string' ? parseFloat(c) : NaN;
+    if (!isNaN(num) && num > 0 && num < 120) {
+      return parseFloat(num.toFixed(1));
     }
-    return undefined;
-  };
+  }
 
-  const primary = evaluate(val);
-  // If primary was found and is realistic (> 20°C), return it
-  if (primary !== undefined && primary > 20) return primary;
-
-  // Otherwise check fallback if available
-  const fallback = evaluate(fallbackVal);
-  if (fallback !== undefined && fallback > 20) return fallback;
-
-  return primary ?? fallback;
+  return undefined;
 }
 
 /**
- * Parses Beszel stats payload from systems record and optional system_records latest entry
+ * Extracts and computes all Beszel system stats with bulletproof fallbacks
  */
 function extractStatsFromRecord(systemItem: any, latestRecordStats?: any): BeszelStats {
-  // Ensure info is a parsed object (in case PocketBase returned a JSON string)
+  // Ensure info is a parsed object
   let info = systemItem.info;
   if (typeof info === 'string') {
     try {
@@ -306,15 +294,23 @@ function extractStatsFromRecord(systemItem: any, latestRecordStats?: any): Besze
   }
 
   // 2. Memory (RAM)
-  // In Beszel:
-  // info.m is total RAM in GB (e.g. 28.7)
-  // recStats.mp is memory percent (e.g. 33.6)
-  // recStats.m is memory used in GB (e.g. 9.64)
-  let memTotal = parseGigabytes(
-    info.m || info.memory || info.mem || info.ram || info.total_mem || systemItem.memory,
-    0
-  );
+  // Check all possible places where total RAM could be defined
+  let memTotal = 0;
+  const memCandidates = [
+    info.m, info.mem, info.memory, info.ram, info.total_mem, info.total_memory,
+    systemItem.memory, systemItem.m, recStats.total_mem, recStats.total_memory
+  ];
+  for (const cand of memCandidates) {
+    if (cand !== undefined && cand !== null && cand !== '') {
+      const val = parseGigabytes(cand, 0);
+      if (val > 0) {
+        memTotal = val;
+        break;
+      }
+    }
+  }
 
+  // Memory percent (e.g. 33.5%)
   let memPercent = 0;
   if (typeof recStats.mp === 'number') {
     memPercent = recStats.mp;
@@ -326,8 +322,9 @@ function extractStatsFromRecord(systemItem: any, latestRecordStats?: any): Besze
     memPercent = systemItem.memory_percent;
   }
 
+  // Memory used in GB
   let memUsed = 0;
-  if (typeof recStats.m === 'number' && recStats.m > 0) {
+  if (typeof recStats.m === 'number' && recStats.m > 0 && recStats.m !== memTotal) {
     memUsed = parseGigabytes(recStats.m, 0);
   } else if (typeof recStats.mu === 'number' && recStats.mu > 0) {
     memUsed = parseGigabytes(recStats.mu, 0);
@@ -337,27 +334,37 @@ function extractStatsFromRecord(systemItem: any, latestRecordStats?: any): Besze
     memUsed = parseGigabytes(systemItem.memory_used, 0);
   }
 
-  // Cross-compute between memPercent and memUsed
+  // If memTotal is missing but we have memUsed and memPercent, calculate it!
   if (memTotal === 0 && memUsed > 0 && memPercent > 0) {
     memTotal = parseFloat(((memUsed / memPercent) * 100).toFixed(1));
   }
+
+  // Default fallback for memTotal if completely unknown
+  if (memTotal === 0) {
+    memTotal = 16;
+  }
+
+  // Calculate memUsed from percent and total if memUsed wasn't directly provided
   if (memUsed === 0 && memPercent > 0 && memTotal > 0) {
     memUsed = parseFloat(((memPercent / 100) * memTotal).toFixed(1));
   } else if (memPercent === 0 && memTotal > 0 && memUsed > 0) {
     memPercent = parseFloat(((memUsed / memTotal) * 100).toFixed(1));
   }
-  if (memTotal === 0) memTotal = 16;
 
   // 3. Disk
-  // In Beszel:
-  // info.d is total Disk in GB (e.g. 100 or 953.8)
-  // recStats.dp is disk percent (e.g. 6.54)
-  // recStats.d is disk used in GB (e.g. 6.54)
-  let diskTotal = parseGigabytes(
-    info.d || info.disk || info.total_disk || systemItem.disk,
-    0
-  );
+  let diskTotal = 0;
+  const diskCandidates = [info.d, info.disk, info.total_disk, systemItem.disk, systemItem.d];
+  for (const cand of diskCandidates) {
+    if (cand !== undefined && cand !== null && cand !== '') {
+      const val = parseGigabytes(cand, 0);
+      if (val > 0) {
+        diskTotal = val;
+        break;
+      }
+    }
+  }
 
+  // Disk percent (e.g. 6.7%)
   let diskPercent = 0;
   if (typeof recStats.dp === 'number') {
     diskPercent = recStats.dp;
@@ -369,8 +376,9 @@ function extractStatsFromRecord(systemItem: any, latestRecordStats?: any): Besze
     diskPercent = systemItem.disk_percent;
   }
 
+  // Disk used in GB
   let diskUsed = 0;
-  if (typeof recStats.d === 'number' && recStats.d > 0) {
+  if (typeof recStats.d === 'number' && recStats.d > 0 && recStats.d !== diskTotal) {
     diskUsed = parseGigabytes(recStats.d, 0);
   } else if (typeof recStats.du === 'number' && recStats.du > 0) {
     diskUsed = parseGigabytes(recStats.du, 0);
@@ -380,19 +388,30 @@ function extractStatsFromRecord(systemItem: any, latestRecordStats?: any): Besze
     diskUsed = parseGigabytes(systemItem.disk_used, 0);
   }
 
-  // Cross-compute between diskPercent and diskUsed
   if (diskTotal === 0 && diskUsed > 0 && diskPercent > 0) {
     diskTotal = parseFloat(((diskUsed / diskPercent) * 100).toFixed(1));
   }
+
+  if (diskTotal === 0) {
+    diskTotal = 100;
+  }
+
   if (diskUsed === 0 && diskPercent > 0 && diskTotal > 0) {
     diskUsed = parseFloat(((diskPercent / 100) * diskTotal).toFixed(1));
   } else if (diskPercent === 0 && diskTotal > 0 && diskUsed > 0) {
     diskPercent = parseFloat(((diskUsed / diskTotal) * 100).toFixed(1));
   }
-  if (diskTotal === 0) diskTotal = 100;
 
-  // 4. Temperature
-  const temp = parseTemperature(recStats.t, info.t);
+  // 4. Temperature (Prioritize sensor map in recStats, info.t, etc.)
+  const temp = parseTemperature(
+    recStats.t,
+    recStats.temps,
+    recStats.temperatures,
+    info.t,
+    info.temps,
+    info.temperatures,
+    systemItem.temp
+  );
 
   // 5. Uptime & Docker
   const uptimeSeconds =
