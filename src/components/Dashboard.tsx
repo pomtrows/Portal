@@ -7,6 +7,7 @@ import { TrafficWidgetCard } from './TrafficWidgetCard';
 import { SearchWidgetCard } from './SearchWidgetCard';
 import { StockWidgetCard } from './StockWidgetCard';
 import { BeszelWidgetCard } from './BeszelWidgetCard';
+import { WebWidgetCard } from './WebWidgetCard';
 
 import { useLayout } from '../hooks/useLayout';
 import { usePreferences, type GridItemGeometry, type SpacingLevel } from '../hooks/usePreferences';
@@ -122,6 +123,7 @@ function getSectionRowSpan(
   if (section.type === 'stocks') return Math.max(6, section.row_span || 6); // ~265px
   if (section.type === 'beszel') return Math.max(6, section.row_span || 6); // ~290px
   if (section.type === 'rss') return Math.max(8, section.row_span || 8); // ~360px
+  if (section.type === 'web') return Math.max(6, section.row_span || 6); // ~300px
 
   // For links sections, compute strictly according to items count and column width
   const count = section.items?.length || 0;
@@ -650,6 +652,8 @@ function resolveCascadeGeometries(
       cardContent = <StockWidgetCard key={section.id} {...cardProps} />;
     } else if (section.type === 'beszel') {
       cardContent = <BeszelWidgetCard key={section.id} {...cardProps} />;
+    } else if (section.type === 'web') {
+      cardContent = <WebWidgetCard key={section.id} {...cardProps} />;
     } else {
       cardContent = (
         <SectionCard

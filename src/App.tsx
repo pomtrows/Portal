@@ -4,7 +4,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { SortableContext, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { SortablePage } from './components/SortablePage';
 import { Dashboard } from './components/Dashboard';
-import { SectionModal, ItemModal, RssModal, WeatherModal, TrafficModal, SearchModal, StockModal, BeszelModal } from './components/EditModals';
+import { SectionModal, ItemModal, RssModal, WeatherModal, TrafficModal, SearchModal, StockModal, BeszelModal, WebModal } from './components/EditModals';
 import { AddElementModal } from './components/AddElementModal';
 import { TransferModal } from './components/TransferModal';
 import { SettingsModal } from './components/SettingsModal';
@@ -70,6 +70,9 @@ function App() {
   
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<{ sectionId: string, item: LinkItem | null } | null>(null);
+  
+  const [isWebModalOpen, setIsWebModalOpen] = useState(false);
+  const [editingWebSection, setEditingWebSection] = useState<Section | null>(null);
 
   // Page Editing
   const [editingPageId, setEditingPageId] = useState<string | null>(null);
@@ -147,6 +150,7 @@ function App() {
         return {
           ...sec,
           col_span,
+          refresh_interval: sec.type === 'web' ? (sec.display_limit || 60) : sec.refresh_interval,
           items: (linksData || []).filter((link: any) => link.section_id === sec.id)
         };
       });
@@ -298,6 +302,11 @@ function App() {
     setIsBeszelModalOpen(true);
   };
 
+  const handleAddWebWidget = () => {
+    setEditingWebSection(null);
+    setIsWebModalOpen(true);
+  };
+
   const handleEditSection = (section: Section) => {
     if (section.type === 'rss') {
       setEditingRssSection(section);
@@ -317,6 +326,9 @@ function App() {
     } else if (section.type === 'beszel') {
       setEditingBeszelSection(section);
       setIsBeszelModalOpen(true);
+    } else if (section.type === 'web') {
+      setEditingWebSection(section);
+      setIsWebModalOpen(true);
     } else {
       setEditingSection(section);
       setIsSectionModalOpen(true);
@@ -707,6 +719,62 @@ function App() {
         title: newSection.title,
         type: 'beszel',
         widget_url: newSection.widget_url,
+        position: newSection.position,
+        user_id: session.user.id
+      });
+    }
+  };
+
+  const handleSaveWebSection = async (sectionData: Partial<Section>) => {
+    if (!session?.user || !activePageId) return;
+
+    if (editingWebSection) {
+      // Update
+      const col_span = sectionData.col_span || editingWebSection.col_span || 1;
+      const updatedSection: Section = {
+        ...editingWebSection,
+        title: sectionData.title || editingWebSection.title,
+        widget_url: sectionData.widget_url || editingWebSection.widget_url,
+        refresh_interval: sectionData.refresh_interval || editingWebSection.refresh_interval || 60,
+        col_span,
+        type: 'web'
+      };
+      setConfig(prev => ({
+        ...prev,
+        sections: prev.sections.map(s => s.id === editingWebSection.id ? updatedSection : s)
+      }));
+      await supabase.from('sections').update({
+        title: updatedSection.title,
+        widget_url: updatedSection.widget_url,
+        display_limit: updatedSection.refresh_interval, // re-using display_limit for interval in DB just in case, or we should add refresh_interval column to supabase? Wait! The DB schema might not have refresh_interval.
+        type: 'web'
+      }).eq('id', editingWebSection.id);
+    } else {
+      // Create
+      const newId = `web-${Date.now()}`;
+      const col_span = sectionData.col_span || 1;
+      const newSection: Section = {
+        id: newId,
+        page_id: activePageId,
+        title: sectionData.title || 'Widget Web',
+        type: 'web',
+        widget_url: sectionData.widget_url,
+        refresh_interval: sectionData.refresh_interval || 60,
+        col_span,
+        position: config.sections.length,
+        items: []
+      };
+      setConfig(prev => ({
+        ...prev,
+        sections: [...prev.sections, newSection]
+      }));
+      await supabase.from('sections').insert({
+        id: newId,
+        page_id: activePageId,
+        title: newSection.title,
+        type: 'web',
+        widget_url: newSection.widget_url,
+        display_limit: newSection.refresh_interval,
         position: newSection.position,
         user_id: session.user.id
       });
@@ -1172,6 +1240,7 @@ function App() {
         onAddSearchWidget={handleAddSearchWidget}
         onAddStockWidget={handleAddStockWidget}
         onAddBeszelWidget={handleAddBeszelWidget}
+        onAddWebWidget={handleAddWebWidget}
       />
 
       <AccountModal
@@ -1241,6 +1310,17 @@ function App() {
         onSave={handleSaveBeszelSection}
         initialData={editingBeszelSection}
         onTransfer={() => editingBeszelSection && setTransferTarget({ id: editingBeszelSection.id, type: 'section' })}
+      />
+
+      <WebModal
+        isOpen={isWebModalOpen}
+        onClose={() => {
+          setIsWebModalOpen(false);
+          setEditingWebSection(null);
+        }}
+        onSave={handleSaveWebSection}
+        initialData={editingWebSection}
+        onTransfer={() => editingWebSection && setTransferTarget({ id: editingWebSection.id, type: 'section' })}
       />
 
       <ItemModal

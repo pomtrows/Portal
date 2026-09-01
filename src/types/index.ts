@@ -20,9 +20,10 @@ export interface Section {
   id: string;
   page_id: string;
   title: string;
-  type?: 'links' | 'rss' | 'weather' | 'traffic' | 'search' | 'stocks' | 'beszel';
+  type?: 'links' | 'rss' | 'weather' | 'traffic' | 'search' | 'stocks' | 'beszel' | 'web';
   widget_url?: string;
   display_limit?: number;
+  refresh_interval?: number; // seconds
   position?: number;
   column_index?: number;
   grid_x?: number; // 0-indexed column position on the grid

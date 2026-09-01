@@ -2143,3 +2143,148 @@ export const BeszelModal: React.FC<BeszelModalProps> = ({
     </div>
   );
 };
+
+export interface WebModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (data: any) => void;
+  onTransfer?: () => void;
+  initialData?: Section | null;
+}
+
+export const WebModal: React.FC<WebModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  initialData,
+  onTransfer,
+}) => {
+  const [title, setTitle] = useState('');
+  const [url, setUrl] = useState('');
+  const [refreshInterval, setRefreshInterval] = useState(60);
+  const [colSpan, setColSpan] = useState(2);
+
+  useEffect(() => {
+    if (initialData) {
+      setTitle(initialData.title || '');
+      setUrl(initialData.widget_url || '');
+      setRefreshInterval(initialData.refresh_interval || 60);
+      setColSpan(initialData.col_span || 2);
+    } else {
+      setTitle('Widget Web');
+      setUrl('');
+      setRefreshInterval(60);
+      setColSpan(2);
+    }
+  }, [initialData, isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-pink-500/10 text-pink-600 dark:text-pink-400">
+              <Globe size={20} />
+            </div>
+            <h2 className="text-xl font-bold text-[var(--color-text-strong)]">
+              {initialData ? 'Modifier le widget Web' : 'Nouveau widget Web'}
+            </h2>
+          </div>
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-200">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1">
+            Titre du widget
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="ex: Dashboard, Statistiques..."
+            className="w-full bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-3 py-2 focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)] text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1">
+            URL de la page web <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://..."
+            className="w-full bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-3 py-2 focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)] text-sm"
+          />
+          <p className="text-xs text-[var(--color-text-muted)] mt-1">
+            L'URL doit commencer par http:// ou https:// et autoriser l'intégration en iframe.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1">
+            Fréquence de rafraîchissement (secondes)
+          </label>
+          <input
+            type="number"
+            min="0"
+            value={refreshInterval}
+            onChange={(e) => setRefreshInterval(parseInt(e.target.value) || 0)}
+            className="w-full bg-[var(--color-background)] border border-[var(--color-border)] rounded-md px-3 py-2 focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text-strong)] text-sm"
+          />
+          <p className="text-xs text-[var(--color-text-muted)] mt-1">
+            Mettre 0 pour désactiver le rafraîchissement automatique.
+          </p>
+        </div>
+
+        <ColumnSpanSelector value={colSpan} onChange={setColSpan} />
+
+        <div className="mt-6 flex justify-end gap-3 pt-2 border-t border-[var(--color-border)]">
+          {initialData && onTransfer && (
+            <button 
+              type="button"
+              onClick={() => {
+                onClose();
+                onTransfer();
+              }} 
+              className="mr-auto px-4 py-2 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/30 transition-colors font-medium flex items-center gap-2"
+              title="Déplacer ou Dupliquer"
+            >
+              <ArrowRight size={16} />
+              <span className="hidden sm:inline">Transférer / Dupliquer</span>
+              <span className="sm:hidden">Transférer</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-md bg-[var(--color-background)] text-[var(--color-text)] hover:bg-[var(--color-border)] transition-colors text-sm"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            disabled={!url.trim()}
+            onClick={() => {
+              onSave({
+                title,
+                widget_url: url.trim(),
+                refresh_interval: refreshInterval,
+                col_span: colSpan,
+              });
+              onClose();
+            }}
+            className="px-4 py-2 rounded-md bg-[var(--color-primary)] text-white hover:opacity-90 transition-opacity text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Sauvegarder
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

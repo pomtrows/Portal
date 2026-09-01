@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, X, Layers, Rss, CloudSun, Car, Search, TrendingUp, Server } from 'lucide-react';
+import { Plus, X, Layers, Rss, CloudSun, Car, Search, TrendingUp, Server, Globe } from 'lucide-react';
 
 interface AddElementModalProps {
   isOpen: boolean;
@@ -11,6 +11,7 @@ interface AddElementModalProps {
   onAddSearchWidget: () => void;
   onAddStockWidget: () => void;
   onAddBeszelWidget: () => void;
+  onAddWebWidget: () => void;
 }
 
 export const AddElementModal: React.FC<AddElementModalProps> = ({
@@ -23,6 +24,7 @@ export const AddElementModal: React.FC<AddElementModalProps> = ({
   onAddSearchWidget,
   onAddStockWidget,
   onAddBeszelWidget,
+  onAddWebWidget,
 }) => {
   if (!isOpen) return null;
 
@@ -196,6 +198,27 @@ export const AddElementModal: React.FC<AddElementModalProps> = ({
               </div>
               <div className="text-xs text-[var(--color-text-muted)] truncate">
                 Surveillance en direct CPU, RAM, Disque, Docker, Uptime
+              </div>
+            </div>
+          </button>
+
+          {/* Widget Web */}
+          <button
+            onClick={() => {
+              onClose();
+              onAddWebWidget();
+            }}
+            className="flex items-center gap-3.5 p-3 rounded-xl border border-[var(--color-border)] bg-black/5 hover:bg-pink-500/10 hover:border-pink-500 text-left transition-all group"
+          >
+            <div className="p-2.5 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 group-hover:scale-105 transition-transform flex-shrink-0">
+              <Globe size={20} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-sm text-[var(--color-text-strong)] group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">
+                Widget Web (Iframe)
+              </div>
+              <div className="text-xs text-[var(--color-text-muted)] truncate">
+                Affichage et rafraîchissement d'une page web externe
               </div>
             </div>
           </button>
