@@ -106,6 +106,8 @@ interface DashboardProps {
   onUpdateSectionSpan?: (sectionId: string, col_span: number) => void;
   onUpdateSectionGeometry?: (sectionId: string, geo: { grid_x?: number; grid_y?: number; col_span?: number; row_span?: number }) => void;
   onUpdateAllGeometries?: (updates: Record<string, { grid_x: number; grid_y: number; col_span: number; row_span: number }>) => void;
+  onTransferSection?: (section: Section) => void;
+  onTransferItem?: (sectionId: string, item: LinkItem) => void;
 }
 
 function getSectionRowSpan(

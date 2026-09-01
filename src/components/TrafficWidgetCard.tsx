@@ -3,6 +3,7 @@ import type { Section } from '../types';
 import {
   Car,
   ArrowRightLeft,
+  ArrowRight,
   RotateCw,
   Edit2,
   Trash2,
@@ -30,6 +31,7 @@ interface TrafficWidgetCardProps {
   isEditMode: boolean;
   onEditSection: (section: Section) => void;
   onDeleteSection: (id: string) => void;
+  onTransferSection?: (section: Section) => void;
   onUpdateSpan?: (sectionId: string, col_span: number) => void;
   onUpdateHeight?: (sectionId: string, row_span: number) => void;
   maxAllowedSpan?: number;
@@ -40,6 +42,7 @@ export const TrafficWidgetCard: React.FC<TrafficWidgetCardProps> = ({
   isEditMode,
   onEditSection,
   onDeleteSection,
+  onTransferSection,
   onUpdateSpan,
   onUpdateHeight,
   maxAllowedSpan = 8,
@@ -246,7 +249,16 @@ export const TrafficWidgetCard: React.FC<TrafficWidgetCardProps> = ({
                   </button>
                 </div>
               )}
+              {onTransferSection && (
               <button
+                onClick={() => onTransferSection(section)}
+                className="p-1 text-emerald-400 hover:bg-emerald-400/10 rounded-md transition-colors"
+                title="Transférer ou Dupliquer"
+              >
+                <ArrowRight size={16} />
+              </button>
+            )}
+            <button
                 onClick={() => onEditSection(section)}
                 className="p-1 text-blue-700 dark:text-blue-400 hover:bg-blue-400/10 rounded-md transition-colors"
                 title="Modifier le trajet"

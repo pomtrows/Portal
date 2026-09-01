@@ -3,6 +3,7 @@ import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { SectionModal, ItemModal, RssModal, WeatherModal, TrafficModal, SearchModal, StockModal, BeszelModal } from './components/EditModals';
 import { AddElementModal } from './components/AddElementModal';
+import { TransferModal } from './components/TransferModal';
 import { SettingsModal } from './components/SettingsModal';
 import { PwaInstallPrompt } from './components/PwaInstallPrompt';
 import { MobileMenu } from './components/MobileMenu';
@@ -42,6 +43,8 @@ function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isSectionModalOpen, setIsSectionModalOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<Section | null>(null);
+
+  const [transferTarget, setTransferTarget] = useState<{ id: string; type: 'section' | 'item' } | null>(null);
 
   const [isRssModalOpen, setIsRssModalOpen] = useState(false);
   const [editingRssSection, setEditingRssSection] = useState<Section | null>(null);
@@ -830,6 +833,105 @@ function App() {
     }
   };
 
+  const handleDuplicateSection = async (sectionId: string, targetPageId: string) => {
+    const original = config.sections.find(s => s.id === sectionId);
+    if (!original || !session?.user) return;
+    const newId = `${original.type || 'sec'}-${Date.now()}`;
+    const newSection: Section = { ...original, id: newId, page_id: targetPageId, title: `${original.title} (Copie)` };
+    
+    if (original.type === 'links' || !original.type) {
+        newSection.items = original.items.map(i => ({...i, id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, section_id: newId}));
+    } else {
+        newSection.items = [];
+    }
+    
+    setConfig(prev => ({...prev, sections: [...prev.sections, newSection]}));
+    
+    await supabase.from('sections').insert({
+       id: newId,
+       page_id: targetPageId,
+       title: newSection.title,
+       type: newSection.type || 'links',
+       widget_url: newSection.widget_url,
+       display_limit: newSection.display_limit,
+       position: config.sections.length,
+       user_id: session.user.id
+    });
+    
+    if (newSection.items.length > 0) {
+        await supabase.from('links').insert(newSection.items.map(i => ({
+            id: i.id,
+            section_id: newId,
+            title: i.title,
+            url: i.url,
+            description: i.description,
+            icon: i.icon,
+            position: i.position,
+            user_id: session.user.id
+        })));
+    }
+  };
+
+  const handleMoveSection = async (sectionId: string, targetPageId: string) => {
+      setConfig(prev => ({
+        ...prev,
+        sections: prev.sections.map(s => s.id === sectionId ? {...s, page_id: targetPageId} : s)
+      }));
+      await supabase.from('sections').update({ page_id: targetPageId }).eq('id', sectionId);
+  };
+
+  const handleDuplicateItem = async (itemId: string, targetSectionId: string) => {
+      if (!session?.user) return;
+      const originalSection = config.sections.find(s => s.items.some(i => i.id === itemId));
+      if (!originalSection) return;
+      const original = originalSection.items.find(i => i.id === itemId);
+      if (!original) return;
+      
+      const targetSection = config.sections.find(s => s.id === targetSectionId);
+      
+      const newItem: LinkItem = { ...original, id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, section_id: targetSectionId, title: `${original.title} (Copie)`, position: targetSection ? targetSection.items.length : 0 };
+      setConfig(prev => ({
+        ...prev,
+        sections: prev.sections.map(s => s.id === targetSectionId ? {...s, items: [...s.items, newItem]} : s)
+      }));
+      await supabase.from('links').insert({
+          id: newItem.id,
+          section_id: newItem.section_id,
+          title: newItem.title,
+          url: newItem.url,
+          description: newItem.description,
+          icon: newItem.icon,
+          position: newItem.position,
+          user_id: session.user.id
+      });
+  };
+
+  const handleMoveItem = async (itemId: string, targetSectionId: string) => {
+      const originalSection = config.sections.find(s => s.items.some(i => i.id === itemId));
+      if (!originalSection) return;
+      const original = originalSection.items.find(i => i.id === itemId);
+      if (!original) return;
+
+      const targetSection = config.sections.find(s => s.id === targetSectionId);
+      const updatedItem = { ...original, section_id: targetSectionId, position: targetSection ? targetSection.items.length : 0 };
+      setConfig(prev => ({
+        ...prev,
+        sections: prev.sections.map(s => {
+          if (s.id === originalSection.id && originalSection.id !== targetSectionId) {
+             return { ...s, items: s.items.filter(i => i.id !== itemId) };
+          }
+          if (s.id === targetSectionId) {
+             if (originalSection.id === targetSectionId) {
+                 return { ...s, items: s.items.map(i => i.id === itemId ? updatedItem : i) };
+             }
+             return { ...s, items: [...s.items, updatedItem] };
+          }
+          return s;
+        })
+      }));
+      await supabase.from('links').update({ section_id: targetSectionId, position: updatedItem.position }).eq('id', itemId);
+  };
+
   const handleReorderSections = async (newSections: Section[]) => {
     if (!session?.user || !activePageId) return;
     
@@ -1028,6 +1130,8 @@ function App() {
             onUpdateSectionSpan={handleUpdateSectionSpan}
             onUpdateSectionGeometry={handleUpdateSectionGeometry}
             onUpdateAllGeometries={handleUpdateAllGeometries}
+            onTransferSection={(section) => setTransferTarget({ id: section.id, type: 'section' })}
+            onTransferItem={(_, item) => setTransferTarget({ id: item.id, type: 'item' })}
           />
         ) : (
           <div className="text-center py-20 text-[var(--color-text-muted)]">
@@ -1037,6 +1141,17 @@ function App() {
       </main>
 
       {/* Modals */}
+      <TransferModal
+        isOpen={transferTarget !== null}
+        onClose={() => setTransferTarget(null)}
+        targetType={transferTarget?.type || null}
+        targetId={transferTarget?.id || null}
+        pages={config.pages}
+        sections={config.sections}
+        onMove={transferTarget?.type === 'section' ? handleMoveSection : handleMoveItem}
+        onDuplicate={transferTarget?.type === 'section' ? handleDuplicateSection : handleDuplicateItem}
+      />
+
       <AddElementModal
         isOpen={isAddElementModalOpen}
         onClose={() => setIsAddElementModalOpen(false)}
