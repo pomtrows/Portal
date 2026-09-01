@@ -304,6 +304,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             section.type === 'search' ||
             section.type === 'stocks' ||
             section.type === 'beszel' ||
+            section.type === 'web' ||
             section.items.length > 0 ||
             isEditMode)
       );
