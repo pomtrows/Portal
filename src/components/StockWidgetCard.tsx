@@ -10,7 +10,7 @@ import {
   AlertCircle,
   GripVertical,
   ExternalLink
-, ArrowRight} from 'lucide-react';
+} from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
@@ -32,7 +32,6 @@ interface StockWidgetCardProps {
   isEditMode: boolean;
   onEditSection: (section: Section) => void;
   onDeleteSection: (id: string) => void;
-  onTransferSection?: (section: Section) => void;
   onUpdateSpan?: (sectionId: string, col_span: number) => void;
   onUpdateHeight?: (sectionId: string, row_span: number) => void;
   maxAllowedSpan?: number;
@@ -315,7 +314,6 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
   isEditMode,
   onEditSection,
   onDeleteSection,
-  onTransferSection,
   onUpdateSpan,
   onUpdateHeight,
   maxAllowedSpan = 8,
@@ -539,16 +537,7 @@ export const StockWidgetCard: React.FC<StockWidgetCardProps> = ({
                   </button>
                 </div>
               )}
-              {onTransferSection && (
               <button
-                onClick={() => onTransferSection(section)}
-                className="p-1 text-emerald-400 hover:bg-emerald-400/10 rounded-md transition-colors"
-                title="Transférer ou Dupliquer"
-              >
-                <ArrowRight size={16} />
-              </button>
-            )}
-            <button
                 onClick={() => onEditSection(section)}
                 className="p-1 text-blue-700 dark:text-blue-400 hover:bg-blue-400/10 rounded-md transition-colors"
                 title="Modifier les symboles suivis"

@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import type { LinkItem } from '../types';
-import { Edit2, Trash2, GripVertical, ArrowRight } from 'lucide-react';
+import { Edit2, Trash2, GripVertical } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { usePreferences } from '../hooks/usePreferences';
@@ -12,10 +12,9 @@ interface ItemCardProps {
   isEditMode: boolean;
   onEdit: (item: LinkItem) => void;
   onDelete: (id: string) => void;
-  onTransferItem?: (item: LinkItem) => void;
 }
 
-export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, onDelete, onTransferItem }) => {
+export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, onDelete }) => {
   const { fontSizeLinks, linkPadding, iconSize } = usePreferences();
   const {
     attributes,
@@ -120,15 +119,6 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, isEditMode, onEdit, on
 
       {isEditMode && (
         <div className="absolute top-1 right-1 flex items-center gap-0.5 transition-opacity bg-[var(--color-surface)] p-0.5 rounded-md border border-[var(--color-border)] shadow-md z-10">
-          {onTransferItem && (
-            <button
-              onClick={() => onTransferItem(item)}
-              className="p-1 text-emerald-400 hover:bg-emerald-400/10 rounded transition-colors"
-              title="Transférer ou Dupliquer le lien"
-            >
-              <ArrowRight size={12} />
-            </button>
-          )}
           <button
             onClick={() => onEdit(item)}
             className="p-1 text-blue-400 hover:bg-blue-400/10 rounded transition-colors"

@@ -1130,8 +1130,6 @@ function App() {
             onUpdateSectionSpan={handleUpdateSectionSpan}
             onUpdateSectionGeometry={handleUpdateSectionGeometry}
             onUpdateAllGeometries={handleUpdateAllGeometries}
-            onTransferSection={(section) => setTransferTarget({ id: section.id, type: 'section' })}
-            onTransferItem={(_, item) => setTransferTarget({ id: item.id, type: 'item' })}
           />
         ) : (
           <div className="text-center py-20 text-[var(--color-text-muted)]">
@@ -1179,6 +1177,7 @@ function App() {
         onClose={() => setIsSectionModalOpen(false)}
         onSave={handleSaveSection}
         initialData={editingSection}
+        onTransfer={() => editingSection && setTransferTarget({ id: editingSection.id, type: 'section' })}
       />
 
       <RssModal
@@ -1186,6 +1185,7 @@ function App() {
         onClose={() => setIsRssModalOpen(false)}
         onSave={handleSaveRssSection}
         initialData={editingRssSection}
+        onTransfer={() => editingRssSection && setTransferTarget({ id: editingRssSection.id, type: 'section' })}
       />
 
       <WeatherModal
@@ -1193,6 +1193,7 @@ function App() {
         onClose={() => setIsWeatherModalOpen(false)}
         onSave={handleSaveWeatherSection}
         initialData={editingWeatherSection}
+        onTransfer={() => editingWeatherSection && setTransferTarget({ id: editingWeatherSection.id, type: 'section' })}
       />
 
       <TrafficModal
@@ -1200,6 +1201,7 @@ function App() {
         onClose={() => setIsTrafficModalOpen(false)}
         onSave={handleSaveTrafficSection}
         initialData={editingTrafficSection}
+        onTransfer={() => editingTrafficSection && setTransferTarget({ id: editingTrafficSection.id, type: 'section' })}
       />
 
       <SearchModal
@@ -1207,6 +1209,7 @@ function App() {
         onClose={() => setIsSearchModalOpen(false)}
         onSave={handleSaveSearchSection}
         initialData={editingSearchSection}
+        onTransfer={() => editingSearchSection && setTransferTarget({ id: editingSearchSection.id, type: 'section' })}
       />
 
       <StockModal
@@ -1214,6 +1217,7 @@ function App() {
         onClose={() => setIsStockModalOpen(false)}
         onSave={handleSaveStockSection}
         initialData={editingStockSection}
+        onTransfer={() => editingStockSection && setTransferTarget({ id: editingStockSection.id, type: 'section' })}
       />
 
       <BeszelModal
@@ -1224,6 +1228,7 @@ function App() {
         }}
         onSave={handleSaveBeszelSection}
         initialData={editingBeszelSection}
+        onTransfer={() => editingBeszelSection && setTransferTarget({ id: editingBeszelSection.id, type: 'section' })}
       />
 
       <ItemModal
@@ -1231,6 +1236,7 @@ function App() {
         onClose={() => setIsItemModalOpen(false)}
         onSave={handleSaveItem}
         initialData={editingItem?.item}
+        onTransfer={() => editingItem?.item && setTransferTarget({ id: editingItem.item.id, type: 'item' })}
       />
 
       <PwaInstallPrompt />

@@ -1,3 +1,4 @@
+import { ArrowRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { Section, LinkItem } from '../types';
 import { searchCities, parseWeatherConfig, type WeatherLocation } from '../utils/weather';
@@ -80,11 +81,12 @@ export const ColumnSpanSelector: React.FC<{
 interface SectionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (section: Partial<Section>) => void;
+  onSave: (data: any) => void;
+  onTransfer?: () => void;
   initialData?: Section | null;
 }
 
-export const SectionModal: React.FC<SectionModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
+export const SectionModal: React.FC<SectionModalProps> = ({ isOpen, onClose, onSave, initialData, onTransfer, }) => {
   const [title, setTitle] = useState('');
   const [colSpan, setColSpan] = useState<number>(1);
 
@@ -123,6 +125,21 @@ export const SectionModal: React.FC<SectionModalProps> = ({ isOpen, onClose, onS
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
+          {initialData && onTransfer && (
+            <button 
+              type="button"
+              onClick={() => {
+                onClose();
+                onTransfer();
+              }} 
+              className="mr-auto px-4 py-2 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/30 transition-colors font-medium flex items-center gap-2"
+              title="Déplacer ou Dupliquer"
+            >
+              <ArrowRight size={16} />
+              <span className="hidden sm:inline">Transférer / Dupliquer</span>
+              <span className="sm:hidden">Transférer</span>
+            </button>
+          )}
           <button onClick={onClose} className="px-4 py-2 rounded-md bg-[var(--color-background)] text-[var(--color-text)] hover:bg-[var(--color-border)] transition-colors">
             Annuler
           </button>
@@ -146,11 +163,12 @@ export const SectionModal: React.FC<SectionModalProps> = ({ isOpen, onClose, onS
 interface ItemModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (item: Partial<LinkItem>) => void;
+  onSave: (data: any) => void;
+  onTransfer?: () => void;
   initialData?: LinkItem | null;
 }
 
-export const ItemModal: React.FC<ItemModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
+export const ItemModal: React.FC<ItemModalProps> = ({ isOpen, onClose, onSave, initialData, onTransfer, }) => {
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [description, setDescription] = useState('');
@@ -221,6 +239,21 @@ export const ItemModal: React.FC<ItemModalProps> = ({ isOpen, onClose, onSave, i
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
+          {initialData && onTransfer && (
+            <button 
+              type="button"
+              onClick={() => {
+                onClose();
+                onTransfer();
+              }} 
+              className="mr-auto px-4 py-2 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/30 transition-colors font-medium flex items-center gap-2"
+              title="Déplacer ou Dupliquer"
+            >
+              <ArrowRight size={16} />
+              <span className="hidden sm:inline">Transférer / Dupliquer</span>
+              <span className="sm:hidden">Transférer</span>
+            </button>
+          )}
           <button onClick={onClose} className="px-4 py-2 rounded-md bg-[var(--color-background)] text-[var(--color-text)] hover:bg-[var(--color-border)] transition-colors">
             Annuler
           </button>
@@ -244,10 +277,11 @@ export const ItemModal: React.FC<ItemModalProps> = ({ isOpen, onClose, onSave, i
 interface RssModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (section: Partial<Section>) => void;
+  onSave: (data: any) => void;
+  onTransfer?: () => void;
   initialData?: Section | null;
 }
-export const RssModal: React.FC<RssModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
+export const RssModal: React.FC<RssModalProps> = ({ isOpen, onClose, onSave, initialData, onTransfer, }) => {
   const [title, setTitle] = useState('');
   const [widgetUrl, setWidgetUrl] = useState('');
   const [displayLimit, setDisplayLimit] = useState<number>(10);
@@ -319,6 +353,21 @@ export const RssModal: React.FC<RssModalProps> = ({ isOpen, onClose, onSave, ini
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
+          {initialData && onTransfer && (
+            <button 
+              type="button"
+              onClick={() => {
+                onClose();
+                onTransfer();
+              }} 
+              className="mr-auto px-4 py-2 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/30 transition-colors font-medium flex items-center gap-2"
+              title="Déplacer ou Dupliquer"
+            >
+              <ArrowRight size={16} />
+              <span className="hidden sm:inline">Transférer / Dupliquer</span>
+              <span className="sm:hidden">Transférer</span>
+            </button>
+          )}
           <button onClick={onClose} className="px-4 py-2 rounded-md bg-[var(--color-background)] text-[var(--color-text)] hover:bg-[var(--color-border)] transition-colors">
             Annuler
           </button>
@@ -348,7 +397,8 @@ export const RssModal: React.FC<RssModalProps> = ({ isOpen, onClose, onSave, ini
 interface WeatherModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (section: Partial<Section>) => void;
+  onSave: (data: any) => void;
+  onTransfer?: () => void;
   initialData?: Section | null;
 }
 
@@ -357,7 +407,7 @@ export const WeatherModal: React.FC<WeatherModalProps> = ({
   onClose,
   onSave,
   initialData,
-}) => {
+ onTransfer, }) => {
   const [title, setTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<WeatherLocation[]>([]);
@@ -579,6 +629,21 @@ export const WeatherModal: React.FC<WeatherModalProps> = ({
         <ColumnSpanSelector value={colSpan} onChange={setColSpan} />
 
         <div className="mt-6 flex justify-end gap-3 pt-2">
+          {initialData && onTransfer && (
+            <button 
+              type="button"
+              onClick={() => {
+                onClose();
+                onTransfer();
+              }} 
+              className="mr-auto px-4 py-2 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/30 transition-colors font-medium flex items-center gap-2"
+              title="Déplacer ou Dupliquer"
+            >
+              <ArrowRight size={16} />
+              <span className="hidden sm:inline">Transférer / Dupliquer</span>
+              <span className="sm:hidden">Transférer</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}
@@ -613,7 +678,8 @@ export const WeatherModal: React.FC<WeatherModalProps> = ({
 interface TrafficModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (section: Partial<Section>) => void;
+  onSave: (data: any) => void;
+  onTransfer?: () => void;
   initialData?: Section | null;
 }
 
@@ -622,7 +688,7 @@ export const TrafficModal: React.FC<TrafficModalProps> = ({
   onClose,
   onSave,
   initialData,
-}) => {
+ onTransfer, }) => {
   const [title, setTitle] = useState('');
   const [startQuery, setStartQuery] = useState('');
   const [endQuery, setEndQuery] = useState('');
@@ -925,6 +991,21 @@ export const TrafficModal: React.FC<TrafficModalProps> = ({
 
         {/* Buttons */}
         <div className="mt-6 flex justify-end gap-3 pt-2">
+          {initialData && onTransfer && (
+            <button 
+              type="button"
+              onClick={() => {
+                onClose();
+                onTransfer();
+              }} 
+              className="mr-auto px-4 py-2 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/30 transition-colors font-medium flex items-center gap-2"
+              title="Déplacer ou Dupliquer"
+            >
+              <ArrowRight size={16} />
+              <span className="hidden sm:inline">Transférer / Dupliquer</span>
+              <span className="sm:hidden">Transférer</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}
@@ -965,7 +1046,8 @@ export const TrafficModal: React.FC<TrafficModalProps> = ({
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (section: Partial<Section>) => void;
+  onSave: (data: any) => void;
+  onTransfer?: () => void;
   initialData?: Section | null;
 }
 
@@ -974,7 +1056,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   onClose,
   onSave,
   initialData,
-}) => {
+ onTransfer, }) => {
   const [title, setTitle] = useState('');
   const [defaultEngineId, setDefaultEngineId] = useState<string>('google');
   const [enabledEngineIds, setEnabledEngineIds] = useState<string[]>([]);
@@ -1217,6 +1299,21 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
         {/* Action Buttons */}
         <div className="mt-6 flex justify-end gap-3 pt-2">
+          {initialData && onTransfer && (
+            <button 
+              type="button"
+              onClick={() => {
+                onClose();
+                onTransfer();
+              }} 
+              className="mr-auto px-4 py-2 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/30 transition-colors font-medium flex items-center gap-2"
+              title="Déplacer ou Dupliquer"
+            >
+              <ArrowRight size={16} />
+              <span className="hidden sm:inline">Transférer / Dupliquer</span>
+              <span className="sm:hidden">Transférer</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}
@@ -1256,7 +1353,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 interface StockModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (section: Partial<Section>) => void;
+  onSave: (data: any) => void;
+  onTransfer?: () => void;
   initialData?: Section | null;
 }
 
@@ -1265,7 +1363,7 @@ export const StockModal: React.FC<StockModalProps> = ({
   onClose,
   onSave,
   initialData,
-}) => {
+ onTransfer, }) => {
   const [title, setTitle] = useState('');
   const [symbols, setSymbols] = useState<StockItemConfig[]>(DEFAULT_STOCK_SYMBOLS);
   const [customSymbol, setCustomSymbol] = useState('');
@@ -1592,6 +1690,21 @@ export const StockModal: React.FC<StockModalProps> = ({
 
         {/* Buttons */}
         <div className="mt-6 flex justify-end gap-3 pt-2">
+          {initialData && onTransfer && (
+            <button 
+              type="button"
+              onClick={() => {
+                onClose();
+                onTransfer();
+              }} 
+              className="mr-auto px-4 py-2 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/30 transition-colors font-medium flex items-center gap-2"
+              title="Déplacer ou Dupliquer"
+            >
+              <ArrowRight size={16} />
+              <span className="hidden sm:inline">Transférer / Dupliquer</span>
+              <span className="sm:hidden">Transférer</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}
@@ -1629,7 +1742,8 @@ export const StockModal: React.FC<StockModalProps> = ({
 export interface BeszelModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (section: Partial<Section>) => void;
+  onSave: (data: any) => void;
+  onTransfer?: () => void;
   initialData?: Section | null;
 }
 
@@ -1638,7 +1752,7 @@ export const BeszelModal: React.FC<BeszelModalProps> = ({
   onClose,
   onSave,
   initialData,
-}) => {
+ onTransfer, }) => {
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [authType, setAuthType] = useState<'password' | 'token'>('password');
@@ -1994,6 +2108,21 @@ export const BeszelModal: React.FC<BeszelModalProps> = ({
 
         {/* Footer Buttons */}
         <div className="mt-6 flex justify-end gap-3 pt-2 border-t border-[var(--color-border)]">
+          {initialData && onTransfer && (
+            <button 
+              type="button"
+              onClick={() => {
+                onClose();
+                onTransfer();
+              }} 
+              className="mr-auto px-4 py-2 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/30 transition-colors font-medium flex items-center gap-2"
+              title="Déplacer ou Dupliquer"
+            >
+              <ArrowRight size={16} />
+              <span className="hidden sm:inline">Transférer / Dupliquer</span>
+              <span className="sm:hidden">Transférer</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}
