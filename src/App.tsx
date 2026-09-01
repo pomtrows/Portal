@@ -147,10 +147,27 @@ function App() {
             // raw URL or string
           }
         }
+        let finalUrl = sec.widget_url;
+        let finalRefresh = sec.refresh_interval;
+        let finalZoom = 100;
+        
+        if (sec.type === 'web' && sec.widget_url) {
+          try {
+            const parsed = JSON.parse(sec.widget_url);
+            finalUrl = parsed.url;
+            finalRefresh = parsed.refresh_interval ?? sec.display_limit ?? 60;
+            finalZoom = parsed.zoom ?? 100;
+          } catch {
+            finalRefresh = sec.display_limit || 60;
+          }
+        }
+
         return {
           ...sec,
           col_span,
-          refresh_interval: sec.type === 'web' ? (sec.display_limit || 60) : sec.refresh_interval,
+          widget_url: finalUrl,
+          refresh_interval: finalRefresh,
+          zoom: finalZoom,
           items: (linksData || []).filter((link: any) => link.section_id === sec.id)
         };
       });
@@ -727,6 +744,13 @@ function App() {
 
   const handleSaveWebSection = async (sectionData: Partial<Section>) => {
     if (!session?.user || !activePageId) return;
+    
+    const configToSave = {
+      url: sectionData.widget_url || '',
+      refresh_interval: sectionData.refresh_interval ?? 60,
+      zoom: sectionData.zoom ?? 100
+    };
+    const stringifiedUrl = JSON.stringify(configToSave);
 
     if (editingWebSection) {
       // Update
@@ -735,7 +759,8 @@ function App() {
         ...editingWebSection,
         title: sectionData.title || editingWebSection.title,
         widget_url: sectionData.widget_url || editingWebSection.widget_url,
-        refresh_interval: sectionData.refresh_interval || editingWebSection.refresh_interval || 60,
+        refresh_interval: sectionData.refresh_interval ?? editingWebSection.refresh_interval ?? 60,
+        zoom: sectionData.zoom ?? editingWebSection.zoom ?? 100,
         col_span,
         type: 'web'
       };
@@ -745,8 +770,7 @@ function App() {
       }));
       await supabase.from('sections').update({
         title: updatedSection.title,
-        widget_url: updatedSection.widget_url,
-        display_limit: updatedSection.refresh_interval, // re-using display_limit for interval in DB just in case, or we should add refresh_interval column to supabase? Wait! The DB schema might not have refresh_interval.
+        widget_url: stringifiedUrl,
         type: 'web'
       }).eq('id', editingWebSection.id);
     } else {
@@ -759,7 +783,8 @@ function App() {
         title: sectionData.title || 'Widget Web',
         type: 'web',
         widget_url: sectionData.widget_url,
-        refresh_interval: sectionData.refresh_interval || 60,
+        refresh_interval: sectionData.refresh_interval ?? 60,
+        zoom: sectionData.zoom ?? 100,
         col_span,
         position: config.sections.length,
         items: []
@@ -773,8 +798,7 @@ function App() {
         page_id: activePageId,
         title: newSection.title,
         type: 'web',
-        widget_url: newSection.widget_url,
-        display_limit: newSection.refresh_interval,
+        widget_url: stringifiedUrl,
         position: newSection.position,
         user_id: session.user.id
       });

@@ -24,6 +24,7 @@ export interface Section {
   widget_url?: string;
   display_limit?: number;
   refresh_interval?: number; // seconds
+  zoom?: number; // percentage, default 100
   position?: number;
   column_index?: number;
   grid_x?: number; // 0-indexed column position on the grid

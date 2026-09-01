@@ -2162,6 +2162,7 @@ export const WebModal: React.FC<WebModalProps> = ({
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [refreshInterval, setRefreshInterval] = useState(60);
+  const [zoom, setZoom] = useState(100);
   const [colSpan, setColSpan] = useState(2);
 
   useEffect(() => {
@@ -2169,11 +2170,13 @@ export const WebModal: React.FC<WebModalProps> = ({
       setTitle(initialData.title || '');
       setUrl(initialData.widget_url || '');
       setRefreshInterval(initialData.refresh_interval || 60);
+      setZoom(initialData.zoom ?? 100);
       setColSpan(initialData.col_span || 2);
     } else {
       setTitle('Widget Web');
       setUrl('');
       setRefreshInterval(60);
+      setZoom(100);
       setColSpan(2);
     }
   }, [initialData, isOpen]);
@@ -2242,6 +2245,27 @@ export const WebModal: React.FC<WebModalProps> = ({
           </p>
         </div>
 
+        <div>
+          <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-1">
+            Niveau de zoom (%)
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min="20"
+              max="200"
+              step="5"
+              value={zoom}
+              onChange={(e) => setZoom(parseInt(e.target.value) || 100)}
+              className="flex-1 accent-[var(--color-primary)]"
+            />
+            <span className="text-sm font-bold w-12 text-right">{zoom}%</span>
+          </div>
+          <p className="text-xs text-[var(--color-text-muted)] mt-1">
+            Ajustez pour adapter le contenu à la taille du widget.
+          </p>
+        </div>
+
         <ColumnSpanSelector value={colSpan} onChange={setColSpan} />
 
         <div className="mt-6 flex justify-end gap-3 pt-2 border-t border-[var(--color-border)]">
@@ -2275,6 +2299,7 @@ export const WebModal: React.FC<WebModalProps> = ({
                 title,
                 widget_url: url.trim(),
                 refresh_interval: refreshInterval,
+                zoom,
                 col_span: colSpan,
               });
               onClose();

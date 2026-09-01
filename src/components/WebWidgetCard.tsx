@@ -183,15 +183,23 @@ export const WebWidgetCard: React.FC<WebWidgetCardProps> = ({
 
       <div className="flex-1 w-full relative rounded-lg overflow-hidden border border-[var(--color-border)]/50 bg-white dark:bg-black/20 min-h-[200px]">
         {section.widget_url ? (
-          <iframe
-            key={iframeKey}
-            ref={iframeRef}
-            src={section.widget_url}
-            className="absolute top-0 left-0 w-full h-full border-0"
-            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-            title={section.title}
-            loading="lazy"
-          />
+          <div className="w-full h-full relative overflow-hidden">
+            <iframe
+              key={iframeKey}
+              ref={iframeRef}
+              src={section.widget_url}
+              className="absolute top-0 left-0 border-0"
+              style={{
+                width: `${100 / (section.zoom ? section.zoom / 100 : 1)}%`,
+                height: `${100 / (section.zoom ? section.zoom / 100 : 1)}%`,
+                transform: `scale(${section.zoom ? section.zoom / 100 : 1})`,
+                transformOrigin: 'top left'
+              }}
+              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+              title={section.title}
+              loading="lazy"
+            />
+          </div>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-[var(--color-text-muted)] text-sm p-4 text-center">
             Aucune URL configurée pour ce widget
