@@ -858,15 +858,25 @@ function App() {
     const upsertRows = Object.entries(updates).map(([id, geo]) => {
       const sec = config.sections.find(s => s.id === id);
       const position = geo.grid_y * 1000 + geo.grid_x;
+      
+      let widget_url = sec?.widget_url || null;
+      if (sec?.type === 'links' || !sec?.type) {
+        widget_url = JSON.stringify(geo);
+      } else if (sec?.type === 'web') {
+        widget_url = JSON.stringify({
+          url: sec?.widget_url || '',
+          refresh_interval: sec?.refresh_interval ?? 60,
+          zoom: sec?.zoom ?? 100
+        });
+      }
+
       return {
         id,
         page_id: sec?.page_id || activePageId,
         title: sec?.title || '',
         type: sec?.type || 'links',
         position,
-        widget_url: (sec?.type === 'links' || !sec?.type)
-          ? JSON.stringify(geo)
-          : sec?.widget_url || null,
+        widget_url,
         user_id: session.user.id
       };
     });
