@@ -28,7 +28,8 @@ function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [currentProfile, setCurrentProfile] = useState<'perso' | 'pro'>(() => {
     if (schedule.enabled) {
-      return getCurrentScheduledProfile();
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      return isMobile ? 'perso' : getCurrentScheduledProfile();
     }
     return (localStorage.getItem('portal-profile') as 'perso' | 'pro') || 'perso';
   });
