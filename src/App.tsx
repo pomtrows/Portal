@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { SortablePage } from './components/SortablePage';
 import { Dashboard } from './components/Dashboard';
 import { SectionModal, ItemModal, RssModal, WeatherModal, TrafficModal, SearchModal, StockModal, BeszelModal } from './components/EditModals';
 import { AddElementModal } from './components/AddElementModal';
@@ -10,7 +13,7 @@ import { MobileMenu } from './components/MobileMenu';
 import { Auth } from './components/Auth';
 import { AccountModal } from './components/AccountModal';
 import type { DashboardConfig, Section, LinkItem, Page } from './types';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus,  } from 'lucide-react';
 import { supabase } from './utils/supabase';
 import { usePreferences, hydratePreferencesFromCloud } from './hooks/usePreferences';
 import type { Session } from '@supabase/supabase-js';
@@ -171,6 +174,41 @@ function App() {
   };
 
   // Page Handlers
+    const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor)
+  );
+
+  const handleDragEndPages = async (event: any) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = config.pages.findIndex(p => p.id === active.id);
+    const newIndex = config.pages.findIndex(p => p.id === over.id);
+    
+    let newPages = arrayMove(config.pages, oldIndex, newIndex);
+    
+    // Distribute created_at sequentially to maintain order
+    const baseTime = Date.now();
+    newPages = newPages.map((page, index) => ({
+      ...page,
+      created_at: new Date(baseTime + index * 1000).toISOString()
+    }));
+
+    setConfig(prev => ({ ...prev, pages: newPages }));
+
+    // Bulk update pages in DB
+    const updates = newPages.map(p => ({
+      id: p.id,
+      title: p.title,
+      profile: p.profile,
+      created_at: p.created_at
+    }));
+
+    const { error } = await supabase.from('pages').upsert(updates);
+    if (error) console.error('Error reordering pages:', error);
+  };
+
   const handleAddPage = async () => {
     if (!session?.user) return;
     const newId = crypto.randomUUID();
@@ -1042,47 +1080,31 @@ function App() {
       {/* Full-width Tabs Navigation Bar with Screen-Wide Primary Blue Divider Line */}
       <div className="hidden md:block w-full border-b-2 border-[var(--color-primary)] mb-5">
         <div className="w-full max-w-[1920px] 2xl:max-w-[98%] mx-auto px-4 sm:px-6 flex flex-wrap gap-1.5 items-end">
-          {config.pages.map(page => (
-            <div key={page.id} className="relative group flex items-center">
-              {editingPageId === page.id ? (
-                <input
-                  autoFocus
-                  value={tempPageTitle}
-                  onChange={e => setTempPageTitle(e.target.value)}
-                  onBlur={() => handleSavePageTitle(page.id)}
-                  onKeyDown={e => e.key === 'Enter' && handleSavePageTitle(page.id)}
-                  className="px-4 py-1.5 rounded-t-lg bg-[var(--color-surface)] border-2 border-b-0 border-[var(--color-primary)] text-[var(--color-text-strong)] text-sm focus:outline-none"
-                />
-              ) : (
-                <button
-                  onClick={() => setActivePageId(page.id)}
-                  onDoubleClick={() => {
-                    if (isEditMode) {
-                      setEditingPageId(page.id);
-                      setTempPageTitle(page.title);
-                    }
-                  }}
-                  className={`px-4 py-1.5 rounded-t-lg font-medium text-sm transition-colors ${
-                    activePageId === page.id 
-                      ? 'bg-[var(--color-primary)] text-white shadow-sm' 
-                      : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]'
-                  }`}
-                >
-                  {page.title}
-                </button>
-              )}
-              
-              {isEditMode && editingPageId !== page.id && (
-                <button
-                  onClick={() => handleDeletePage(page.id)}
-                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full transition-opacity z-10"
-                  title="Supprimer la page"
-                >
-                  <Trash2 size={12} />
-                </button>
-              )}
-            </div>
-          ))}
+          
+<DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndPages}>
+  <SortableContext items={config.pages.map(p => p.id)} strategy={horizontalListSortingStrategy}>
+    {config.pages.map(page => (
+      <SortablePage
+        key={page.id}
+        page={page}
+        isActive={activePageId === page.id}
+        isEditing={editingPageId === page.id}
+        tempTitle={tempPageTitle}
+        isEditMode={isEditMode}
+        onSelect={() => setActivePageId(page.id)}
+        onDoubleClick={() => {
+          if (isEditMode) {
+            setEditingPageId(page.id);
+            setTempPageTitle(page.title);
+          }
+        }}
+        onChangeTempTitle={setTempPageTitle}
+        onSaveTitle={() => handleSavePageTitle(page.id)}
+        onDelete={() => handleDeletePage(page.id)}
+      />
+    ))}
+  </SortableContext>
+</DndContext>
 
           {isEditMode && (
             <button
