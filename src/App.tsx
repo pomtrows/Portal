@@ -71,17 +71,6 @@ function App() {
   const [editingPageId, setEditingPageId] = useState<string | null>(null);
   const [tempPageTitle, setTempPageTitle] = useState('');
 
-  // Auto-schedule check on mount or when schedule changes
-  useEffect(() => {
-    if (schedule.enabled) {
-      const autoProf = getCurrentScheduledProfile();
-      if (autoProf !== currentProfile) {
-        setCurrentProfile(autoProf);
-        localStorage.setItem('portal-profile', autoProf);
-      }
-    }
-  }, [schedule.enabled, schedule.proDays, schedule.proStartTime, schedule.proEndTime]);
-
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
