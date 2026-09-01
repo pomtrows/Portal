@@ -34,6 +34,7 @@ function App() {
     return (localStorage.getItem('portal-profile') as 'perso' | 'pro') || 'perso';
   });
   const [config, setConfig] = useState<DashboardConfig>({ title: 'Mon Portail', pages: [], sections: [] });
+  const [allPages, setAllPages] = useState<Page[]>([]);
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -119,6 +120,7 @@ function App() {
       const [
         { data: configData },
         { data: pagesData },
+        { data: allPagesData },
         { data: sectionsData },
         { data: linksData }
       ] = await Promise.all([
@@ -128,12 +130,14 @@ function App() {
           .eq('id', `${currentProfile}_${session.user.id}`)
           .single(),
         supabase.from('pages').select('*').eq('profile', currentProfile).order('created_at', { ascending: true }),
+        supabase.from('pages').select('*').order('created_at', { ascending: true }),
         supabase.from('sections').select('*').order('position', { ascending: true }).order('created_at', { ascending: true }),
         supabase.from('links').select('*').order('position', { ascending: true }).order('created_at', { ascending: true })
       ]);
         
       const title = configData?.title || (currentProfile === 'pro' ? 'Mon Portail Pro' : 'Mon Portail');
       const pages: Page[] = pagesData || [];
+      setAllPages(allPagesData || []);
 
       const sections: Section[] = (sectionsData || []).map((sec: any) => {
         let col_span = sec.col_span || 1;
@@ -1248,7 +1252,7 @@ function App() {
         onClose={() => setTransferTarget(null)}
         targetType={transferTarget?.type || null}
         targetId={transferTarget?.id || null}
-        pages={config.pages}
+        pages={allPages}
         sections={config.sections}
         onMove={transferTarget?.type === 'section' ? handleMoveSection : handleMoveItem}
         onDuplicate={transferTarget?.type === 'section' ? handleDuplicateSection : handleDuplicateItem}

@@ -74,7 +74,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
             {isSection
               ? pages.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.title}
+                    {p.title} {p.profile === 'pro' ? '(Pro)' : '(Perso)'}
                   </option>
                 ))
               : sections
@@ -83,7 +83,7 @@ export const TransferModal: React.FC<TransferModalProps> = ({
                     const page = pages.find((p) => p.id === s.page_id);
                     return (
                       <option key={s.id} value={s.id}>
-                        {s.title} {page ? `(Page : ${page.title})` : ''}
+                        {s.title} {page ? `(Page : ${page.title} - ${page.profile === 'pro' ? 'Pro' : 'Perso'})` : ''}
                       </option>
                     );
                   })}
